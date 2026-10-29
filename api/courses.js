@@ -14,50 +14,52 @@ export default async function handler(req, res) {
     }
 
     const headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
         "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "fr-FR,fr;q=0.9"
+        "Accept-Language": "fr-FR,fr;q=0.9",
+        "Referer": "https://www.pmu.fr/",
+        "Origin": "https://www.pmu.fr"
     };
 
-    // Cas 1 : Récupération des partants (et de l'arrivée si disponible)
+    // Cas 1 : Récupération des partants et des rapports pour une course spécifique
     if (r && c) {
-        try {
-            // 1. Charger obligatoirement les partants
-            const participantsUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`;
-            const participantsRes = await fetch(participantsUrl, { headers });
+        const participantUrls = [
+            `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`,
+            `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}/R${r}/C${c}/participants`
+        ];
 
-            if (!participantsRes.ok) {
-                return res.status(participantsRes.status).json({ error: "Impossible de charger les partants de cette course." });
-            }
-
-            const participantsData = await participantsRes.json();
-
-            // 2. Charger les rapports de manière totalement optionnelle (sans faire planter si 404)
-            let rapportsData = null;
+        let participantsData = [];
+        for (const url of participantUrls) {
             try {
-                const rapportsUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/rapports-definitifs`;
-                const rapportsRes = await fetch(rapportsUrl, { headers });
-                if (rapportsRes.ok) {
-                    rapportsData = await rapportsRes.json();
+                const response = await fetch(url, { headers });
+                if (response.ok) {
+                    const data = await response.json();
+                    participantsData = data.participants || data || [];
+                    break;
                 }
-            } catch (e) {
-                // Course non terminée : on ignore l'erreur
-            }
-
-            return res.status(200).json({
-                participants: participantsData.participants || participantsData || [],
-                rapports: rapportsData
-            });
-
-        } catch (e) {
-            return res.status(500).json({ error: "Erreur lors de la communication avec le PMU." });
+            } catch (e) {}
         }
+
+        let rapportsData = null;
+        try {
+            const rapportsUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/rapports-definitifs`;
+            const rapportsRes = await fetch(rapportsUrl, { headers });
+            if (rapportsRes.ok) {
+                rapportsData = await rapportsRes.json();
+            }
+        } catch (e) {}
+
+        return res.status(200).json({
+            participants: participantsData,
+            rapports: rapportsData
+        });
     }
 
-    // Cas 2 : Récupération du programme global
+    // Cas 2 : Récupération du programme global des réunions du jour
     const programmeUrls = [
+        `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}?specialisation=INTERNET`,
         `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}`,
-        `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}?specialisation=INTERNET`
+        `https://online.turf.pmu.fr/client/rest/v1/programme/${date}`
     ];
 
     for (const url of programmeUrls) {
@@ -65,12 +67,13 @@ export default async function handler(req, res) {
             const response = await fetch(url, { headers });
             if (response.ok) {
                 const data = await response.json();
-                if (data && data.programme && data.programme.reunions && data.programme.reunions.length > 0) {
-                    return res.status(200).json(data);
+                if (data && (data.programme || data.reunions)) {
+                    // Normalisation du format si besoin
+                    return res.status(200).json(data.programme ? data : { programme: data });
                 }
             }
         } catch (e) {}
     }
 
-    return res.status(500).json({ error: "Programme PMU indisponible pour cette date." });
+    return res.status(500).json({ error: "Impossible de récupérer le programme officiel PMU pour cette date." });
 }
