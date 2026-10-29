@@ -7,7 +7,7 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const { date } = req.query; // Format attendu: ddmmyyyy (ex: 29102026)
+    const { date } = req.query; // Format ddmmyyyy
 
     if (!date) {
         return res.status(400).json({ error: "Date manquante" });
@@ -19,14 +19,12 @@ export default async function handler(req, res) {
         "Accept-Language": "fr-FR,fr;q=0.9"
     };
 
-    // Véritables routes de l'API interne du PMU
-    const urlsToTry = [
-        `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}?specialisation=INTERNET`,
+    const endpoints = [
         `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}`,
-        `https://online.turfinfo.api.pmu.fr/rest/client/1/programme/${date}`
+        `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}?specialisation=INTERNET`
     ];
 
-    for (const url of urlsToTry) {
+    for (const url of endpoints) {
         try {
             const response = await fetch(url, { headers });
             if (response.ok) {
@@ -36,11 +34,9 @@ export default async function handler(req, res) {
                 }
             }
         } catch (e) {
-            // Passage au miroir suivant
+            // Test du second point d'accès
         }
     }
 
-    return res.status(500).json({ 
-        error: "Impossible de récupérer le programme officiel PMU pour cette date." 
-    });
+    return res.status(500).json({ error: "PMU temporairement indisponible pour cette date" });
 }
