@@ -21,12 +21,24 @@ export default async function handler(req, res) {
     if (r && c) {
         try {
             const resp = await fetch(`https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`, { headers });
+            let participants = [];
             if (resp.ok) {
                 const data = await resp.json();
-                return res.status(200).json({ participants: data.participants || data || [] });
+                participants = data.participants || data || [];
             }
-        } catch (e) {}
-        return res.status(500).json({ error: "Erreur partants" });
+
+            let rapports = null;
+            try {
+                const repResp = await fetch(`https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/rapports-definitifs`, { headers });
+                if (repResp.ok) {
+                    rapports = await repResp.json();
+                }
+            } catch (e) {}
+
+            return res.status(200).json({ participants, rapports });
+        } catch (e) {
+            return res.status(500).json({ error: "Erreur partants" });
+        }
     }
 
     try {
