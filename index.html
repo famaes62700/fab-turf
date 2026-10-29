@@ -119,8 +119,8 @@
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             try {
-                // On interroge directement votre relais Vercel personnel
-                const response = await fetch(`https://relais-turf.vercel.app/api/courses?date=${ddmmyyyy}`);
+               // On interroge directement le relais intégré à l'application
+               const response = await fetch(`/api/courses?date=${ddmmyyyy}`);
                 
                 if (!response.ok) throw new Error("Erreur de communication avec votre relais");
 
