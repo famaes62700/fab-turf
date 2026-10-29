@@ -117,7 +117,6 @@
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             try {
-                // Appel direct du relais local Vercel (sans passer par relais-turf.vercel.app)
                 const response = await fetch(`/api/courses?date=${ddmmyyyy}`);
                 
                 if (!response.ok) {
@@ -174,26 +173,56 @@
             }
         }
 
-        function onRaceChange() {
+        async function onRaceChange() {
             const mIdx = document.getElementById('meetingSelect').value;
             const rIdx = document.getElementById('raceSelect').value;
 
             if (mIdx === "" || rIdx === "") return clearDisplay();
 
-            const race = liveMeetingsData[mIdx].courses[rIdx];
-            processRaceData(race);
+            const meeting = liveMeetingsData[mIdx];
+            const race = meeting.courses[rIdx];
+
+            const dateInput = document.getElementById('raceDate').value;
+            const parts = dateInput.split('-');
+            const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+
+            const rNum = meeting.numOfficiel || (parseInt(mIdx) + 1);
+            const cNum = race.numOrdre || (parseInt(rIdx) + 1);
+
+            const statusText = document.getElementById('statusText');
+            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement des partants officiels...</span>';
+
+            try {
+                const response = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
+                if (!response.ok) throw new Error("Impossible de charger les partants");
+
+                const data = await response.json();
+                let partants = data.participants || data || [];
+
+                if (Array.isArray(partants) && partants.length > 0) {
+                    processRaceData(partants, race);
+                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>${partants.length} partants officiels chargés !</span>`;
+                } else {
+                    throw new Error("Aucun partant répertorié pour cette course.");
+                }
+            } catch (err) {
+                console.error(err);
+                statusText.innerHTML = `<span class="text-red-400 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>${err.message}</span>`;
+                clearDisplay();
+            }
         }
 
-        function processRaceData(race) {
-            let partants = race.participants || race.chevaux || [];
-
+        function processRaceData(partants, race) {
             let processed = partants.map((p, idx) => {
                 let musique = p.musique || p.form || "0p";
+                let coteVal = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
+                              ? p.dernierRapportDirect.rapport 
+                              : (p.probabiliteEvolution ? p.probabiliteEvolution : "--");
                 return {
                     num: p.numPmu || p.numOrdre || (idx+1),
                     nom: p.nom || "Cheval",
                     musique: musique,
-                    cote: p.dernierRapportDirect ? p.dernierRapportDirect.rapport : (Math.random() * 12 + 2).toFixed(1),
+                    cote: coteVal,
                     score: calculateScore(musique)
                 };
             });
