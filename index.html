@@ -37,41 +37,34 @@
             </div>
         </div>
 
-        <!-- BLOC HISTORIQUE (SEMAINE / MOIS) -->
+        <!-- BLOC HISTORIQUE (CALENDRIER SEMAINE & MOIS) -->
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Vos Gains Cumulés</h2>
+                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Vos Gains Net (Année en cours)</h2>
                 <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-[10px] text-zinc-400 mb-3 italic">Calculé d'après les jours où vous avez lancé le "Bilan du Jour".</p>
             
-            <div class="space-y-3">
-                <!-- Semaine -->
+            <div class="space-y-4">
+                <!-- Semaine en cours -->
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
-                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">7 Derniers Jours</h3>
+                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Semaine (Lundi au Dimanche)</h3>
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <div class="text-center bg-emerald-950/30 p-2 rounded border border-emerald-500/20">
-                            <div class="text-[9px] text-emerald-400 uppercase">Base (Net)</div>
+                            <div class="text-[9px] text-emerald-400 uppercase">Base</div>
                             <div id="histWeekBase" class="font-bold text-white">--</div>
                         </div>
                         <div class="text-center bg-amber-950/30 p-2 rounded border border-amber-500/20">
-                            <div class="text-[9px] text-amber-400 uppercase">Pépite (Net)</div>
+                            <div class="text-[9px] text-amber-400 uppercase">Pépite</div>
                             <div id="histWeekPepite" class="font-bold text-white">--</div>
                         </div>
                     </div>
                 </div>
-                <!-- Mois -->
+
+                <!-- Mois de l'année -->
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
-                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">30 Derniers Jours</h3>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="text-center bg-emerald-950/30 p-2 rounded border border-emerald-500/20">
-                            <div class="text-[9px] text-emerald-400 uppercase">Base (Net)</div>
-                            <div id="histMonthBase" class="font-bold text-white">--</div>
-                        </div>
-                        <div class="text-center bg-amber-950/30 p-2 rounded border border-amber-500/20">
-                            <div class="text-[9px] text-amber-400 uppercase">Pépite (Net)</div>
-                            <div id="histMonthPepite" class="font-bold text-white">--</div>
-                        </div>
+                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Bilan Mensuel (Janvier - Décembre)</h3>
+                    <div id="monthsGrid" class="space-y-2">
+                        <!-- Généré en JS -->
                     </div>
                 </div>
             </div>
@@ -380,199 +373,3 @@
                             hasReports = true;
                             let val = parseFloat(montant);
                             if (val > 100) val = val / 100;
-                            let combo = r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
-                            let div = document.createElement('div');
-                            div.className = "bg-zinc-800 p-2 rounded border border-zinc-700 flex justify-between";
-                            div.innerHTML = `<span class="text-zinc-400">${r.libelleRapport || typeJeu}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
-                            reportsGrid.appendChild(div);
-                        }
-                    });
-                });
-
-                if (hasReports) reportsBlock.classList.remove('hidden');
-                else reportsBlock.classList.add('hidden');
-
-                let algoResult = computeAlgorithm(partants);
-                let { processed, baseHorse, nuggetHorse } = algoResult;
-
-                if (baseHorse) {
-                    document.getElementById('top1Name').textContent = `${baseHorse.num}. ${baseHorse.nom}`;
-                    document.getElementById('top1Stats').textContent = `Confiance : ${baseHorse.baseScore}% | Cote : ${baseHorse.coteDisplay}`;
-                }
-                if (nuggetHorse) {
-                    document.getElementById('top2Name').textContent = `${nuggetHorse.num}. ${nuggetHorse.nom}`;
-                    document.getElementById('top2Stats').textContent = `Potentiel : ${nuggetHorse.nuggetScore}% | Cote : ${nuggetHorse.coteDisplay}`;
-                }
-
-                processed.sort((a, b) => b.baseScore - a.baseScore);
-                let tbody = document.getElementById('runnersTableBody');
-                tbody.innerHTML = '';
-                processed.forEach(p => {
-                    let tr = document.createElement('tr');
-                    let tag = p.ordreArrivee ? `<span class="ml-1 text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
-                    if (p.num === baseHorse?.num) tag += '<span class="ml-1 text-[10px] bg-emerald-500/20 text-emerald-400 px-1 rounded">Base</span>';
-                    if (p.num === nuggetHorse?.num) tag += '<span class="ml-1 text-[10px] bg-amber-500/20 text-amber-400 px-1 rounded">Pépite</span>';
-
-                    tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-2.5">${p.baseScore}%</td>`;
-                    tbody.appendChild(tr);
-                });
-                let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
-                document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
-            } catch (e) {}
-        }
-
-        function evaluateMusique(musique) {
-            let score = 30;
-            const numbers = musique.match(/\d+/g);
-            if (numbers && numbers.length > 0) {
-                let pts = 0;
-                let count = Math.min(numbers.length, 4);
-                for (let i = 0; i < count; i++) {
-                    let val = parseInt(numbers[i], 10);
-                    if (val === 1) pts += 10;
-                    else if (val === 2) pts += 8;
-                    else if (val === 3) pts += 6;
-                    else if (val === 4 || val === 5) pts += 4;
-                    else pts += 1;
-                }
-                score = (pts / count) * 10;
-            }
-            return Math.min(98, Math.max(10, Math.round(score)));
-        }
-
-        // --- NOUVEAU : Sauvegarde locale et affichage de l'historique ---
-        function getSavedStats(daysBack) {
-            let totalNetBase = 0;
-            let totalNetPepite = 0;
-            let today = new Date();
-            for(let i=0; i<daysBack; i++) {
-                let d = new Date(today);
-                d.setDate(today.getDate() - i);
-                let key = `pmu_stats_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
-                let saved = localStorage.getItem(key);
-                if (saved) {
-                    let parsed = JSON.parse(saved);
-                    totalNetBase += parsed.netBase;
-                    totalNetPepite += parsed.netPepite;
-                }
-            }
-            return { totalNetBase, totalNetPepite };
-        }
-
-        function showHistoryStats() {
-            document.getElementById('statsBlock').classList.add('hidden');
-            let historyBlock = document.getElementById('historyBlock');
-            historyBlock.classList.remove('hidden');
-
-            let weekStats = getSavedStats(7);
-            let monthStats = getSavedStats(30);
-
-            const formatMoney = (val) => {
-                let color = val >= 0 ? 'text-emerald-400' : 'text-red-400';
-                let sign = val > 0 ? '+' : '';
-                return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
-            };
-            const formatMoneyAm = (val) => {
-                let color = val >= 0 ? 'text-amber-400' : 'text-red-400';
-                let sign = val > 0 ? '+' : '';
-                return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
-            };
-
-            document.getElementById('histWeekBase').innerHTML = formatMoney(weekStats.totalNetBase);
-            document.getElementById('histWeekPepite').innerHTML = formatMoneyAm(weekStats.totalNetPepite);
-            document.getElementById('histMonthBase').innerHTML = formatMoney(monthStats.totalNetBase);
-            document.getElementById('histMonthPepite').innerHTML = formatMoneyAm(monthStats.totalNetPepite);
-        }
-
-        async function calculateDailyStats() {
-            document.getElementById('historyBlock').classList.add('hidden');
-            let statsBlock = document.getElementById('statsBlock');
-            let statsProgress = document.getElementById('statsProgress');
-            let statBase = document.getElementById('statBase');
-            let statPepite = document.getElementById('statPepite');
-            let gainBaseEl = document.getElementById('gainBase');
-            let gainPepiteEl = document.getElementById('gainPepite');
-            let statGlobal = document.getElementById('statGlobal');
-
-            statsBlock.classList.remove('hidden');
-            statBase.innerHTML = `0 <span class="text-xs font-normal text-zinc-400">/ 0</span>`;
-            statPepite.innerHTML = `0 <span class="text-xs font-normal text-zinc-400">/ 0</span>`;
-            gainBaseEl.innerHTML = `Retours : 0.00 € <br><span class="text-emerald-400 font-bold">Bénéfice : 0.00 €</span>`;
-            gainPepiteEl.innerHTML = `Retours : 0.00 € <br><span class="text-amber-400 font-bold">Bénéfice : 0.00 €</span>`;
-            statGlobal.textContent = "Recherche en cours...";
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses...";
-
-            let dateInput = document.getElementById('raceDate').value;
-            let parts = dateInput.split('-');
-            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
-
-            let finishedRaces = [];
-            liveMeetingsData.forEach((m, mIdx) => {
-                let rNum = m.numOfficiel || (mIdx + 1);
-                let courses = m.courses || m.races || m.lesCourses || [];
-                courses.forEach((c, cIdx) => {
-                    let cNum = c.numOrdre || (cIdx + 1);
-                    if (c.heureDepart && new Date(c.heureDepart) < new Date()) {
-                        finishedRaces.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
-                    }
-                });
-            });
-
-            if (finishedRaces.length === 0) {
-                statsProgress.textContent = "Aucune course terminée pour cette date.";
-                return;
-            }
-
-            let baseGagnantes = 0, pepiteGagnantes = 0, totalGainBase = 0, totalGainPepite = 0, coursesValidees = 0;
-
-            for (let i = 0; i < finishedRaces.length; i++) {
-                let r = finishedRaces[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours (${i+1}/${finishedRaces.length}) : ${r.name}`;
-
-                try {
-                    const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
-                    if (!res.ok) continue;
-                    const data = await res.json();
-                    let partants = data.participants || [];
-                    let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
-                    
-                    if (arrivees.length > 0) {
-                        coursesValidees++;
-                        let algoResult = computeAlgorithm(partants);
-                        let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
-
-                        if (algoResult.baseHorse && algoResult.baseHorse.ordreArrivee === 1) {
-                            baseGagnantes++;
-                            let gain = getGagnantRapport(rapportsList, algoResult.baseHorse.num) || algoResult.baseHorse.cote;
-                            totalGainBase += gain;
-                        }
-                        if (algoResult.nuggetHorse && algoResult.nuggetHorse.ordreArrivee === 1) {
-                            pepiteGagnantes++;
-                            let gain = getGagnantRapport(rapportsList, algoResult.nuggetHorse.num) || algoResult.nuggetHorse.cote;
-                            totalGainPepite += gain;
-                        }
-
-                        let netBase = totalGainBase - coursesValidees;
-                        let netPepite = totalGainPepite - coursesValidees;
-                        
-                        statBase.innerHTML = `${baseGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
-                        statPepite.innerHTML = `${pepiteGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
-                        gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${netBase >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold">Bénéfice : ${netBase > 0 ? '+' : ''}${netBase.toFixed(2)} €</span>`;
-                        gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'} font-bold">Bénéfice : ${netPepite > 0 ? '+' : ''}${netPepite.toFixed(2)} €</span>`;
-                        statGlobal.textContent = `Bilan sur ${coursesValidees} courses (Mise : ${coursesValidees} €)`;
-
-                        // SAUVEGARDE LOCALE DANS LE TÉLÉPHONE
-                        localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
-                            netBase: netBase,
-                            netPepite: netPepite
-                        }));
-                    }
-                } catch (e) {}
-            }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété et sauvegardé !</span>`;
-        }
-
-        window.onload = loadLivePmu;
-    </script>
-</body>
-</html>
