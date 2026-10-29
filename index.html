@@ -50,9 +50,9 @@
             </div>
         </div>
 
-        <!-- Bloc Arrivée Officielle (s'affiche si la course est terminée) -->
-        <div id="arrivalBlock" class="hidden bg-gradient-to-r from-blue-950/70 via-zinc-900 to-indigo-950/70 border-2 border-blue-500/50 rounded-2xl p-4 shadow-xl">
-            <h3 class="text-xs font-extrabold uppercase text-blue-400 tracking-wider mb-2 flex items-center">
+        <!-- Bloc Arrivée Officielle -->
+        <div id="arrivalBlock" class="hidden bg-gradient-to-r from-blue-950/70 via-zinc-900 to-indigo-950/70 border-2 border-blue-500/50 rounded-2xl p-4 shadow-xl space-y-3">
+            <h3 class="text-xs font-extrabold uppercase text-blue-400 tracking-wider flex items-center">
                 <i class="fa-solid fa-flag-checkered mr-2"></i> Arrivée Officielle PMU
             </h3>
             <div id="arrivalList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
@@ -60,7 +60,17 @@
             </div>
         </div>
 
-        <!-- Section des 2 Chevaux Clés -->
+        <!-- Bloc NOUVEAU : Rapports Payés -->
+        <div id="reportsBlock" class="hidden bg-zinc-900/90 border border-blue-500/30 rounded-2xl p-4 shadow-xl space-y-3">
+            <h3 class="text-xs font-extrabold uppercase text-emerald-400 tracking-wider flex items-center">
+                <i class="fa-solid fa-euro-sign mr-2"></i> Rapports Définitifs (pour 1 €)
+            </h3>
+            <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                <!-- Rempli en JS -->
+            </div>
+        </div>
+
+        <!-- Section des 2 Chevaux Clés Pronostiqués -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border-2 border-pmu-green/50 rounded-2xl p-5 shadow-xl relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-pmu-green text-white text-xs font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
                 <i class="fa-solid fa-crosshairs mr-1"></i> Simple Gagnant
@@ -93,7 +103,7 @@
             </div>
         </div>
 
-        <!-- Couplés & Trio -->
+        <!-- Couplés & Trio Pronostiqués -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl shadow space-y-3">
                 <h3 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
@@ -259,7 +269,7 @@
             const cNum = race.numOrdre || (parseInt(rIdx) + 1);
 
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement des partants et de l\'arrivée...</span>';
+            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement de la course et des rapports...</span>';
 
             try {
                 const response = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
@@ -270,7 +280,7 @@
 
                 if (Array.isArray(partants) && partants.length > 0) {
                     processRaceData(partants, race, data.rapports);
-                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>Analyse de la course terminée !</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>Analyse effectuée avec succès !</span>`;
                 } else {
                     throw new Error("Aucun partant répertorié pour cette course.");
                 }
@@ -281,13 +291,12 @@
             }
         }
 
-        function processRaceData(partants, race, rapports) {
-            // Traitement de l'arrivée officielle
+        function processRaceData(partants, race, rapportsData) {
+            // 1. Gestion de l'Arrivée
             const arrivalBlock = document.getElementById('arrivalBlock');
             const arrivalList = document.getElementById('arrivalList');
             arrivalList.innerHTML = '';
 
-            // Recherche de l'ordre d'arrivée (soit dans la race, soit dans les partants, soit dans les rapports)
             let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0)
                                    .sort((a, b) => a.ordreArrivee - b.ordreArrivee);
 
@@ -304,6 +313,44 @@
                 arrivalBlock.classList.add('hidden');
             }
 
+            // 2. Gestion des Rapports Payés
+            const reportsBlock = document.getElementById('reportsBlock');
+            const reportsGrid = document.getElementById('reportsGrid');
+            reportsGrid.innerHTML = '';
+
+            let hasReports = false;
+
+            if (rapportsData && Array.isArray(rapportsData)) {
+                rapportsData.forEach(repGroup => {
+                    let typeJeu = repGroup.typePari || repGroup.libellePari || 'Pari';
+                    if (repGroup.rapports && repGroup.rapports.length > 0) {
+                        repGroup.rapports.forEach(r => {
+                            if (r.gainEuro || r.rapport) {
+                                hasReports = true;
+                                let gain = r.gainEuro ? (r.gainEuro).toFixed(2) + ' €' : (r.rapport) + ' €';
+                                let combo = r.combinaison ? ` (${r.combinaison})` : '';
+                                let libelle = r.libelleRapport || typeJeu;
+
+                                let item = document.createElement('div');
+                                item.className = 'bg-zinc-800/80 p-2 rounded-lg border border-zinc-700/60 flex justify-between items-center';
+                                item.innerHTML = `
+                                    <span class="text-zinc-400 font-medium">${libelle}${combo} :</span>
+                                    <span class="font-extrabold text-emerald-400 ml-2">${gain}</span>
+                                `;
+                                reportsGrid.appendChild(item);
+                            }
+                        });
+                    }
+                });
+            }
+
+            if (hasReports) {
+                reportsBlock.classList.remove('hidden');
+            } else {
+                reportsBlock.classList.add('hidden');
+            }
+
+            // 3. Calculs et Pronostics Algorithmiques
             let processed = partants.map((p, idx) => {
                 let musique = p.musique || p.form || "0p";
                 let rawCote = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
@@ -330,16 +377,13 @@
                 };
             });
 
-            // 1. BASE
             let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
             let baseHorse = sortedByBase[0];
 
-            // 2. PÉPITE
             let remainingRunners = processed.filter(p => p.num !== baseHorse.num);
             let sortedByNugget = remainingRunners.sort((a, b) => b.nuggetScore - a.nuggetScore);
             let nuggetHorse = sortedByNugget[0];
 
-            // 3. TRIO
             let remainingForTrio = remainingRunners.filter(p => p.num !== (nuggetHorse ? nuggetHorse.num : null));
             let thirdHorse = remainingForTrio.sort((a, b) => b.baseScore - a.baseScore)[0];
 
@@ -448,6 +492,7 @@
 
         function clearDisplay() {
             document.getElementById('arrivalBlock').classList.add('hidden');
+            document.getElementById('reportsBlock').classList.add('hidden');
             document.getElementById('top1Name').textContent = 'En attente...';
             document.getElementById('top1Stats').textContent = '--';
             document.getElementById('top2Name').textContent = 'En attente...';
