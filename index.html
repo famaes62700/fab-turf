@@ -113,29 +113,32 @@
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement des courses...</span>';
+            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Contournement des sécurités PMU...</span>';
 
             const parts = dateInput.split('-');
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             try {
-               // On interroge directement le relais intégré à l'application
-               const response = await fetch(`/api/courses?date=${ddmmyyyy}`);
+                // L'adresse officielle du PMU
+                const pmuUrl = `https://online.turf.pmu.fr/client/rest/v1/programme/${ddmmyyyy}`;
                 
-                if (!response.ok) throw new Error("Erreur de communication avec votre relais");
+                // On utilise un proxy public mondial très puissant pour passer à travers le blocage (sans passer par l'API Vercel)
+                const response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${pmuUrl}`);
+                
+                if (!response.ok) throw new Error("Le pare-feu du PMU a bloqué la requête");
 
                 const data = await response.json();
 
                 if (data && data.programme && data.programme.reunions) {
                     liveMeetingsData = data.programme.reunions;
                     populateMeetingsSelect(liveMeetingsData);
-                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>Programme chargé (${liveMeetingsData.length} réunions).</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>Programme du ${dateInput} chargé !</span>`;
                 } else {
                     throw new Error("Aucune course disponible pour cette date.");
                 }
             } catch (err) {
                 console.error(err);
-                statusText.innerHTML = `<span class="text-red-400 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Erreur : ${err.message}. Essayez la date du jour.</span>`;
+                statusText.innerHTML = `<span class="text-red-400 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Erreur : ${err.message}</span>`;
                 clearDisplay();
             }
         }
