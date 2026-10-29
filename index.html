@@ -109,7 +109,9 @@
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
                 const data = await res.json();
 
-                let reunions = data.programme ? data.programme.reunions : (data.reunions || []);
+                // Récupération sécurisée des réunions peu importe la structure de l'API
+                let reunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
+                
                 if (reunions.length > 0) {
                     liveMeetingsData = reunions;
                     let select = document.getElementById('meetingSelect');
@@ -120,15 +122,16 @@
                         let opt = document.createElement('option');
                         opt.value = idx;
                         
-                        // Récupération de l'heure de début de réunion
+                        let coursesList = r.courses || r.races || r.lesCourses || [];
                         let timeStr = "";
                         if (r.heurereunion || r.heurePremierDepart) {
                             timeStr = ` 🕒 [${formatTime(r.heurereunion || r.heurePremierDepart)}]`;
-                        } else if (r.courses && r.courses[0] && r.courses[0].heureDepart) {
-                            timeStr = ` 🕒 [${formatTime(r.courses[0].heureDepart)}]`;
+                        } else if (coursesList[0] && coursesList[0].heureDepart) {
+                            timeStr = ` 🕒 [${formatTime(coursesList[0].heureDepart)}]`;
                         }
 
-                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${r.hippodrome ? r.hippodrome.libelleLong : 'Hippodrome'}${timeStr} (${r.courses.length} courses)`;
+                        let hipName = r.hippodrome ? (r.hippodrome.libelleLong || r.hippodrome.libelleCourt || r.hippodrome.nom) : 'Hippodrome';
+                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${hipName}${timeStr} (${coursesList.length} courses)`;
                         select.appendChild(opt);
                     });
                     
@@ -150,13 +153,24 @@
             if (mIdx === "") return;
 
             let meeting = liveMeetingsData[mIdx];
-            meeting.courses.forEach((c, cIdx) => {
+            let courses = meeting.courses || meeting.races || meeting.lesCourses || [];
+
+            if (courses.length > 0) {
+                courses.forEach((c, cIdx) => {
+                    let opt = document.createElement('option');
+                    opt.value = cIdx;
+                    let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
+                    let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
+                    opt.textContent = `C${c.numOrdre || (cIdx+1)}${courseTime} : ${libelleCourse}`;
+                    raceSelect.appendChild(opt);
+                });
+            } else {
                 let opt = document.createElement('option');
-                opt.value = cIdx;
-                let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
-                opt.textContent = `C${c.numOrdre || (cIdx+1)}${courseTime} : ${c.libelle || 'Prix'}`;
+                opt.value = "";
+                opt.textContent = "Aucune course disponible";
                 raceSelect.appendChild(opt);
-            });
+            }
+
             if (currentRaceVal !== "") raceSelect.value = currentRaceVal;
         }
 
@@ -169,7 +183,6 @@
             let rIdx = document.getElementById('raceSelect').value;
             if (mIdx === "" || rIdx === "") return;
 
-            // Re-charge d'abord le programme global pour actualiser les heures/statuts, puis la course
             await loadLivePmu();
             document.getElementById('meetingSelect').value = mIdx;
             onMeetingChange();
@@ -183,7 +196,9 @@
             if (mIdx === "" || rIdx === "") return;
 
             let meeting = liveMeetingsData[mIdx];
-            let race = meeting.courses[rIdx];
+            let courses = meeting.courses || meeting.races || meeting.lesCourses || [];
+            let race = courses[rIdx];
+            if (!race) return;
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -278,4 +293,52 @@
 
                 if (baseHorse) {
                     document.getElementById('top1Name').textContent = `${baseHorse.num}. ${baseHorse.nom}`;
-                    document.getElementById('top1Stats').
+                    document.getElementById('top1Stats').textContent = `Confiance : ${baseHorse.baseScore}% | Cote : ${baseHorse.coteDisplay}`;
+                }
+                if (nuggetHorse) {
+                    document.getElementById('top2Name').textContent = `${nuggetHorse.num}. ${nuggetHorse.nom}`;
+                    document.getElementById('top2Stats').textContent = `Potentiel : ${nuggetHorse.nuggetScore}% | Cote : ${nuggetHorse.coteDisplay}`;
+                }
+
+                processed.sort((a, b) => b.baseScore - a.baseScore);
+                let tbody = document.getElementById('runnersTableBody');
+                tbody.innerHTML = '';
+                processed.forEach(p => {
+                    let tr = document.createElement('tr');
+                    let tag = p.ordreArrivee ? `<span class="ml-1 text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
+                    if (p.num === baseHorse?.num) tag += '<span class="ml-1 text-[10px] bg-emerald-500/20 text-emerald-400 px-1 rounded">Base</span>';
+                    if (p.num === nuggetHorse?.num) tag += '<span class="ml-1 text-[10px] bg-amber-500/20 text-amber-400 px-1 rounded">Pépite</span>';
+
+                    tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-2.5">${p.baseScore}%</td>`;
+                    tbody.appendChild(tr);
+                });
+
+                let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
+                document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
+
+            } catch (e) {}
+        }
+
+        function evaluateMusique(musique) {
+            let score = 30;
+            const numbers = musique.match(/\d+/g);
+            if (numbers && numbers.length > 0) {
+                let pts = 0;
+                let count = Math.min(numbers.length, 4);
+                for (let i = 0; i < count; i++) {
+                    let val = parseInt(numbers[i], 10);
+                    if (val === 1) pts += 10;
+                    else if (val === 2) pts += 8;
+                    else if (val === 3) pts += 6;
+                    else if (val === 4 || val === 5) pts += 4;
+                    else pts += 1;
+                }
+                score = (pts / count) * 10;
+            }
+            return Math.min(98, Math.max(10, Math.round(score)));
+        }
+
+        window.onload = loadLivePmu;
+    </script>
+</body>
+</html>
