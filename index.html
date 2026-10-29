@@ -27,9 +27,54 @@
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
         <div class="flex justify-between items-center">
             <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au PMU...</div>
-            <button onclick="calculateDailyStats()" class="bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs px-3 py-1.5 rounded border border-indigo-500/40 font-bold transition flex items-center space-x-1">
-                <i class="fa-solid fa-chart-pie mr-1"></i> Bilan du Jour
-            </button>
+            <div class="flex space-x-2">
+                <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
+                    <i class="fa-solid fa-calendar-days mr-1"></i> Historique
+                </button>
+                <button onclick="calculateDailyStats()" class="bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs px-3 py-1.5 rounded border border-indigo-500/40 font-bold transition flex items-center">
+                    <i class="fa-solid fa-chart-pie mr-1"></i> Bilan du Jour
+                </button>
+            </div>
+        </div>
+
+        <!-- BLOC HISTORIQUE (SEMAINE / MOIS) -->
+        <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Vos Gains Cumulés</h2>
+                <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-[10px] text-zinc-400 mb-3 italic">Calculé d'après les jours où vous avez lancé le "Bilan du Jour".</p>
+            
+            <div class="space-y-3">
+                <!-- Semaine -->
+                <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
+                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">7 Derniers Jours</h3>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="text-center bg-emerald-950/30 p-2 rounded border border-emerald-500/20">
+                            <div class="text-[9px] text-emerald-400 uppercase">Base (Net)</div>
+                            <div id="histWeekBase" class="font-bold text-white">--</div>
+                        </div>
+                        <div class="text-center bg-amber-950/30 p-2 rounded border border-amber-500/20">
+                            <div class="text-[9px] text-amber-400 uppercase">Pépite (Net)</div>
+                            <div id="histWeekPepite" class="font-bold text-white">--</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mois -->
+                <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
+                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">30 Derniers Jours</h3>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="text-center bg-emerald-950/30 p-2 rounded border border-emerald-500/20">
+                            <div class="text-[9px] text-emerald-400 uppercase">Base (Net)</div>
+                            <div id="histMonthBase" class="font-bold text-white">--</div>
+                        </div>
+                        <div class="text-center bg-amber-950/30 p-2 rounded border border-amber-500/20">
+                            <div class="text-[9px] text-amber-400 uppercase">Pépite (Net)</div>
+                            <div id="histMonthPepite" class="font-bold text-white">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- BLOC STATISTIQUES DU JOUR -->
@@ -59,7 +104,7 @@
                 </div>
             </div>
             <div id="statGlobal" class="text-center text-[10px] text-zinc-400 mt-3 font-semibold bg-zinc-800/50 py-2 rounded-lg border border-zinc-700/50">
-                Mise totale simulée : 0 € (1€ par course)
+                Mise totale simulée : 0 €
             </div>
         </div>
 
@@ -87,8 +132,8 @@
         <!-- 2 Chevaux Clés Intelligents -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg relative">
             <div class="flex justify-between items-center">
-                <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés (Base & Pépite)</h2>
-                <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1 rounded border border-emerald-500/30 font-semibold transition flex items-center space-x-1">
+                <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés</h2>
+                <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1 rounded border border-emerald-500/30 font-semibold transition flex items-center">
                     <i class="fa-solid fa-rotate mr-1"></i> Actualiser
                 </button>
             </div>
@@ -145,6 +190,8 @@
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
             statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement...';
+            document.getElementById('statsBlock').classList.add('hidden');
+            document.getElementById('historyBlock').classList.add('hidden');
 
             const parts = dateInput.split('-');
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
@@ -152,7 +199,6 @@
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
                 const data = await res.json();
-
                 let reunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                 
                 if (reunions.length > 0) {
@@ -164,7 +210,6 @@
                     reunions.forEach((r, idx) => {
                         let opt = document.createElement('option');
                         opt.value = idx;
-                        
                         let coursesList = r.courses || r.races || r.lesCourses || [];
                         let timeStr = "";
                         if (r.heurereunion || r.heurePremierDepart) {
@@ -172,7 +217,6 @@
                         } else if (coursesList[0] && coursesList[0].heureDepart) {
                             timeStr = ` 🕒 [${formatTime(coursesList[0].heureDepart)}]`;
                         }
-
                         let hipName = r.hippodrome ? (r.hippodrome.libelleLong || r.hippodrome.libelleCourt || r.hippodrome.nom) : 'Hippodrome';
                         opt.textContent = `R${r.numOfficiel || (idx+1)} - ${hipName}${timeStr} (${coursesList.length} courses)`;
                         select.appendChild(opt);
@@ -184,7 +228,7 @@
                     throw new Error("Aucune réunion");
                 }
             } catch (e) {
-                statusText.innerHTML = '<span class="text-red-400">Erreur de chargement du programme</span>';
+                statusText.innerHTML = '<span class="text-red-400">Erreur réseau</span>';
             }
         }
 
@@ -208,12 +252,8 @@
                     raceSelect.appendChild(opt);
                 });
             } else {
-                let opt = document.createElement('option');
-                opt.value = "";
-                opt.textContent = "Aucune course disponible";
-                raceSelect.appendChild(opt);
+                raceSelect.innerHTML = '<option value="">Aucune course</option>';
             }
-
             if (currentRaceVal !== "") raceSelect.value = currentRaceVal;
         }
 
@@ -225,7 +265,6 @@
             let mIdx = document.getElementById('meetingSelect').value;
             let rIdx = document.getElementById('raceSelect').value;
             if (mIdx === "" || rIdx === "") return;
-
             await loadLivePmu();
             document.getElementById('meetingSelect').value = mIdx;
             onMeetingChange();
@@ -233,16 +272,13 @@
             await fetchRaceData();
         }
 
-        // Fonction pour calculer l'algorithme sur une liste de partants
         function computeAlgorithm(partants) {
             let processed = partants.map((p, idx) => {
                 let musique = p.musique || p.form || "0p";
                 let rawCote = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
                               ? p.dernierRapportDirect.rapport 
                               : (p.probabiliteEvolution ? p.probabiliteEvolution : "15.0");
-
                 let cote = parseFloat(String(rawCote).replace(',', '.')) || 15.0;
-
                 let coteScore = cote <= 3 ? 95 : (cote <= 6 ? 80 : (cote <= 12 ? 65 : (cote <= 25 ? 40 : 15)));
                 let musiqueScore = evaluateMusique(musique);
                 let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
@@ -259,20 +295,16 @@
                     ordreArrivee: p.ordreArrivee
                 };
             });
-
             let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
             let baseHorse = sortedByBase[0];
             let remaining = processed.filter(p => p.num !== baseHorse?.num);
             let nuggetHorse = remaining.sort((a, b) => b.nuggetScore - a.nuggetScore)[0];
-
             return { processed, baseHorse, nuggetHorse };
         }
 
-        // Extrait intelligemment le rapport du "Simple Gagnant" dans les données complexes du PMU
         function getGagnantRapport(listeRapports, horseNum) {
             let maxGain = 0;
             if (!listeRapports || listeRapports.length === 0) return 0;
-            
             listeRapports.forEach(repGroup => {
                 let typePari = (repGroup.typePari || repGroup.libellePari || "").toUpperCase();
                 if (typePari.includes('SIMPLE') || typePari === 'PARI') {
@@ -384,10 +416,8 @@
                     tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-2.5">${p.baseScore}%</td>`;
                     tbody.appendChild(tr);
                 });
-
                 let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
                 document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
-
             } catch (e) {}
         }
 
@@ -410,8 +440,52 @@
             return Math.min(98, Math.max(10, Math.round(score)));
         }
 
-        // --- Bilan de fin de journée avec Gains & Bénéfices ---
+        // --- NOUVEAU : Sauvegarde locale et affichage de l'historique ---
+        function getSavedStats(daysBack) {
+            let totalNetBase = 0;
+            let totalNetPepite = 0;
+            let today = new Date();
+            for(let i=0; i<daysBack; i++) {
+                let d = new Date(today);
+                d.setDate(today.getDate() - i);
+                let key = `pmu_stats_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+                let saved = localStorage.getItem(key);
+                if (saved) {
+                    let parsed = JSON.parse(saved);
+                    totalNetBase += parsed.netBase;
+                    totalNetPepite += parsed.netPepite;
+                }
+            }
+            return { totalNetBase, totalNetPepite };
+        }
+
+        function showHistoryStats() {
+            document.getElementById('statsBlock').classList.add('hidden');
+            let historyBlock = document.getElementById('historyBlock');
+            historyBlock.classList.remove('hidden');
+
+            let weekStats = getSavedStats(7);
+            let monthStats = getSavedStats(30);
+
+            const formatMoney = (val) => {
+                let color = val >= 0 ? 'text-emerald-400' : 'text-red-400';
+                let sign = val > 0 ? '+' : '';
+                return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
+            };
+            const formatMoneyAm = (val) => {
+                let color = val >= 0 ? 'text-amber-400' : 'text-red-400';
+                let sign = val > 0 ? '+' : '';
+                return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
+            };
+
+            document.getElementById('histWeekBase').innerHTML = formatMoney(weekStats.totalNetBase);
+            document.getElementById('histWeekPepite').innerHTML = formatMoneyAm(weekStats.totalNetPepite);
+            document.getElementById('histMonthBase').innerHTML = formatMoney(monthStats.totalNetBase);
+            document.getElementById('histMonthPepite').innerHTML = formatMoneyAm(monthStats.totalNetPepite);
+        }
+
         async function calculateDailyStats() {
+            document.getElementById('historyBlock').classList.add('hidden');
             let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
             let statBase = document.getElementById('statBase');
@@ -426,7 +500,7 @@
             gainBaseEl.innerHTML = `Retours : 0.00 € <br><span class="text-emerald-400 font-bold">Bénéfice : 0.00 €</span>`;
             gainPepiteEl.innerHTML = `Retours : 0.00 € <br><span class="text-amber-400 font-bold">Bénéfice : 0.00 €</span>`;
             statGlobal.textContent = "Recherche en cours...";
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses terminées...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -445,15 +519,11 @@
             });
 
             if (finishedRaces.length === 0) {
-                statsProgress.textContent = "Aucune course n'est terminée pour le moment.";
+                statsProgress.textContent = "Aucune course terminée pour cette date.";
                 return;
             }
 
-            let baseGagnantes = 0;
-            let pepiteGagnantes = 0;
-            let totalGainBase = 0;
-            let totalGainPepite = 0;
-            let coursesValidees = 0;
+            let baseGagnantes = 0, pepiteGagnantes = 0, totalGainBase = 0, totalGainPepite = 0, coursesValidees = 0;
 
             for (let i = 0; i < finishedRaces.length; i++) {
                 let r = finishedRaces[i];
@@ -464,51 +534,42 @@
                     if (!res.ok) continue;
                     const data = await res.json();
                     let partants = data.participants || [];
-
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
+                    
                     if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
                         let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                        // Analyse de la Base
                         if (algoResult.baseHorse && algoResult.baseHorse.ordreArrivee === 1) {
                             baseGagnantes++;
-                            let gain = getGagnantRapport(rapportsList, algoResult.baseHorse.num);
-                            if (gain === 0) gain = algoResult.baseHorse.cote; // Fallback sur la cote finale si le rapport n'est pas publié
+                            let gain = getGagnantRapport(rapportsList, algoResult.baseHorse.num) || algoResult.baseHorse.cote;
                             totalGainBase += gain;
                         }
-                        
-                        // Analyse de la Pépite
                         if (algoResult.nuggetHorse && algoResult.nuggetHorse.ordreArrivee === 1) {
                             pepiteGagnantes++;
-                            let gain = getGagnantRapport(rapportsList, algoResult.nuggetHorse.num);
-                            if (gain === 0) gain = algoResult.nuggetHorse.cote;
+                            let gain = getGagnantRapport(rapportsList, algoResult.nuggetHorse.num) || algoResult.nuggetHorse.cote;
                             totalGainPepite += gain;
                         }
 
-                        // Calcul du bénéfice (Gain total - 1€ de mise par course jouée)
                         let netBase = totalGainBase - coursesValidees;
                         let netPepite = totalGainPepite - coursesValidees;
-                        let colorBase = netBase >= 0 ? 'text-emerald-400' : 'text-red-400';
-                        let colorPepite = netPepite >= 0 ? 'text-amber-400' : 'text-red-400';
-                        let signBase = netBase > 0 ? '+' : '';
-                        let signPepite = netPepite > 0 ? '+' : '';
-
-                        // Mise à jour visuelle en direct
+                        
                         statBase.innerHTML = `${baseGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
                         statPepite.innerHTML = `${pepiteGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
-                        
-                        gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${colorBase} font-bold">Bénéfice net : ${signBase}${netBase.toFixed(2)} €</span>`;
-                        gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${colorPepite} font-bold">Bénéfice net : ${signPepite}${netPepite.toFixed(2)} €</span>`;
-                        
-                        statGlobal.textContent = `Bilan sur ${coursesValidees} courses (Mise totale : ${coursesValidees} € engagés par sélection)`;
+                        gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${netBase >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold">Bénéfice : ${netBase > 0 ? '+' : ''}${netBase.toFixed(2)} €</span>`;
+                        gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'} font-bold">Bénéfice : ${netPepite > 0 ? '+' : ''}${netPepite.toFixed(2)} €</span>`;
+                        statGlobal.textContent = `Bilan sur ${coursesValidees} courses (Mise : ${coursesValidees} €)`;
+
+                        // SAUVEGARDE LOCALE DANS LE TÉLÉPHONE
+                        localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
+                            netBase: netBase,
+                            netPepite: netPepite
+                        }));
                     }
-                } catch (e) {
-                    console.error("Erreur d'analyse sur " + r.name);
-                }
+                } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété et sauvegardé !</span>`;
         }
 
         window.onload = loadLivePmu;
