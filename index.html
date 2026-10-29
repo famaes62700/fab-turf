@@ -12,7 +12,7 @@
     <header class="bg-zinc-900 border-b border-zinc-800 p-4 sticky top-0 z-50">
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <h1 class="text-lg font-black uppercase tracking-wider text-emerald-500"><i class="fa-solid fa-horse-head mr-2"></i>PMU Direct</h1>
-            <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700">
+            <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer">
         </div>
     </header>
 
@@ -20,14 +20,27 @@
         <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au PMU...</div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <select id="meetingSelect" onchange="onMeetingChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-xs text-white">
+            <select id="meetingSelect" onchange="onMeetingChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500">
                 <option value="">-- Réunion / Hippodrome --</option>
             </select>
-            <select id="raceSelect" onchange="onRaceChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-xs text-white">
+            <select id="raceSelect" onchange="onRaceChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500">
                 <option value="">-- Course --</option>
             </select>
         </div>
 
+        <!-- Bloc Arrivée Officielle -->
+        <div id="arrivalBlock" class="hidden bg-blue-950/50 border border-blue-500/40 rounded-xl p-3 space-y-2">
+            <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider"><i class="fa-solid fa-flag-checkered mr-1"></i> Arrivée Officielle</h2>
+            <div id="arrivalList" class="flex flex-wrap gap-2 text-xs font-bold text-white"></div>
+        </div>
+
+        <!-- Bloc Rapports Définitifs -->
+        <div id="reportsBlock" class="hidden bg-zinc-900 border border-emerald-500/30 rounded-xl p-3 space-y-2">
+            <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-euro-sign mr-1"></i> Rapports Définitifs (pour 1 €)</h2>
+            <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+        </div>
+
+        <!-- 2 Chevaux Clés -->
         <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-4 space-y-2">
             <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> 2 Chevaux Clés (Base & Pépite)</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -41,7 +54,7 @@
         </div>
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden text-xs">
-            <div class="p-3 border-b border-zinc-800 font-bold text-zinc-300">Partants & Cotes</div>
+            <div id="raceInfoDetails" class="p-3 border-b border-zinc-800 font-bold text-zinc-300">Partants & Cotes</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
@@ -66,6 +79,17 @@
 
         let liveMeetingsData = [];
 
+        function formatTime(timeValue) {
+            if (!timeValue) return '';
+            if (typeof timeValue === 'number') {
+                const date = new Date(timeValue);
+                const h = String(date.getHours()).padStart(2, '0');
+                const m = String(date.getMinutes()).padStart(2, '0');
+                return `${h}h${m}`;
+            }
+            return String(timeValue);
+        }
+
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
@@ -86,7 +110,8 @@
                     reunions.forEach((r, idx) => {
                         let opt = document.createElement('option');
                         opt.value = idx;
-                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${r.hippodrome ? r.hippodrome.libelleLong : 'Hippodrome'} (${r.courses.length} courses)`;
+                        let timeStr = r.heurePremierDepart ? ` [${formatTime(r.heurePremierDepart)}]` : '';
+                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${r.hippodrome ? r.hippodrome.libelleLong : 'Hippodrome'}${timeStr} (${r.courses.length} courses)`;
                         select.appendChild(opt);
                     });
                     statusText.innerHTML = `<span class="text-emerald-400">Prêt (${reunions.length} réunions)</span>`;
@@ -108,7 +133,8 @@
             meeting.courses.forEach((c, cIdx) => {
                 let opt = document.createElement('option');
                 opt.value = cIdx;
-                opt.textContent = `Course ${c.numOrdre || (cIdx+1)} : ${c.libelle || 'Prix'}`;
+                let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
+                opt.textContent = `C${c.numOrdre || (cIdx+1)}${courseTime} : ${c.libelle || 'Prix'}`;
                 raceSelect.appendChild(opt);
             });
         }
@@ -132,7 +158,55 @@
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
                 const data = await res.json();
                 let partants = data.participants || [];
+                let rapportsData = data.rapports;
 
+                // 1. Arrivée
+                let arrivalBlock = document.getElementById('arrivalBlock');
+                let arrivalList = document.getElementById('arrivalList');
+                arrivalList.innerHTML = '';
+                let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a, b) => a.ordreArrivee - b.ordreArrivee);
+
+                if (arrivees.length > 0) {
+                    arrivalBlock.classList.remove('hidden');
+                    arrivees.slice(0, 5).forEach((p, idx) => {
+                        let div = document.createElement('div');
+                        div.className = "bg-blue-900/60 px-2.5 py-1 rounded border border-blue-500/40";
+                        div.innerHTML = `<span class="text-blue-300">${p.ordreArrivee}er:</span> N°${p.numPmu || p.numOrdre} ${p.nom}`;
+                        arrivalList.appendChild(div);
+                    });
+                } else {
+                    arrivalBlock.classList.add('hidden');
+                }
+
+                // 2. Rapports
+                let reportsBlock = document.getElementById('reportsBlock');
+                let reportsGrid = document.getElementById('reportsGrid');
+                reportsGrid.innerHTML = '';
+                let hasReports = false;
+                let listeRapports = Array.isArray(rapportsData) ? rapportsData : (rapportsData?.lesRapports || rapportsData?.rapports || []);
+
+                listeRapports.forEach(repGroup => {
+                    let typeJeu = repGroup.typePari || repGroup.libellePari || 'Pari';
+                    let details = repGroup.rapports || repGroup.dividendes || [];
+                    details.forEach(r => {
+                        let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
+                        if (montant) {
+                            hasReports = true;
+                            let val = parseFloat(montant);
+                            if (val > 100) val = val / 100;
+                            let combo = r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
+                            let div = document.createElement('div');
+                            div.className = "bg-zinc-800 p-2 rounded border border-zinc-700 flex justify-between";
+                            div.innerHTML = `<span class="text-zinc-400">${r.libelleRapport || typeJeu}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
+                            reportsGrid.appendChild(div);
+                        }
+                    });
+                });
+
+                if (hasReports) reportsBlock.classList.remove('hidden');
+                else reportsBlock.classList.add('hidden');
+
+                // 3. Traitement Partants & Scores
                 let processed = partants.map((p, idx) => {
                     let musique = p.musique || "0p";
                     let cote = p.dernierRapportDirect ? p.dernierRapportDirect.rapport : 15.0;
@@ -142,7 +216,8 @@
                         nom: p.nom || "Cheval",
                         musique: musique,
                         cote: numCote,
-                        score: Math.round(Math.random() * 40 + 50)
+                        score: Math.round(Math.random() * 40 + 50),
+                        ordreArrivee: p.ordreArrivee
                     };
                 });
 
@@ -157,9 +232,14 @@
                 tbody.innerHTML = '';
                 processed.forEach(p => {
                     let tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.cote}</td><td class="p-2.5">${p.score}%</td>`;
+                    let tag = p.ordreArrivee ? `<span class="ml-1 text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
+                    tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.cote}</td><td class="p-2.5">${p.score}%</td>`;
                     tbody.appendChild(tr);
                 });
+
+                let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
+                document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
+
             } catch (e) {}
         }
 
