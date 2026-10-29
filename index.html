@@ -29,7 +29,7 @@
             <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au PMU...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
-                    <i class="fa-solid fa-calendar-days mr-1"></i> Historique
+                    <i class="fa-solid fa-calendar-days mr-1"></i> Bilan Mensuel
                 </button>
                 <button onclick="calculateDailyStats()" class="bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs px-3 py-1.5 rounded border border-indigo-500/40 font-bold transition flex items-center">
                     <i class="fa-solid fa-chart-pie mr-1"></i> Bilan du Jour
@@ -37,34 +37,33 @@
             </div>
         </div>
 
-        <!-- BLOC HISTORIQUE (CALENDRIER SEMAINE & MOIS) -->
+        <!-- BLOC HISTORIQUE (COMPTABILITÉ SEMAINE / MOIS) -->
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Vos Gains Net (Année en cours)</h2>
+                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Vos Gains Cumulés</h2>
                 <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div class="space-y-4">
-                <!-- Semaine en cours -->
+            <div class="space-y-4 max-h-96 overflow-y-auto pr-1">
+                <!-- Semaine Officielle (Lun - Dim) -->
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
-                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Semaine (Lundi au Dimanche)</h3>
+                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Cette Semaine (Lun - Dim)</h3>
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <div class="text-center bg-emerald-950/30 p-2 rounded border border-emerald-500/20">
-                            <div class="text-[9px] text-emerald-400 uppercase">Base</div>
-                            <div id="histWeekBase" class="font-bold text-white">--</div>
+                            <div class="text-[9px] text-emerald-400 uppercase">Base (Net)</div>
+                            <div id="histWeekBase" class="font-bold text-white mt-0.5">--</div>
                         </div>
                         <div class="text-center bg-amber-950/30 p-2 rounded border border-amber-500/20">
-                            <div class="text-[9px] text-amber-400 uppercase">Pépite</div>
-                            <div id="histWeekPepite" class="font-bold text-white">--</div>
+                            <div class="text-[9px] text-amber-400 uppercase">Pépite (Net)</div>
+                            <div id="histWeekPepite" class="font-bold text-white mt-0.5">--</div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Mois de l'année -->
+                <!-- Bilan Mois par Mois -->
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
-                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Bilan Mensuel (Janvier - Décembre)</h3>
+                    <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Mois par Mois (<span id="currentYearText"></span>)</h3>
                     <div id="monthsGrid" class="space-y-2">
-                        <!-- Généré en JS -->
+                        <!-- Les 12 mois seront injectés ici -->
                     </div>
                 </div>
             </div>
@@ -110,19 +109,16 @@
             </select>
         </div>
 
-        <!-- Bloc Arrivée Officielle -->
         <div id="arrivalBlock" class="hidden bg-blue-950/50 border border-blue-500/40 rounded-xl p-3 space-y-2">
             <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider"><i class="fa-solid fa-flag-checkered mr-1"></i> Arrivée Officielle</h2>
             <div id="arrivalList" class="flex flex-wrap gap-2 text-xs font-bold text-white"></div>
         </div>
 
-        <!-- Bloc Rapports Définitifs -->
         <div id="reportsBlock" class="hidden bg-zinc-900 border border-emerald-500/30 rounded-xl p-3 space-y-2">
             <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-euro-sign mr-1"></i> Rapports Définitifs (pour 1 €)</h2>
             <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
         </div>
 
-        <!-- 2 Chevaux Clés Intelligents -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg relative">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés</h2>
@@ -373,3 +369,229 @@
                             hasReports = true;
                             let val = parseFloat(montant);
                             if (val > 100) val = val / 100;
+                            let combo = r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
+                            let div = document.createElement('div');
+                            div.className = "bg-zinc-800 p-2 rounded border border-zinc-700 flex justify-between";
+                            div.innerHTML = `<span class="text-zinc-400">${r.libelleRapport || typeJeu}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
+                            reportsGrid.appendChild(div);
+                        }
+                    });
+                });
+
+                if (hasReports) reportsBlock.classList.remove('hidden');
+                else reportsBlock.classList.add('hidden');
+
+                let algoResult = computeAlgorithm(partants);
+                let { processed, baseHorse, nuggetHorse } = algoResult;
+
+                if (baseHorse) {
+                    document.getElementById('top1Name').textContent = `${baseHorse.num}. ${baseHorse.nom}`;
+                    document.getElementById('top1Stats').textContent = `Confiance : ${baseHorse.baseScore}% | Cote : ${baseHorse.coteDisplay}`;
+                }
+                if (nuggetHorse) {
+                    document.getElementById('top2Name').textContent = `${nuggetHorse.num}. ${nuggetHorse.nom}`;
+                    document.getElementById('top2Stats').textContent = `Potentiel : ${nuggetHorse.nuggetScore}% | Cote : ${nuggetHorse.coteDisplay}`;
+                }
+
+                processed.sort((a, b) => b.baseScore - a.baseScore);
+                let tbody = document.getElementById('runnersTableBody');
+                tbody.innerHTML = '';
+                processed.forEach(p => {
+                    let tr = document.createElement('tr');
+                    let tag = p.ordreArrivee ? `<span class="ml-1 text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
+                    if (p.num === baseHorse?.num) tag += '<span class="ml-1 text-[10px] bg-emerald-500/20 text-emerald-400 px-1 rounded">Base</span>';
+                    if (p.num === nuggetHorse?.num) tag += '<span class="ml-1 text-[10px] bg-amber-500/20 text-amber-400 px-1 rounded">Pépite</span>';
+
+                    tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-2.5">${p.baseScore}%</td>`;
+                    tbody.appendChild(tr);
+                });
+                let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
+                document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
+            } catch (e) {}
+        }
+
+        function evaluateMusique(musique) {
+            let score = 30;
+            const numbers = musique.match(/\d+/g);
+            if (numbers && numbers.length > 0) {
+                let pts = 0;
+                let count = Math.min(numbers.length, 4);
+                for (let i = 0; i < count; i++) {
+                    let val = parseInt(numbers[i], 10);
+                    if (val === 1) pts += 10;
+                    else if (val === 2) pts += 8;
+                    else if (val === 3) pts += 6;
+                    else if (val === 4 || val === 5) pts += 4;
+                    else pts += 1;
+                }
+                score = (pts / count) * 10;
+            }
+            return Math.min(98, Math.max(10, Math.round(score)));
+        }
+
+        // --- CALENDRIER : SEMAINE ET MOIS ---
+        function formatMoneyHTML(val, type) {
+            if (val === 0) return `<span class="text-zinc-500">0.00 €</span>`;
+            let color = val > 0 ? (type === 'base' ? 'text-emerald-400' : 'text-amber-400') : 'text-red-400';
+            let sign = val > 0 ? '+' : '';
+            return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
+        }
+
+        function getStatForDateObj(d) {
+            let key = `pmu_stats_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let saved = localStorage.getItem(key);
+            if (saved) return JSON.parse(saved);
+            return { netBase: 0, netPepite: 0 };
+        }
+
+        function showHistoryStats() {
+            document.getElementById('statsBlock').classList.add('hidden');
+            let historyBlock = document.getElementById('historyBlock');
+            historyBlock.classList.remove('hidden');
+
+            let today = new Date();
+            let year = today.getFullYear();
+            document.getElementById('currentYearText').textContent = year;
+
+            // --- 1. SEMAINE (Du lundi en cours au dimanche) ---
+            let dayOfWeek = today.getDay() || 7; // Dimanche = 7
+            let monday = new Date(today);
+            monday.setDate(today.getDate() - (dayOfWeek - 1)); // Retour au lundi
+            
+            let weekBase = 0, weekPepite = 0;
+            for(let i=0; i<7; i++) {
+                let d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                let s = getStatForDateObj(d);
+                weekBase += s.netBase;
+                weekPepite += s.netPepite;
+            }
+            document.getElementById('histWeekBase').innerHTML = formatMoneyHTML(weekBase, 'base');
+            document.getElementById('histWeekPepite').innerHTML = formatMoneyHTML(weekPepite, 'pepite');
+
+            // --- 2. MOIS PAR MOIS ---
+            const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Sept", "Oct", "Nov", "Déc"];
+            let monthsGrid = document.getElementById('monthsGrid');
+            monthsGrid.innerHTML = '';
+
+            for (let m = 0; m < 12; m++) {
+                let totalBase = 0;
+                let totalPepite = 0;
+                let daysInMonth = new Date(year, m + 1, 0).getDate(); // Nombre de jours dans le mois
+                
+                for (let d = 1; d <= daysInMonth; d++) {
+                    let s = getStatForDateObj(new Date(year, m, d));
+                    totalBase += s.netBase;
+                    totalPepite += s.netPepite;
+                }
+
+                // Afficher le mois même s'il est à zéro pour avoir la grille complète
+                let div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-700/50 text-xs";
+                div.innerHTML = `
+                    <div class="w-16 font-bold text-zinc-400">${monthNames[m]}</div>
+                    <div class="flex-1 text-center border-l border-r border-zinc-700/50 px-2">
+                        <span class="text-[9px] text-zinc-500 uppercase block mb-0.5">Base</span>
+                        ${formatMoneyHTML(totalBase, 'base')}
+                    </div>
+                    <div class="flex-1 text-center px-2">
+                        <span class="text-[9px] text-zinc-500 uppercase block mb-0.5">Pépite</span>
+                        ${formatMoneyHTML(totalPepite, 'pepite')}
+                    </div>
+                `;
+                monthsGrid.appendChild(div);
+            }
+        }
+
+        async function calculateDailyStats() {
+            document.getElementById('historyBlock').classList.add('hidden');
+            let statsBlock = document.getElementById('statsBlock');
+            let statsProgress = document.getElementById('statsProgress');
+            let statBase = document.getElementById('statBase');
+            let statPepite = document.getElementById('statPepite');
+            let gainBaseEl = document.getElementById('gainBase');
+            let gainPepiteEl = document.getElementById('gainPepite');
+            let statGlobal = document.getElementById('statGlobal');
+
+            statsBlock.classList.remove('hidden');
+            statBase.innerHTML = `0 <span class="text-xs font-normal text-zinc-400">/ 0</span>`;
+            statPepite.innerHTML = `0 <span class="text-xs font-normal text-zinc-400">/ 0</span>`;
+            gainBaseEl.innerHTML = `Retours : 0.00 € <br><span class="text-emerald-400 font-bold">Bénéfice : 0.00 €</span>`;
+            gainPepiteEl.innerHTML = `Retours : 0.00 € <br><span class="text-amber-400 font-bold">Bénéfice : 0.00 €</span>`;
+            statGlobal.textContent = "Recherche en cours...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses...";
+
+            let dateInput = document.getElementById('raceDate').value;
+            let parts = dateInput.split('-');
+            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+
+            let finishedRaces = [];
+            liveMeetingsData.forEach((m, mIdx) => {
+                let rNum = m.numOfficiel || (mIdx + 1);
+                let courses = m.courses || m.races || m.lesCourses || [];
+                courses.forEach((c, cIdx) => {
+                    let cNum = c.numOrdre || (cIdx + 1);
+                    if (c.heureDepart && new Date(c.heureDepart) < new Date()) {
+                        finishedRaces.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
+                    }
+                });
+            });
+
+            if (finishedRaces.length === 0) {
+                statsProgress.textContent = "Aucune course terminée pour cette date.";
+                return;
+            }
+
+            let baseGagnantes = 0, pepiteGagnantes = 0, totalGainBase = 0, totalGainPepite = 0, coursesValidees = 0;
+
+            for (let i = 0; i < finishedRaces.length; i++) {
+                let r = finishedRaces[i];
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours (${i+1}/${finishedRaces.length}) : ${r.name}`;
+
+                try {
+                    const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    let partants = data.participants || [];
+                    let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
+                    
+                    if (arrivees.length > 0) {
+                        coursesValidees++;
+                        let algoResult = computeAlgorithm(partants);
+                        let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+
+                        if (algoResult.baseHorse && algoResult.baseHorse.ordreArrivee === 1) {
+                            baseGagnantes++;
+                            let gain = getGagnantRapport(rapportsList, algoResult.baseHorse.num) || algoResult.baseHorse.cote;
+                            totalGainBase += gain;
+                        }
+                        if (algoResult.nuggetHorse && algoResult.nuggetHorse.ordreArrivee === 1) {
+                            pepiteGagnantes++;
+                            let gain = getGagnantRapport(rapportsList, algoResult.nuggetHorse.num) || algoResult.nuggetHorse.cote;
+                            totalGainPepite += gain;
+                        }
+
+                        let netBase = totalGainBase - coursesValidees;
+                        let netPepite = totalGainPepite - coursesValidees;
+                        
+                        statBase.innerHTML = `${baseGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
+                        statPepite.innerHTML = `${pepiteGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
+                        gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${netBase >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold">Bénéfice : ${netBase > 0 ? '+' : ''}${netBase.toFixed(2)} €</span>`;
+                        gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'} font-bold">Bénéfice : ${netPepite > 0 ? '+' : ''}${netPepite.toFixed(2)} €</span>`;
+                        statGlobal.textContent = `Bilan sur ${coursesValidees} courses (Mise : ${coursesValidees} €)`;
+
+                        // SAUVEGARDE LOCALE 
+                        localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
+                            netBase: netBase,
+                            netPepite: netPepite
+                        }));
+                    }
+                } catch (e) {}
+            }
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété et sauvegardé !</span>`;
+        }
+
+        window.onload = loadLivePmu;
+    </script>
+</body>
+</html>
