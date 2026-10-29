@@ -53,13 +53,12 @@
         <!-- Section des 2 Chevaux Clés -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border-2 border-pmu-green/50 rounded-2xl p-5 shadow-xl relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-pmu-green text-white text-xs font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                <i class="fa-solid fa-crosshairs mr-1"></i> Stratégie Gagnante
+                <i class="fa-solid fa-crosshairs mr-1"></i> Simple Gagnant
             </div>
             <h2 class="text-sm font-bold uppercase tracking-wider text-pmu-green mb-3 flex items-center">
                 <i class="fa-solid fa-star mr-2"></i> Nos 2 Chevaux Clés
             </h2>
             <div id="topSelections" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Cheval 1 : La Base -->
                 <div class="bg-zinc-800/90 border border-emerald-500/50 p-3.5 rounded-xl flex items-center space-x-3">
                     <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-lg">
                         <i class="fa-solid fa-shield-halved text-base"></i>
@@ -71,7 +70,6 @@
                     </div>
                 </div>
 
-                <!-- Cheval 2 : La Pépite -->
                 <div class="bg-zinc-800/90 border border-amber-500/50 p-3.5 rounded-xl flex items-center space-x-3">
                     <div class="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-400 flex items-center justify-center font-black text-amber-400 text-lg">
                         <i class="fa-solid fa-gem text-base"></i>
@@ -81,6 +79,40 @@
                         <div id="top2Name" class="font-bold text-white text-base">En attente...</div>
                         <div id="top2Stats" class="text-xs text-zinc-300">--</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section NOUVELLE : Couplés & Trio -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Bloc Couplés -->
+            <div class="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl shadow space-y-3">
+                <h3 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
+                    <i class="fa-solid fa-layer-group mr-2"></i> Couplés Probables (Gagnant / Placé)
+                </h3>
+                <div class="space-y-2 text-xs">
+                    <div class="bg-zinc-800/80 p-2.5 rounded-lg border border-zinc-700/50 flex justify-between items-center">
+                        <span class="text-zinc-400 font-medium">Couplé Gagnant (1er - 2ème) :</span>
+                        <span id="coupleGagnant" class="font-bold text-emerald-400 text-sm">--</span>
+                    </div>
+                    <div class="bg-zinc-800/80 p-2.5 rounded-lg border border-zinc-700/50 flex justify-between items-center">
+                        <span class="text-zinc-400 font-medium">Couplés Placés :</span>
+                        <span id="couplePlace" class="font-bold text-emerald-300 text-sm">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloc Trio -->
+            <div class="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl shadow space-y-3">
+                <h3 class="text-xs font-bold uppercase text-amber-400 tracking-wider flex items-center">
+                    <i class="fa-solid fa-trophy mr-2"></i> Sélection Trio (Ordre / Désordre)
+                </h3>
+                <div class="bg-zinc-800/80 p-3 rounded-lg border border-zinc-700/50 space-y-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-zinc-400 text-xs font-medium">Combinaison 3 Chevaux :</span>
+                        <span id="trioCombo" class="font-black text-amber-400 text-base">--</span>
+                    </div>
+                    <div id="trioDetail" class="text-[11px] text-zinc-400 italic">Sélectionnez une course pour générer le Trio.</div>
                 </div>
             </div>
         </div>
@@ -116,7 +148,6 @@
 
         let liveMeetingsData = [];
 
-        // Utilitaire pour convertir un timestamp (ms) ou heure brute en format Lisible (ex: 13h45)
         function formatTime(timeValue) {
             if (!timeValue) return '';
             if (typeof timeValue === 'number') {
@@ -168,7 +199,6 @@
                 const opt = document.createElement('option');
                 opt.value = idx;
                 
-                // Récupération de l'heure de la réunion
                 let timeStr = "";
                 if (r.heurePremierDepart) {
                     timeStr = ` [${formatTime(r.heurePremierDepart)}]`;
@@ -195,7 +225,6 @@
                     const opt = document.createElement('option');
                     opt.value = cIdx;
                     
-                    // Récupération de l'heure de départ de la course
                     let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
                     
                     opt.textContent = `C${c.numOrdre || (cIdx+1)}${courseTime} : ${c.libelle || 'Prix'} (${c.discipline || 'Trot'})`;
@@ -269,13 +298,20 @@
                 };
             });
 
+            // 1. Détermination de la BASE
             let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
             let baseHorse = sortedByBase[0];
 
+            // 2. Détermination de la PÉPITE
             let remainingRunners = processed.filter(p => p.num !== baseHorse.num);
             let sortedByNugget = remainingRunners.sort((a, b) => b.nuggetScore - a.nuggetScore);
             let nuggetHorse = sortedByNugget[0];
 
+            // 3. Détermination du 3ème Cheval pour le Trio (3e meilleur score global)
+            let remainingForTrio = remainingRunners.filter(p => p.num !== (nuggetHorse ? nuggetHorse.num : null));
+            let thirdHorse = remainingForTrio.sort((a, b) => b.baseScore - a.baseScore)[0];
+
+            // Affichage Chevaux Clés
             if (baseHorse) {
                 document.getElementById('top1Name').textContent = `${baseHorse.num}. ${baseHorse.nom}`;
                 document.getElementById('top1Stats').textContent = `Confiance : ${baseHorse.baseScore}% | Cote : ${baseHorse.coteDisplay}`;
@@ -286,8 +322,22 @@
                 document.getElementById('top2Stats').textContent = `Potentiel Gain : ${nuggetHorse.nuggetScore}% | Cote : ${nuggetHorse.coteDisplay}`;
             }
 
+            // Affichage Couplés et Trio
+            if (baseHorse && nuggetHorse) {
+                document.getElementById('coupleGagnant').textContent = `${baseHorse.num} - ${nuggetHorse.num}`;
+                
+                if (thirdHorse) {
+                    document.getElementById('couplePlace').textContent = `${baseHorse.num}-${nuggetHorse.num} / ${baseHorse.num}-${thirdHorse.num}`;
+                    document.getElementById('trioCombo').textContent = `${baseHorse.num} - ${nuggetHorse.num} - ${thirdHorse.num}`;
+                    document.getElementById('trioDetail').textContent = `Ordre conseillé : ${baseHorse.num} (1er), ${nuggetHorse.num} (2e), ${thirdHorse.num} (3e)`;
+                } else {
+                    document.getElementById('couplePlace').textContent = `${baseHorse.num} - ${nuggetHorse.num}`;
+                    document.getElementById('trioCombo').textContent = `--`;
+                }
+            }
+
             processed.sort((a, b) => b.baseScore - a.baseScore);
-            displayTable(processed, race, baseHorse.num, nuggetHorse ? nuggetHorse.num : null);
+            displayTable(processed, race, baseHorse ? baseHorse.num : null, nuggetHorse ? nuggetHorse.num : null);
         }
 
         function evaluateMusique(musique) {
@@ -333,7 +383,6 @@
             const tbody = document.getElementById('runnersTableBody');
             tbody.innerHTML = '';
             
-            // Formatage de l'heure de départ pour le détail de la course
             let timeInfo = race.heureDepart ? `🕒 Départ : ${formatTime(race.heureDepart)} — ` : '';
             document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} — ${race.distance ? race.distance + 'm' : ''}`;
 
@@ -369,6 +418,10 @@
             document.getElementById('top1Stats').textContent = '--';
             document.getElementById('top2Name').textContent = 'En attente...';
             document.getElementById('top2Stats').textContent = '--';
+            document.getElementById('coupleGagnant').textContent = '--';
+            document.getElementById('couplePlace').textContent = '--';
+            document.getElementById('trioCombo').textContent = '--';
+            document.getElementById('trioDetail').textContent = 'Sélectionnez une course pour générer le Trio.';
             document.getElementById('runnersTableBody').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-zinc-500 italic">Veuillez sélectionner une course ci-dessus.</td></tr>';
             document.getElementById('raceInfoDetails').textContent = '--';
         }
