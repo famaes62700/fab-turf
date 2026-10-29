@@ -215,44 +215,70 @@
         function processRaceData(partants, race) {
             let processed = partants.map((p, idx) => {
                 let musique = p.musique || p.form || "0p";
-                let coteVal = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
+                let rawCote = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
                               ? p.dernierRapportDirect.rapport 
                               : (p.probabiliteEvolution ? p.probabiliteEvolution : "--");
+
+                // Conversion numérique de la cote
+                let numCote = parseFloat(String(rawCote).replace(',', '.'));
+                if (isNaN(numCote) || numCote <= 0) numCote = 20.0;
+
                 return {
                     num: p.numPmu || p.numOrdre || (idx+1),
                     nom: p.nom || "Cheval",
                     musique: musique,
-                    cote: coteVal,
-                    score: calculateScore(musique)
+                    coteDisplay: rawCote !== "--" ? rawCote : numCote.toFixed(1),
+                    numCote: numCote,
+                    score: calculateScore(musique, numCote)
                 };
             });
 
+            // Tri par score algorithmique décroissant
             processed.sort((a, b) => b.score - a.score);
 
             if (processed.length >= 2) {
                 document.getElementById('top1Name').textContent = `${processed[0].num}. ${processed[0].nom}`;
-                document.getElementById('top1Stats').textContent = `Score : ${processed[0].score}% | Cote : ${processed[0].cote}`;
+                document.getElementById('top1Stats').textContent = `Score : ${processed[0].score}% | Cote : ${processed[0].coteDisplay}`;
 
                 document.getElementById('top2Name').textContent = `${processed[1].num}. ${processed[1].nom}`;
-                document.getElementById('top2Stats').textContent = `Score : ${processed[1].score}% | Cote : ${processed[1].cote}`;
+                document.getElementById('top2Stats').textContent = `Score : ${processed[1].score}% | Cote : ${processed[1].coteDisplay}`;
             }
 
             displayTable(processed, race);
         }
 
-        function calculateScore(musique) {
-            let score = 45;
+        function calculateScore(musique, cote) {
+            // 1. Composante Cote PMU (65% du poids) : Plus la cote est basse, plus le score de marché est fort
+            let coteScore = 0;
+            if (cote <= 2.5) coteScore = 95;
+            else if (cote <= 5.0) coteScore = 85;
+            else if (cote <= 8.0) coteScore = 75;
+            else if (cote <= 12.0) coteScore = 60;
+            else if (cote <= 20.0) coteScore = 40;
+            else if (cote <= 40.0) coteScore = 20;
+            else coteScore = 10; // Pour les cotes > 40/1 (outsiders très lointains)
+
+            // 2. Composante Musique (35% du poids) : Analyse des 4 dernières sorties
+            let musiqueScore = 40;
             const numbers = musique.match(/\d+/g);
-            if (numbers) {
+            if (numbers && numbers.length > 0) {
                 let pts = 0;
-                let len = Math.min(numbers.length, 3);
-                for (let i = 0; i < len; i++) {
-                    let val = parseInt(numbers[i]) === 0 ? 10 : parseInt(numbers[i]);
-                    pts += (11 - Math.min(val, 10));
+                let count = Math.min(numbers.length, 4);
+                for (let i = 0; i < count; i++) {
+                    let val = parseInt(numbers[i], 10);
+                    if (val === 1) pts += 10;      // 1er
+                    else if (val === 2) pts += 8; // 2ème
+                    else if (val === 3) pts += 6; // 3ème
+                    else if (val === 4 || val === 5) pts += 4;
+                    else if (val === 0) pts += 0; // Non placé
+                    else pts += 1;
                 }
-                score += (pts / len) * 5;
+                musiqueScore = (pts / count) * 10; // Note sur 100
             }
-            return Math.min(Math.round(score + Math.random() * 5), 98);
+
+            // Calcul combiné du score final (65% Cote + 35% Musique)
+            let finalScore = (coteScore * 0.65) + (musiqueScore * 0.35);
+            return Math.min(98, Math.max(12, Math.round(finalScore)));
         }
 
         function displayTable(participants, race) {
@@ -268,7 +294,7 @@
                 tr.innerHTML = `
                     <td class="p-3 font-medium"><span class="text-emerald-400 mr-2 font-bold">${p.num}</span>${p.nom}</td>
                     <td class="p-3 font-mono text-xs text-zinc-300">${p.musique}</td>
-                    <td class="p-3 font-bold text-emerald-400">${p.cote}</td>
+                    <td class="p-3 font-bold text-emerald-400">${p.coteDisplay}</td>
                     <td class="p-3 font-bold text-white">${p.score}%</td>
                 `;
                 tbody.appendChild(tr);
