@@ -113,28 +113,26 @@
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Contournement des sécurités PMU...</span>';
+            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Récupération du programme en direct...</span>';
 
             const parts = dateInput.split('-');
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             try {
-                // L'adresse officielle du PMU
-                const pmuUrl = `https://online.turf.pmu.fr/client/rest/v1/programme/${ddmmyyyy}`;
-                
-                // On utilise un proxy public mondial très puissant pour passer à travers le blocage (sans passer par l'API Vercel)
-                const response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${pmuUrl}`);
-                
-                if (!response.ok) throw new Error("Le pare-feu du PMU a bloqué la requête");
+                // Adresse officielle du PMU via le passerelle CORS.io (haute stabilité)
+                const targetUrl = `https://online.turf.pmu.fr/client/rest/v1/programme/${ddmmyyyy}`;
+                const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+
+                if (!response.ok) throw new Error(`Serveur PMU indisponible (${response.status})`);
 
                 const data = await response.json();
 
-                if (data && data.programme && data.programme.reunions) {
+                if (data && data.programme && data.programme.reunions && data.programme.reunions.length > 0) {
                     liveMeetingsData = data.programme.reunions;
                     populateMeetingsSelect(liveMeetingsData);
-                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>Programme du ${dateInput} chargé !</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>Programme PMU officiel chargé (${liveMeetingsData.length} réunions) !</span>`;
                 } else {
-                    throw new Error("Aucune course disponible pour cette date.");
+                    throw new Error("Aucune réunion répertoriée pour cette date.");
                 }
             } catch (err) {
                 console.error(err);
