@@ -50,26 +50,34 @@
             </div>
         </div>
 
-        <div class="bg-gradient-to-r from-emerald-900/40 via-zinc-900 to-zinc-900 border-2 border-pmu-green/50 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+        <!-- Section des 2 Chevaux Clés Revisitée -->
+        <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border-2 border-pmu-green/50 rounded-2xl p-5 shadow-xl relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-pmu-green text-white text-xs font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                <i class="fa-solid fa-crosshairs mr-1"></i> Simple Gagnant
+                <i class="fa-solid fa-crosshairs mr-1"></i> Stratégie Gagnante
             </div>
             <h2 class="text-sm font-bold uppercase tracking-wider text-pmu-green mb-3 flex items-center">
                 <i class="fa-solid fa-star mr-2"></i> Nos 2 Chevaux Clés
             </h2>
             <div id="topSelections" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="bg-zinc-800/90 border border-pmu-green/40 p-3.5 rounded-xl flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-pmu-green flex items-center justify-center font-black text-pmu-green text-lg">1er</div>
+                <!-- Cheval 1 : La Base -->
+                <div class="bg-zinc-800/90 border border-emerald-500/50 p-3.5 rounded-xl flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-lg">
+                        <i class="fa-solid fa-shield-halved text-base"></i>
+                    </div>
                     <div>
-                        <div class="text-xs text-zinc-400 font-medium">Favori Prioritaire</div>
+                        <div class="text-xs text-emerald-400 font-bold uppercase tracking-wide">Base Solide (Banquier)</div>
                         <div id="top1Name" class="font-bold text-white text-base">En attente...</div>
-                        <div id="top1Stats" class="text-xs text-emerald-400">--</div>
+                        <div id="top1Stats" class="text-xs text-zinc-300">--</div>
                     </div>
                 </div>
-                <div class="bg-zinc-800/90 border border-zinc-600 p-3.5 rounded-xl flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-zinc-700 border border-zinc-500 flex items-center justify-center font-black text-zinc-300 text-lg">2ème</div>
+
+                <!-- Cheval 2 : La Pépite -->
+                <div class="bg-zinc-800/90 border border-amber-500/50 p-3.5 rounded-xl flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-400 flex items-center justify-center font-black text-amber-400 text-lg">
+                        <i class="fa-solid fa-gem text-base"></i>
+                    </div>
                     <div>
-                        <div class="text-xs text-zinc-400 font-medium">Challenger Direct</div>
+                        <div class="text-xs text-amber-400 font-bold uppercase tracking-wide">Pépite / Coup de Cœur</div>
                         <div id="top2Name" class="font-bold text-white text-base">En attente...</div>
                         <div id="top2Stats" class="text-xs text-zinc-300">--</div>
                     </div>
@@ -91,7 +99,7 @@
                             <th class="p-3">N° / Cheval</th>
                             <th class="p-3">Musique / Forme</th>
                             <th class="p-3">Cote Est.</th>
-                            <th class="p-3">Score Algorithmique (%)</th>
+                            <th class="p-3">Indice Confiance (%)</th>
                         </tr>
                     </thead>
                     <tbody id="runnersTableBody" class="divide-y divide-zinc-800/60">
@@ -190,7 +198,7 @@
             const cNum = race.numOrdre || (parseInt(rIdx) + 1);
 
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement des partants officiels...</span>';
+            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse intelligente des partants...</span>';
 
             try {
                 const response = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
@@ -201,7 +209,7 @@
 
                 if (Array.isArray(partants) && partants.length > 0) {
                     processRaceData(partants, race);
-                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>${partants.length} partants officiels chargés !</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>${partants.length} partants analysés avec succès !</span>`;
                 } else {
                     throw new Error("Aucun partant répertorié pour cette course.");
                 }
@@ -219,9 +227,12 @@
                               ? p.dernierRapportDirect.rapport 
                               : (p.probabiliteEvolution ? p.probabiliteEvolution : "--");
 
-                // Conversion numérique de la cote
                 let numCote = parseFloat(String(rawCote).replace(',', '.'));
-                if (isNaN(numCote) || numCote <= 0) numCote = 20.0;
+                if (isNaN(numCote) || numCote <= 0) numCote = 15.0;
+
+                let musiqueScore = evaluateMusique(musique);
+                let baseScore = Math.round((evaluateCoteSolidity(numCote) * 0.45) + (musiqueScore * 0.55));
+                let nuggetScore = evaluateNuggetPotential(musiqueScore, numCote);
 
                 return {
                     num: p.numPmu || p.numOrdre || (idx+1),
@@ -229,73 +240,106 @@
                     musique: musique,
                     coteDisplay: rawCote !== "--" ? rawCote : numCote.toFixed(1),
                     numCote: numCote,
-                    score: calculateScore(musique, numCote)
+                    musiqueScore: musiqueScore,
+                    baseScore: baseScore,
+                    nuggetScore: nuggetScore
                 };
             });
 
-            // Tri par score algorithmique décroissant
-            processed.sort((a, b) => b.score - a.score);
+            // 1. Détermination de la "BASE SOLIDE" (Meilleur score équilibré forme / cote raisonnable)
+            let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
+            let baseHorse = sortedByBase[0];
 
-            if (processed.length >= 2) {
-                document.getElementById('top1Name').textContent = `${processed[0].num}. ${processed[0].nom}`;
-                document.getElementById('top1Stats').textContent = `Score : ${processed[0].score}% | Cote : ${processed[0].coteDisplay}`;
+            // 2. Détermination de la "PÉPITE" (Meilleur potentiel parmi les autres chevaux avec une cote intéressante)
+            let remainingRunners = processed.filter(p => p.num !== baseHorse.num);
+            let sortedByNugget = remainingRunners.sort((a, b) => b.nuggetScore - a.nuggetScore);
+            let nuggetHorse = sortedByNugget[0];
 
-                document.getElementById('top2Name').textContent = `${processed[1].num}. ${processed[1].nom}`;
-                document.getElementById('top2Stats').textContent = `Score : ${processed[1].score}% | Cote : ${processed[1].coteDisplay}`;
+            if (baseHorse) {
+                document.getElementById('top1Name').textContent = `${baseHorse.num}. ${baseHorse.nom}`;
+                document.getElementById('top1Stats').textContent = `Confiance : ${baseHorse.baseScore}% | Cote : ${baseHorse.coteDisplay}`;
             }
 
-            displayTable(processed, race);
+            if (nuggetHorse) {
+                document.getElementById('top2Name').textContent = `${nuggetHorse.num}. ${nuggetHorse.nom}`;
+                document.getElementById('top2Stats').textContent = `Potentiel Gain : ${nuggetHorse.nuggetScore}% | Cote : ${nuggetHorse.coteDisplay}`;
+            }
+
+            // Pour le tableau : tri par score global de performance
+            processed.sort((a, b) => b.baseScore - a.baseScore);
+            displayTable(processed, race, baseHorse.num, nuggetHorse ? nuggetHorse.num : null);
         }
 
-        function calculateScore(musique, cote) {
-            // 1. Composante Cote PMU (65% du poids) : Plus la cote est basse, plus le score de marché est fort
-            let coteScore = 0;
-            if (cote <= 2.5) coteScore = 95;
-            else if (cote <= 5.0) coteScore = 85;
-            else if (cote <= 8.0) coteScore = 75;
-            else if (cote <= 12.0) coteScore = 60;
-            else if (cote <= 20.0) coteScore = 40;
-            else if (cote <= 40.0) coteScore = 20;
-            else coteScore = 10; // Pour les cotes > 40/1 (outsiders très lointains)
-
-            // 2. Composante Musique (35% du poids) : Analyse des 4 dernières sorties
-            let musiqueScore = 40;
+        // Calcul de la forme récente (Musique)
+        function evaluateMusique(musique) {
+            let score = 30;
             const numbers = musique.match(/\d+/g);
             if (numbers && numbers.length > 0) {
                 let pts = 0;
                 let count = Math.min(numbers.length, 4);
                 for (let i = 0; i < count; i++) {
                     let val = parseInt(numbers[i], 10);
-                    if (val === 1) pts += 10;      // 1er
-                    else if (val === 2) pts += 8; // 2ème
-                    else if (val === 3) pts += 6; // 3ème
+                    if (val === 1) pts += 10;
+                    else if (val === 2) pts += 8;
+                    else if (val === 3) pts += 6;
                     else if (val === 4 || val === 5) pts += 4;
-                    else if (val === 0) pts += 0; // Non placé
+                    else if (val === 0) pts += 0;
                     else pts += 1;
                 }
-                musiqueScore = (pts / count) * 10; // Note sur 100
+                score = (pts / count) * 10;
             }
-
-            // Calcul combiné du score final (65% Cote + 35% Musique)
-            let finalScore = (coteScore * 0.65) + (musiqueScore * 0.35);
-            return Math.min(98, Math.max(12, Math.round(finalScore)));
+            return Math.min(98, Math.max(10, Math.round(score)));
         }
 
-        function displayTable(participants, race) {
+        // Évaluation de la régularité du marché
+        function evaluateCoteSolidity(cote) {
+            if (cote <= 2.5) return 95;
+            if (cote <= 4.5) return 85;
+            if (cote <= 7.0) return 70;
+            if (cote <= 12.0) return 50;
+            if (cote <= 20.0) return 30;
+            return 15;
+        }
+
+        // Algorithme "Pépite" : Détecte les excellents rapports Qualité/Cote
+        function evaluateNuggetPotential(musiqueScore, cote) {
+            // Un bonus est accordé si la cote est située dans la "zone d'or" (entre 5.0 et 22.0)
+            let coteMultiplier = 1.0;
+            if (cote >= 5.0 && cote <= 12.0) coteMultiplier = 1.4;
+            else if (cote > 12.0 && cote <= 25.0) coteMultiplier = 1.25;
+            else if (cote < 4.0) coteMultiplier = 0.7; // Trop faible rapport pour être une pépite
+
+            let score = (musiqueScore * 0.7) * coteMultiplier;
+            return Math.min(96, Math.max(15, Math.round(score)));
+        }
+
+        function displayTable(participants, race, baseNum, nuggetNum) {
             const tbody = document.getElementById('runnersTableBody');
             tbody.innerHTML = '';
             document.getElementById('raceInfoDetails').textContent = `${race.discipline || 'Plat'} — ${race.distance ? race.distance + 'm' : ''}`;
 
-            participants.forEach((p, idx) => {
+            participants.forEach((p) => {
                 const tr = document.createElement('tr');
-                if (idx === 0) tr.className = "bg-emerald-500/10 font-semibold border-l-4 border-pmu-green";
-                else if (idx === 1) tr.className = "bg-zinc-800/40 border-l-4 border-zinc-500";
+                
+                if (p.num === baseNum) {
+                    tr.className = "bg-emerald-500/10 font-semibold border-l-4 border-emerald-400";
+                } else if (p.num === nuggetNum) {
+                    tr.className = "bg-amber-500/10 font-semibold border-l-4 border-amber-400";
+                } else {
+                    tr.className = "hover:bg-zinc-800/40 border-l-4 border-transparent";
+                }
+
+                let tag = "";
+                if (p.num === baseNum) tag = '<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/40">Base</span>';
+                if (p.num === nuggetNum) tag = '<span class="ml-2 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/40">Pépite</span>';
 
                 tr.innerHTML = `
-                    <td class="p-3 font-medium"><span class="text-emerald-400 mr-2 font-bold">${p.num}</span>${p.nom}</td>
+                    <td class="p-3 font-medium">
+                        <span class="text-emerald-400 mr-2 font-bold">${p.num}</span>${p.nom} ${tag}
+                    </td>
                     <td class="p-3 font-mono text-xs text-zinc-300">${p.musique}</td>
                     <td class="p-3 font-bold text-emerald-400">${p.coteDisplay}</td>
-                    <td class="p-3 font-bold text-white">${p.score}%</td>
+                    <td class="p-3 font-bold text-white">${p.baseScore}%</td>
                 `;
                 tbody.appendChild(tr);
             });
