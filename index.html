@@ -50,7 +50,7 @@
             </div>
         </div>
 
-        <!-- Section des 2 Chevaux Clés Revisitée -->
+        <!-- Section des 2 Chevaux Clés -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border-2 border-pmu-green/50 rounded-2xl p-5 shadow-xl relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-pmu-green text-white text-xs font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
                 <i class="fa-solid fa-crosshairs mr-1"></i> Stratégie Gagnante
@@ -116,6 +116,18 @@
 
         let liveMeetingsData = [];
 
+        // Utilitaire pour convertir un timestamp (ms) ou heure brute en format Lisible (ex: 13h45)
+        function formatTime(timeValue) {
+            if (!timeValue) return '';
+            if (typeof timeValue === 'number') {
+                const date = new Date(timeValue);
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${hours}h${minutes}`;
+            }
+            return String(timeValue);
+        }
+
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
@@ -155,7 +167,14 @@
             reunions.forEach((r, idx) => {
                 const opt = document.createElement('option');
                 opt.value = idx;
-                opt.textContent = `R${r.numOfficiel || (idx+1)} - ${r.hippodrome ? r.hippodrome.libelleLong : 'Hippodrome'} (${r.courses ? r.courses.length : 0} courses)`;
+                
+                // Récupération de l'heure de la réunion
+                let timeStr = "";
+                if (r.heurePremierDepart) {
+                    timeStr = ` [${formatTime(r.heurePremierDepart)}]`;
+                }
+
+                opt.textContent = `R${r.numOfficiel || (idx+1)} - ${r.hippodrome ? r.hippodrome.libelleLong : 'Hippodrome'}${timeStr} (${r.courses ? r.courses.length : 0} courses)`;
                 select.appendChild(opt);
             });
             document.getElementById('raceSelect').innerHTML = '<option value="">Choisissez une réunion</option>';
@@ -175,7 +194,11 @@
                 meeting.courses.forEach((c, cIdx) => {
                     const opt = document.createElement('option');
                     opt.value = cIdx;
-                    opt.textContent = `Course ${c.numOrdre || (cIdx+1)} : ${c.libelle || 'Prix'} (${c.discipline || 'Trot'})`;
+                    
+                    // Récupération de l'heure de départ de la course
+                    let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
+                    
+                    opt.textContent = `C${c.numOrdre || (cIdx+1)}${courseTime} : ${c.libelle || 'Prix'} (${c.discipline || 'Trot'})`;
                     raceSelect.appendChild(opt);
                 });
             }
@@ -246,11 +269,9 @@
                 };
             });
 
-            // 1. Détermination de la "BASE SOLIDE" (Meilleur score équilibré forme / cote raisonnable)
             let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
             let baseHorse = sortedByBase[0];
 
-            // 2. Détermination de la "PÉPITE" (Meilleur potentiel parmi les autres chevaux avec une cote intéressante)
             let remainingRunners = processed.filter(p => p.num !== baseHorse.num);
             let sortedByNugget = remainingRunners.sort((a, b) => b.nuggetScore - a.nuggetScore);
             let nuggetHorse = sortedByNugget[0];
@@ -265,12 +286,10 @@
                 document.getElementById('top2Stats').textContent = `Potentiel Gain : ${nuggetHorse.nuggetScore}% | Cote : ${nuggetHorse.coteDisplay}`;
             }
 
-            // Pour le tableau : tri par score global de performance
             processed.sort((a, b) => b.baseScore - a.baseScore);
             displayTable(processed, race, baseHorse.num, nuggetHorse ? nuggetHorse.num : null);
         }
 
-        // Calcul de la forme récente (Musique)
         function evaluateMusique(musique) {
             let score = 30;
             const numbers = musique.match(/\d+/g);
@@ -291,7 +310,6 @@
             return Math.min(98, Math.max(10, Math.round(score)));
         }
 
-        // Évaluation de la régularité du marché
         function evaluateCoteSolidity(cote) {
             if (cote <= 2.5) return 95;
             if (cote <= 4.5) return 85;
@@ -301,13 +319,11 @@
             return 15;
         }
 
-        // Algorithme "Pépite" : Détecte les excellents rapports Qualité/Cote
         function evaluateNuggetPotential(musiqueScore, cote) {
-            // Un bonus est accordé si la cote est située dans la "zone d'or" (entre 5.0 et 22.0)
             let coteMultiplier = 1.0;
             if (cote >= 5.0 && cote <= 12.0) coteMultiplier = 1.4;
             else if (cote > 12.0 && cote <= 25.0) coteMultiplier = 1.25;
-            else if (cote < 4.0) coteMultiplier = 0.7; // Trop faible rapport pour être une pépite
+            else if (cote < 4.0) coteMultiplier = 0.7;
 
             let score = (musiqueScore * 0.7) * coteMultiplier;
             return Math.min(96, Math.max(15, Math.round(score)));
@@ -316,7 +332,10 @@
         function displayTable(participants, race, baseNum, nuggetNum) {
             const tbody = document.getElementById('runnersTableBody');
             tbody.innerHTML = '';
-            document.getElementById('raceInfoDetails').textContent = `${race.discipline || 'Plat'} — ${race.distance ? race.distance + 'm' : ''}`;
+            
+            // Formatage de l'heure de départ pour le détail de la course
+            let timeInfo = race.heureDepart ? `🕒 Départ : ${formatTime(race.heureDepart)} — ` : '';
+            document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} — ${race.distance ? race.distance + 'm' : ''}`;
 
             participants.forEach((p) => {
                 const tr = document.createElement('tr');
