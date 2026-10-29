@@ -7,7 +7,7 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const { date } = req.query; // Format ddmmyyyy
+    const { date, r, c } = req.query; // date = ddmmyyyy, r = numReunion, c = numCourse
 
     if (!date) {
         return res.status(400).json({ error: "Date manquante" });
@@ -19,12 +19,32 @@ export default async function handler(req, res) {
         "Accept-Language": "fr-FR,fr;q=0.9"
     };
 
-    const endpoints = [
+    // Si une réunion (r) et une course (c) sont demandées, on va chercher les partants officiels
+    if (r && c) {
+        const participantUrls = [
+            `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`,
+            `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}/R${r}/C${c}/participants`
+        ];
+
+        for (const url of participantUrls) {
+            try {
+                const response = await fetch(url, { headers });
+                if (response.ok) {
+                    const data = await response.json();
+                    return res.status(200).json(data);
+                }
+            } catch (e) {}
+        }
+        return res.status(500).json({ error: "Impossible de charger les partants de cette course" });
+    }
+
+    // Sinon, on récupère le programme des réunions du jour
+    const programmeUrls = [
         `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}`,
         `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}?specialisation=INTERNET`
     ];
 
-    for (const url of endpoints) {
+    for (const url of programmeUrls) {
         try {
             const response = await fetch(url, { headers });
             if (response.ok) {
@@ -33,10 +53,8 @@ export default async function handler(req, res) {
                     return res.status(200).json(data);
                 }
             }
-        } catch (e) {
-            // Test du second point d'accès
-        }
+        } catch (e) {}
     }
 
-    return res.status(500).json({ error: "PMU temporairement indisponible pour cette date" });
+    return res.status(500).json({ error: "Programme PMU indisponible" });
 }
