@@ -1,75 +1,38 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PMU Direct</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .bg-pmu-dark { background-color: #0c0c10; }
-        .text-pmu-green { color: #00965e; }
-        .bg-pmu-green { background-color: #00965e; }
-    </style>
-</head>
-<body class="bg-pmu-dark text-slate-100 min-h-screen flex flex-col font-sans">
+async function loadLivePmu() {
+            const dateInput = document.getElementById('raceDate').value;
+            const statusText = document.getElementById('statusText');
+            statusText.innerHTML = '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement du programme PMU...</span>';
 
-    <header class="bg-zinc-900 border-b border-zinc-800 p-4 sticky top-0 z-50 shadow-md">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-horse-head text-pmu-green text-2xl"></i>
-                <h1 class="text-xl font-black tracking-wider uppercase">PMU <span class="text-pmu-green">Direct</span></h1>
-            </div>
-            <div class="flex items-center space-x-2 bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
-                <i class="fa-regular fa-calendar text-emerald-400"></i>
-                <input type="date" id="raceDate" class="bg-transparent text-white text-sm focus:outline-none cursor-pointer">
-            </div>
-        </div>
-    </header>
+            const parts = dateInput.split('-');
+            const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
-    <main class="flex-grow max-w-4xl w-full mx-auto p-4 space-y-6">
-        <div id="statusAlert" class="bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl text-xs flex items-center justify-between">
-            <span id="statusText" class="flex items-center text-zinc-300 font-mono">
-                <i class="fa-solid fa-spinner fa-spin text-amber-400 mr-2"></i> Connexion au PMU...
-            </span>
-            <button onclick="loadLivePmu()" class="text-emerald-400 hover:underline font-semibold ml-2"><i class="fa-solid fa-rotate"></i> Actualiser</button>
-        </div>
+            try {
+                const response = await fetch(`/api/courses?date=${ddmmyyyy}`);
+                
+                if (!response.ok) {
+                    throw new Error("Erreur de connexion au serveur proxy");
+                }
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl shadow">
-                <label class="block text-xs font-bold uppercase text-zinc-400 mb-2">1. Hippodrome / Réunion</label>
-                <select id="meetingSelect" onchange="onMeetingChange()" class="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-                    <option value="">Chargement...</option>
-                </select>
-            </div>
-            <div class="bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl shadow">
-                <label class="block text-xs font-bold uppercase text-zinc-400 mb-2">2. Course du Jour</label>
-                <select id="raceSelect" onchange="onRaceChange()" class="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-                    <option value="">Choisissez une réunion</option>
-                </select>
-            </div>
-        </div>
+                const data = await response.json();
 
-        <!-- Bloc Arrivée Officielle -->
-        <div id="arrivalBlock" class="hidden bg-gradient-to-r from-blue-950/70 via-zinc-900 to-indigo-950/70 border-2 border-blue-500/50 rounded-2xl p-4 shadow-xl space-y-3">
-            <h3 class="text-xs font-extrabold uppercase text-blue-400 tracking-wider flex items-center">
-                <i class="fa-solid fa-flag-checkered mr-2"></i> Arrivée Officielle PMU
-            </h3>
-            <div id="arrivalList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
-                <!-- Rempli en JS -->
-            </div>
-        </div>
+                // Gestion flexible des structures de données PMU
+                let reunions = null;
+                if (data && data.programme && data.programme.reunions) {
+                    reunions = data.programme.reunions;
+                } else if (data && data.reunions) {
+                    reunions = data.reunions;
+                }
 
-        <!-- Bloc Rapports Définitifs -->
-        <div id="reportsBlock" class="hidden bg-zinc-900/90 border border-blue-500/30 rounded-2xl p-4 shadow-xl space-y-3">
-            <h3 class="text-xs font-extrabold uppercase text-emerald-400 tracking-wider flex items-center">
-                <i class="fa-solid fa-euro-sign mr-2"></i> Rapports Définitifs (pour 1 €)
-            </h3>
-            <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                <!-- Rempli en JS -->
-            </div>
-        </div>
-
-        <!-- Section des 2 Chevaux Clés Pronostiqués -->
-        <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border-2 border-pmu-green/50 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-            <div class="absolute
+                if (reunions && reunions.length > 0) {
+                    liveMeetingsData = reunions;
+                    populateMeetingsSelect(liveMeetingsData);
+                    statusText.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check mr-2"></i>Programme chargé (${liveMeetingsData.length} réunions)</span>`;
+                } else {
+                    throw new Error("Aucune réunion disponible pour cette date.");
+                }
+            } catch (err) {
+                console.error(err);
+                statusText.innerHTML = `<span class="text-red-400 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Erreur de liaison réseau avec le PMU</span>`;
+                clearDisplay();
+            }
+        }
