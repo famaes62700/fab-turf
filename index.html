@@ -9,7 +9,7 @@
 </head>
 <body class="bg-zinc-950 text-slate-100 min-h-screen flex flex-col font-sans">
 
-    <header class="bg-zinc-900 border-b border-zinc-800 p-4 sticky top-0 z-50">
+    <header class="bg-zinc-900 border-b border-zinc-800 p-4 sticky top-0 z-50 shadow-md">
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <h1 class="text-lg font-black uppercase tracking-wider text-emerald-500"><i class="fa-solid fa-horse-head mr-2"></i>PMU Direct</h1>
             <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer">
@@ -40,15 +40,19 @@
             <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
         </div>
 
-        <!-- 2 Chevaux Clés -->
-        <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-4 space-y-2">
-            <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> 2 Chevaux Clés (Base & Pépite)</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div class="bg-zinc-900 p-2.5 rounded-lg border border-emerald-500/30">
-                    <span class="text-emerald-400 font-bold">1. Base :</span> <span id="top1Name" class="font-semibold">En attente...</span>
+        <!-- 2 Chevaux Clés Intelligents -->
+        <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg">
+            <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés (Base & Pépite)</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="bg-zinc-900/90 p-3 rounded-lg border border-emerald-500/40 space-y-1">
+                    <div class="text-[10px] uppercase font-bold text-emerald-400">Base Solide (Banquier)</div>
+                    <div id="top1Name" class="font-bold text-white text-sm">En attente...</div>
+                    <div id="top1Stats" class="text-[11px] text-zinc-400">--</div>
                 </div>
-                <div class="bg-zinc-900 p-2.5 rounded-lg border border-amber-500/30">
-                    <span class="text-amber-400 font-bold">2. Pépite :</span> <span id="top2Name" class="font-semibold">En attente...</span>
+                <div class="bg-zinc-900/90 p-3 rounded-lg border border-amber-500/40 space-y-1">
+                    <div class="text-[10px] uppercase font-bold text-amber-400">Pépite / Coup de Cœur</div>
+                    <div id="top2Name" class="font-bold text-white text-sm">En attente...</div>
+                    <div id="top2Stats" class="text-[11px] text-zinc-400">--</div>
                 </div>
             </div>
         </div>
@@ -168,7 +172,7 @@
 
                 if (arrivees.length > 0) {
                     arrivalBlock.classList.remove('hidden');
-                    arrivees.slice(0, 5).forEach((p, idx) => {
+                    arrivees.slice(0, 5).forEach((p) => {
                         let div = document.createElement('div');
                         div.className = "bg-blue-900/60 px-2.5 py-1 rounded border border-blue-500/40";
                         div.innerHTML = `<span class="text-blue-300">${p.ordreArrivee}er:</span> N°${p.numPmu || p.numOrdre} ${p.nom}`;
@@ -206,34 +210,60 @@
                 if (hasReports) reportsBlock.classList.remove('hidden');
                 else reportsBlock.classList.add('hidden');
 
-                // 3. Traitement Partants & Scores
+                // 3. Algorithme de calcul intelligent (Base & Pépite)
                 let processed = partants.map((p, idx) => {
-                    let musique = p.musique || "0p";
-                    let cote = p.dernierRapportDirect ? p.dernierRapportDirect.rapport : 15.0;
-                    let numCote = parseFloat(String(cote).replace(',', '.')) || 15.0;
+                    let musique = p.musique || p.form || "0p";
+                    let rawCote = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
+                                  ? p.dernierRapportDirect.rapport 
+                                  : (p.probabiliteEvolution ? p.probabiliteEvolution : "15.0");
+
+                    let cote = parseFloat(String(rawCote).replace(',', '.')) || 15.0;
+
+                    // Formule de score équilibrée (60% cote de marché + 40% musique)
+                    let coteScore = cote <= 3 ? 95 : (cote <= 6 ? 80 : (cote <= 12 ? 65 : (cote <= 25 ? 40 : 15)));
+                    let musiqueScore = evaluateMusique(musique);
+                    let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
+                    let nuggetScore = (cote >= 5 && cote <= 20) ? Math.round(musiqueScore * 1.3) : musiqueScore;
+
                     return {
-                        num: p.numPmu || (idx+1),
+                        num: p.numPmu || p.numOrdre || (idx+1),
                         nom: p.nom || "Cheval",
                         musique: musique,
-                        cote: numCote,
-                        score: Math.round(Math.random() * 40 + 50),
+                        coteDisplay: rawCote,
+                        cote: cote,
+                        baseScore: baseScore,
+                        nuggetScore: nuggetScore,
                         ordreArrivee: p.ordreArrivee
                     };
                 });
 
-                processed.sort((a, b) => b.score - a.score);
+                // Tri Base Solide
+                let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
+                let baseHorse = sortedByBase[0];
 
-                if (processed.length >= 2) {
-                    document.getElementById('top1Name').textContent = `${processed[0].num}. ${processed[0].nom} (${processed[0].cote})`;
-                    document.getElementById('top2Name').textContent = `${processed[1].num}. ${processed[1].nom} (${processed[1].cote})`;
+                // Tri Pépite (parmi les autres chevaux)
+                let remaining = processed.filter(p => p.num !== baseHorse.num);
+                let nuggetHorse = remaining.sort((a, b) => b.nuggetScore - a.nuggetScore)[0];
+
+                if (baseHorse) {
+                    document.getElementById('top1Name').textContent = `${baseHorse.num}. ${baseHorse.nom}`;
+                    document.getElementById('top1Stats').textContent = `Confiance : ${baseHorse.baseScore}% | Cote : ${baseHorse.coteDisplay}`;
+                }
+                if (nuggetHorse) {
+                    document.getElementById('top2Name').textContent = `${nuggetHorse.num}. ${nuggetHorse.nom}`;
+                    document.getElementById('top2Stats').textContent = `Potentiel : ${nuggetHorse.nuggetScore}% | Cote : ${nuggetHorse.coteDisplay}`;
                 }
 
+                processed.sort((a, b) => b.baseScore - a.baseScore);
                 let tbody = document.getElementById('runnersTableBody');
                 tbody.innerHTML = '';
                 processed.forEach(p => {
                     let tr = document.createElement('tr');
                     let tag = p.ordreArrivee ? `<span class="ml-1 text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
-                    tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.cote}</td><td class="p-2.5">${p.score}%</td>`;
+                    if (p.num === baseHorse?.num) tag += '<span class="ml-1 text-[10px] bg-emerald-500/20 text-emerald-400 px-1 rounded">Base</span>';
+                    if (p.num === nuggetHorse?.num) tag += '<span class="ml-1 text-[10px] bg-amber-500/20 text-amber-400 px-1 rounded">Pépite</span>';
+
+                    tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-2.5">${p.baseScore}%</td>`;
                     tbody.appendChild(tr);
                 });
 
@@ -241,6 +271,25 @@
                 document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
 
             } catch (e) {}
+        }
+
+        function evaluateMusique(musique) {
+            let score = 30;
+            const numbers = musique.match(/\d+/g);
+            if (numbers && numbers.length > 0) {
+                let pts = 0;
+                let count = Math.min(numbers.length, 4);
+                for (let i = 0; i < count; i++) {
+                    let val = parseInt(numbers[i], 10);
+                    if (val === 1) pts += 10;
+                    else if (val === 2) pts += 8;
+                    else if (val === 3) pts += 6;
+                    else if (val === 4 || val === 5) pts += 4;
+                    else pts += 1;
+                }
+                score = (pts / count) * 10;
+            }
+            return Math.min(98, Math.max(10, Math.round(score)));
         }
 
         window.onload = loadLivePmu;
