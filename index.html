@@ -313,29 +313,44 @@
                 arrivalBlock.classList.add('hidden');
             }
 
-            // 2. Gestion des Rapports Payés
+            // 2. Gestion des Rapports Payés (Compatible tous formats PMU)
             const reportsBlock = document.getElementById('reportsBlock');
             const reportsGrid = document.getElementById('reportsGrid');
             reportsGrid.innerHTML = '';
 
             let hasReports = false;
 
-            if (rapportsData && Array.isArray(rapportsData)) {
-                rapportsData.forEach(repGroup => {
-                    let typeJeu = repGroup.typePari || repGroup.libellePari || 'Pari';
-                    if (repGroup.rapports && repGroup.rapports.length > 0) {
-                        repGroup.rapports.forEach(r => {
-                            if (r.gainEuro || r.rapport) {
+            // Analyse robuste de l'objet rapportsData renvoyé par l'API
+            let listeRapports = [];
+            if (rapportsData) {
+                if (Array.isArray(rapportsData)) {
+                    listeRapports = rapportsData;
+                } else if (rapportsData.lesRapports) {
+                    listeRapports = rapportsData.lesRapports;
+                } else if (rapportsData.rapports) {
+                    listeRapports = rapportsData.rapports;
+                }
+            }
+
+            if (listeRapports.length > 0) {
+                listeRapports.forEach(repGroup => {
+                    let typeJeu = repGroup.typePari || repGroup.libellePari || repGroup.pari || 'Pari';
+                    let rapportsDetails = repGroup.rapports || repGroup.dividendes || [];
+
+                    if (Array.isArray(rapportsDetails)) {
+                        rapportsDetails.forEach(r => {
+                            let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
+                            if (montant) {
                                 hasReports = true;
-                                let gain = r.gainEuro ? (r.gainEuro).toFixed(2) + ' €' : (r.rapport) + ' €';
-                                let combo = r.combinaison ? ` (${r.combinaison})` : '';
+                                let gainVal = typeof montant === 'number' ? montant.toFixed(2) + ' €' : montant + ' €';
+                                let combo = r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
                                 let libelle = r.libelleRapport || typeJeu;
 
                                 let item = document.createElement('div');
                                 item.className = 'bg-zinc-800/80 p-2 rounded-lg border border-zinc-700/60 flex justify-between items-center';
                                 item.innerHTML = `
                                     <span class="text-zinc-400 font-medium">${libelle}${combo} :</span>
-                                    <span class="font-extrabold text-emerald-400 ml-2">${gain}</span>
+                                    <span class="font-extrabold text-emerald-400 ml-2">${gainVal}</span>
                                 `;
                                 reportsGrid.appendChild(item);
                             }
