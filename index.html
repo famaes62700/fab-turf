@@ -35,24 +35,32 @@
         <!-- BLOC STATISTIQUES DU JOUR -->
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Victoires de l'Algorithme</h2>
-                <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour (Pour 1€ parié)</h2>
+                <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Recherche des courses terminées...</div>
             
             <div class="grid grid-cols-2 gap-3 text-xs">
-                <div class="bg-zinc-800/80 p-3 rounded-lg border border-emerald-500/30 text-center relative overflow-hidden">
+                <div class="bg-zinc-800/80 p-3 rounded-lg border border-emerald-500/30 text-center relative overflow-hidden flex flex-col justify-between">
                     <div class="text-[10px] uppercase font-bold text-emerald-400 mb-1">Base Gagnante</div>
-                    <div id="statBase" class="text-2xl font-black text-white">0</div>
-                    <div class="text-[9px] text-zinc-500 mt-1">Fois arrivé 1er</div>
+                    <div id="statBase" class="text-2xl font-black text-white">0 <span class="text-xs font-normal text-zinc-400">/ 0</span></div>
+                    <div class="text-[9px] text-zinc-400 mt-0.5 mb-2">victoires sur ce total</div>
+                    <div id="gainBase" class="bg-emerald-950/50 text-emerald-300 py-1.5 px-1 rounded text-[11px] border border-emerald-500/20 leading-tight">
+                        Retours : 0.00 € <br><span class="text-emerald-400 font-bold">Bénéfice : 0.00 €</span>
+                    </div>
                 </div>
-                <div class="bg-zinc-800/80 p-3 rounded-lg border border-amber-500/30 text-center relative overflow-hidden">
+                <div class="bg-zinc-800/80 p-3 rounded-lg border border-amber-500/30 text-center relative overflow-hidden flex flex-col justify-between">
                     <div class="text-[10px] uppercase font-bold text-amber-400 mb-1">Pépite Gagnante</div>
-                    <div id="statPepite" class="text-2xl font-black text-white">0</div>
-                    <div class="text-[9px] text-zinc-500 mt-1">Fois arrivé 1er</div>
+                    <div id="statPepite" class="text-2xl font-black text-white">0 <span class="text-xs font-normal text-zinc-400">/ 0</span></div>
+                    <div class="text-[9px] text-zinc-400 mt-0.5 mb-2">victoires sur ce total</div>
+                    <div id="gainPepite" class="bg-amber-950/50 text-amber-300 py-1.5 px-1 rounded text-[11px] border border-amber-500/20 leading-tight">
+                        Retours : 0.00 € <br><span class="text-amber-400 font-bold">Bénéfice : 0.00 €</span>
+                    </div>
                 </div>
             </div>
-            <div id="statGlobal" class="text-center text-[10px] text-zinc-500 mt-3 font-semibold">--</div>
+            <div id="statGlobal" class="text-center text-[10px] text-zinc-400 mt-3 font-semibold bg-zinc-800/50 py-2 rounded-lg border border-zinc-700/50">
+                Mise totale simulée : 0 € (1€ par course)
+            </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -260,6 +268,32 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
+        // Extrait intelligemment le rapport du "Simple Gagnant" dans les données complexes du PMU
+        function getGagnantRapport(listeRapports, horseNum) {
+            let maxGain = 0;
+            if (!listeRapports || listeRapports.length === 0) return 0;
+            
+            listeRapports.forEach(repGroup => {
+                let typePari = (repGroup.typePari || repGroup.libellePari || "").toUpperCase();
+                if (typePari.includes('SIMPLE') || typePari === 'PARI') {
+                    let details = repGroup.rapports || repGroup.dividendes || [];
+                    details.forEach(r => {
+                        let libelle = (r.libelleRapport || "").toUpperCase();
+                        let combo = String(r.combinaison || r.cheval || "");
+                        if (combo === String(horseNum) && (libelle.includes('GAGNANT') || libelle === 'G')) {
+                            let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
+                            if (montant) {
+                                let val = parseFloat(montant);
+                                if (val > 100) val = val / 100;
+                                if (val > maxGain) maxGain = val;
+                            }
+                        }
+                    });
+                }
+            });
+            return maxGain;
+        }
+
         async function fetchRaceData() {
             let mIdx = document.getElementById('meetingSelect').value;
             let rIdx = document.getElementById('raceSelect').value;
@@ -282,7 +316,6 @@
                 let partants = data.participants || [];
                 let rapportsData = data.rapports;
 
-                // 1. Arrivée
                 let arrivalBlock = document.getElementById('arrivalBlock');
                 let arrivalList = document.getElementById('arrivalList');
                 arrivalList.innerHTML = '';
@@ -300,7 +333,6 @@
                     arrivalBlock.classList.add('hidden');
                 }
 
-                // 2. Rapports
                 let reportsBlock = document.getElementById('reportsBlock');
                 let reportsGrid = document.getElementById('reportsGrid');
                 reportsGrid.innerHTML = '';
@@ -328,7 +360,6 @@
                 if (hasReports) reportsBlock.classList.remove('hidden');
                 else reportsBlock.classList.add('hidden');
 
-                // 3. Algorithme
                 let algoResult = computeAlgorithm(partants);
                 let { processed, baseHorse, nuggetHorse } = algoResult;
 
@@ -379,18 +410,22 @@
             return Math.min(98, Math.max(10, Math.round(score)));
         }
 
-        // --- NOUVEAU : Fonction Bilan de fin de journée ---
+        // --- Bilan de fin de journée avec Gains & Bénéfices ---
         async function calculateDailyStats() {
             let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
             let statBase = document.getElementById('statBase');
             let statPepite = document.getElementById('statPepite');
+            let gainBaseEl = document.getElementById('gainBase');
+            let gainPepiteEl = document.getElementById('gainPepite');
             let statGlobal = document.getElementById('statGlobal');
 
             statsBlock.classList.remove('hidden');
-            statBase.textContent = "0";
-            statPepite.textContent = "0";
-            statGlobal.textContent = "--";
+            statBase.innerHTML = `0 <span class="text-xs font-normal text-zinc-400">/ 0</span>`;
+            statPepite.innerHTML = `0 <span class="text-xs font-normal text-zinc-400">/ 0</span>`;
+            gainBaseEl.innerHTML = `Retours : 0.00 € <br><span class="text-emerald-400 font-bold">Bénéfice : 0.00 €</span>`;
+            gainPepiteEl.innerHTML = `Retours : 0.00 € <br><span class="text-amber-400 font-bold">Bénéfice : 0.00 €</span>`;
+            statGlobal.textContent = "Recherche en cours...";
             statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses terminées...";
 
             let dateInput = document.getElementById('raceDate').value;
@@ -398,14 +433,11 @@
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             let finishedRaces = [];
-
-            // Rechercher toutes les courses de toutes les réunions qui sont déjà courues
             liveMeetingsData.forEach((m, mIdx) => {
                 let rNum = m.numOfficiel || (mIdx + 1);
                 let courses = m.courses || m.races || m.lesCourses || [];
                 courses.forEach((c, cIdx) => {
                     let cNum = c.numOrdre || (cIdx + 1);
-                    // Si l'heure de départ est passée, on l'ajoute à l'analyse
                     if (c.heureDepart && new Date(c.heureDepart) < new Date()) {
                         finishedRaces.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
                     }
@@ -419,9 +451,10 @@
 
             let baseGagnantes = 0;
             let pepiteGagnantes = 0;
+            let totalGainBase = 0;
+            let totalGainPepite = 0;
             let coursesValidees = 0;
 
-            // Analyse de chaque course terminée (une par une pour ne pas bloquer le téléphone)
             for (let i = 0; i < finishedRaces.length; i++) {
                 let r = finishedRaces[i];
                 statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours (${i+1}/${finishedRaces.length}) : ${r.name}`;
@@ -432,30 +465,50 @@
                     const data = await res.json();
                     let partants = data.participants || [];
 
-                    // Vérifier s'il y a bien une arrivée classée
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
+                        let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
+                        // Analyse de la Base
                         if (algoResult.baseHorse && algoResult.baseHorse.ordreArrivee === 1) {
                             baseGagnantes++;
+                            let gain = getGagnantRapport(rapportsList, algoResult.baseHorse.num);
+                            if (gain === 0) gain = algoResult.baseHorse.cote; // Fallback sur la cote finale si le rapport n'est pas publié
+                            totalGainBase += gain;
                         }
+                        
+                        // Analyse de la Pépite
                         if (algoResult.nuggetHorse && algoResult.nuggetHorse.ordreArrivee === 1) {
                             pepiteGagnantes++;
+                            let gain = getGagnantRapport(rapportsList, algoResult.nuggetHorse.num);
+                            if (gain === 0) gain = algoResult.nuggetHorse.cote;
+                            totalGainPepite += gain;
                         }
 
+                        // Calcul du bénéfice (Gain total - 1€ de mise par course jouée)
+                        let netBase = totalGainBase - coursesValidees;
+                        let netPepite = totalGainPepite - coursesValidees;
+                        let colorBase = netBase >= 0 ? 'text-emerald-400' : 'text-red-400';
+                        let colorPepite = netPepite >= 0 ? 'text-amber-400' : 'text-red-400';
+                        let signBase = netBase > 0 ? '+' : '';
+                        let signPepite = netPepite > 0 ? '+' : '';
+
                         // Mise à jour visuelle en direct
-                        statBase.textContent = baseGagnantes;
-                        statPepite.textContent = pepiteGagnantes;
+                        statBase.innerHTML = `${baseGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
+                        statPepite.innerHTML = `${pepiteGagnantes} <span class="text-xs font-normal text-zinc-400">/ ${coursesValidees}</span>`;
+                        
+                        gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${colorBase} font-bold">Bénéfice net : ${signBase}${netBase.toFixed(2)} €</span>`;
+                        gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${colorPepite} font-bold">Bénéfice net : ${signPepite}${netPepite.toFixed(2)} €</span>`;
+                        
+                        statGlobal.textContent = `Bilan sur ${coursesValidees} courses (Mise totale : ${coursesValidees} € engagés par sélection)`;
                     }
                 } catch (e) {
                     console.error("Erreur d'analyse sur " + r.name);
                 }
             }
-
             statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété !</span>`;
-            statGlobal.textContent = `${coursesValidees} courses officiellement arrivées ont été analysées`;
         }
 
         window.onload = loadLivePmu;
