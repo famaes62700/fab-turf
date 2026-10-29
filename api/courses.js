@@ -19,22 +19,29 @@ export default async function handler(req, res) {
         "Accept-Language": "fr-FR,fr;q=0.9"
     };
 
-    // Si une réunion (r) et une course (c) sont demandées : partants ET arrivée/rapports
+    // Cas 1 : Récupération des partants (et de l'arrivée si disponible)
     if (r && c) {
         try {
-            const [participantsRes, rapportsRes] = await Promise.all([
-                fetch(`https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`, { headers }),
-                fetch(`https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/rapports-definitifs`, { headers }).catch(() => null)
-            ]);
+            // 1. Charger obligatoirement les partants
+            const participantsUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`;
+            const participantsRes = await fetch(participantsUrl, { headers });
 
-            let participantsData = [];
-            if (participantsRes.ok) {
-                participantsData = await participantsRes.json();
+            if (!participantsRes.ok) {
+                return res.status(participantsRes.status).json({ error: "Impossible de charger les partants de cette course." });
             }
 
+            const participantsData = await participantsRes.json();
+
+            // 2. Charger les rapports de manière totalement optionnelle (sans faire planter si 404)
             let rapportsData = null;
-            if (rapportsRes && rapportsRes.ok) {
-                rapportsData = await rapportsRes.json();
+            try {
+                const rapportsUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/rapports-definitifs`;
+                const rapportsRes = await fetch(rapportsUrl, { headers });
+                if (rapportsRes.ok) {
+                    rapportsData = await rapportsRes.json();
+                }
+            } catch (e) {
+                // Course non terminée : on ignore l'erreur
             }
 
             return res.status(200).json({
@@ -43,11 +50,11 @@ export default async function handler(req, res) {
             });
 
         } catch (e) {
-            return res.status(500).json({ error: "Impossible de charger les données de cette course" });
+            return res.status(500).json({ error: "Erreur lors de la communication avec le PMU." });
         }
     }
 
-    // Sinon, on récupère le programme complet des réunions
+    // Cas 2 : Récupération du programme global
     const programmeUrls = [
         `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}`,
         `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}?specialisation=INTERNET`
@@ -65,5 +72,5 @@ export default async function handler(req, res) {
         } catch (e) {}
     }
 
-    return res.status(500).json({ error: "Programme PMU indisponible" });
+    return res.status(500).json({ error: "Programme PMU indisponible pour cette date." });
 }
