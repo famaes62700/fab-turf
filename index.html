@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PMU Direct</title>
     
-    <!-- Configuration mobile -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PMU Direct">
     
-    <!-- Icône générée sur mesure (Fond vert PMU, texte blanc) avec anti-cache -->
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=PMU&background=00965e&color=fff&size=512&font-size=0.4&v=2">
     <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=PMU&background=00965e&color=fff&size=512&font-size=0.4&v=2">
 
@@ -27,7 +25,35 @@
     </header>
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
-        <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au PMU...</div>
+        <div class="flex justify-between items-center">
+            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au PMU...</div>
+            <button onclick="calculateDailyStats()" class="bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-300 text-xs px-3 py-1.5 rounded border border-indigo-500/40 font-bold transition flex items-center space-x-1">
+                <i class="fa-solid fa-chart-pie mr-1"></i> Bilan du Jour
+            </button>
+        </div>
+
+        <!-- BLOC STATISTIQUES DU JOUR -->
+        <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Victoires de l'Algorithme</h2>
+                <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Recherche des courses terminées...</div>
+            
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="bg-zinc-800/80 p-3 rounded-lg border border-emerald-500/30 text-center relative overflow-hidden">
+                    <div class="text-[10px] uppercase font-bold text-emerald-400 mb-1">Base Gagnante</div>
+                    <div id="statBase" class="text-2xl font-black text-white">0</div>
+                    <div class="text-[9px] text-zinc-500 mt-1">Fois arrivé 1er</div>
+                </div>
+                <div class="bg-zinc-800/80 p-3 rounded-lg border border-amber-500/30 text-center relative overflow-hidden">
+                    <div class="text-[10px] uppercase font-bold text-amber-400 mb-1">Pépite Gagnante</div>
+                    <div id="statPepite" class="text-2xl font-black text-white">0</div>
+                    <div class="text-[9px] text-zinc-500 mt-1">Fois arrivé 1er</div>
+                </div>
+            </div>
+            <div id="statGlobal" class="text-center text-[10px] text-zinc-500 mt-3 font-semibold">--</div>
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select id="meetingSelect" onchange="onMeetingChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500">
@@ -50,12 +76,12 @@
             <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
         </div>
 
-        <!-- 2 Chevaux Clés Intelligents + Bouton Rafraîchir -->
+        <!-- 2 Chevaux Clés Intelligents -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg relative">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés (Base & Pépite)</h2>
-                <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1 rounded-lg border border-emerald-500/30 font-semibold transition flex items-center space-x-1">
-                    <i class="fa-solid fa-rotate mr-1"></i> Actualiser cotes
+                <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1 rounded border border-emerald-500/30 font-semibold transition flex items-center space-x-1">
+                    <i class="fa-solid fa-rotate mr-1"></i> Actualiser
                 </button>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -119,7 +145,6 @@
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
                 const data = await res.json();
 
-                // Récupération sécurisée des réunions peu importe la structure de l'API
                 let reunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                 
                 if (reunions.length > 0) {
@@ -200,6 +225,41 @@
             await fetchRaceData();
         }
 
+        // Fonction pour calculer l'algorithme sur une liste de partants
+        function computeAlgorithm(partants) {
+            let processed = partants.map((p, idx) => {
+                let musique = p.musique || p.form || "0p";
+                let rawCote = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
+                              ? p.dernierRapportDirect.rapport 
+                              : (p.probabiliteEvolution ? p.probabiliteEvolution : "15.0");
+
+                let cote = parseFloat(String(rawCote).replace(',', '.')) || 15.0;
+
+                let coteScore = cote <= 3 ? 95 : (cote <= 6 ? 80 : (cote <= 12 ? 65 : (cote <= 25 ? 40 : 15)));
+                let musiqueScore = evaluateMusique(musique);
+                let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
+                let nuggetScore = (cote >= 5 && cote <= 20) ? Math.round(musiqueScore * 1.3) : musiqueScore;
+
+                return {
+                    num: p.numPmu || p.numOrdre || (idx+1),
+                    nom: p.nom || "Cheval",
+                    musique: musique,
+                    coteDisplay: rawCote,
+                    cote: cote,
+                    baseScore: baseScore,
+                    nuggetScore: nuggetScore,
+                    ordreArrivee: p.ordreArrivee
+                };
+            });
+
+            let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
+            let baseHorse = sortedByBase[0];
+            let remaining = processed.filter(p => p.num !== baseHorse?.num);
+            let nuggetHorse = remaining.sort((a, b) => b.nuggetScore - a.nuggetScore)[0];
+
+            return { processed, baseHorse, nuggetHorse };
+        }
+
         async function fetchRaceData() {
             let mIdx = document.getElementById('meetingSelect').value;
             let rIdx = document.getElementById('raceSelect').value;
@@ -213,7 +273,6 @@
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
-
             let rNum = meeting.numOfficiel || (parseInt(mIdx) + 1);
             let cNum = race.numOrdre || (parseInt(rIdx) + 1);
 
@@ -269,37 +328,9 @@
                 if (hasReports) reportsBlock.classList.remove('hidden');
                 else reportsBlock.classList.add('hidden');
 
-                // 3. Algorithme de calcul intelligent (Base & Pépite)
-                let processed = partants.map((p, idx) => {
-                    let musique = p.musique || p.form || "0p";
-                    let rawCote = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
-                                  ? p.dernierRapportDirect.rapport 
-                                  : (p.probabiliteEvolution ? p.probabiliteEvolution : "15.0");
-
-                    let cote = parseFloat(String(rawCote).replace(',', '.')) || 15.0;
-
-                    let coteScore = cote <= 3 ? 95 : (cote <= 6 ? 80 : (cote <= 12 ? 65 : (cote <= 25 ? 40 : 15)));
-                    let musiqueScore = evaluateMusique(musique);
-                    let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
-                    let nuggetScore = (cote >= 5 && cote <= 20) ? Math.round(musiqueScore * 1.3) : musiqueScore;
-
-                    return {
-                        num: p.numPmu || p.numOrdre || (idx+1),
-                        nom: p.nom || "Cheval",
-                        musique: musique,
-                        coteDisplay: rawCote,
-                        cote: cote,
-                        baseScore: baseScore,
-                        nuggetScore: nuggetScore,
-                        ordreArrivee: p.ordreArrivee
-                    };
-                });
-
-                let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
-                let baseHorse = sortedByBase[0];
-
-                let remaining = processed.filter(p => p.num !== baseHorse.num);
-                let nuggetHorse = remaining.sort((a, b) => b.nuggetScore - a.nuggetScore)[0];
+                // 3. Algorithme
+                let algoResult = computeAlgorithm(partants);
+                let { processed, baseHorse, nuggetHorse } = algoResult;
 
                 if (baseHorse) {
                     document.getElementById('top1Name').textContent = `${baseHorse.num}. ${baseHorse.nom}`;
@@ -346,6 +377,85 @@
                 score = (pts / count) * 10;
             }
             return Math.min(98, Math.max(10, Math.round(score)));
+        }
+
+        // --- NOUVEAU : Fonction Bilan de fin de journée ---
+        async function calculateDailyStats() {
+            let statsBlock = document.getElementById('statsBlock');
+            let statsProgress = document.getElementById('statsProgress');
+            let statBase = document.getElementById('statBase');
+            let statPepite = document.getElementById('statPepite');
+            let statGlobal = document.getElementById('statGlobal');
+
+            statsBlock.classList.remove('hidden');
+            statBase.textContent = "0";
+            statPepite.textContent = "0";
+            statGlobal.textContent = "--";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses terminées...";
+
+            let dateInput = document.getElementById('raceDate').value;
+            let parts = dateInput.split('-');
+            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+
+            let finishedRaces = [];
+
+            // Rechercher toutes les courses de toutes les réunions qui sont déjà courues
+            liveMeetingsData.forEach((m, mIdx) => {
+                let rNum = m.numOfficiel || (mIdx + 1);
+                let courses = m.courses || m.races || m.lesCourses || [];
+                courses.forEach((c, cIdx) => {
+                    let cNum = c.numOrdre || (cIdx + 1);
+                    // Si l'heure de départ est passée, on l'ajoute à l'analyse
+                    if (c.heureDepart && new Date(c.heureDepart) < new Date()) {
+                        finishedRaces.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
+                    }
+                });
+            });
+
+            if (finishedRaces.length === 0) {
+                statsProgress.textContent = "Aucune course n'est terminée pour le moment.";
+                return;
+            }
+
+            let baseGagnantes = 0;
+            let pepiteGagnantes = 0;
+            let coursesValidees = 0;
+
+            // Analyse de chaque course terminée (une par une pour ne pas bloquer le téléphone)
+            for (let i = 0; i < finishedRaces.length; i++) {
+                let r = finishedRaces[i];
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours (${i+1}/${finishedRaces.length}) : ${r.name}`;
+
+                try {
+                    const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    let partants = data.participants || [];
+
+                    // Vérifier s'il y a bien une arrivée classée
+                    let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
+                    if (arrivees.length > 0) {
+                        coursesValidees++;
+                        let algoResult = computeAlgorithm(partants);
+
+                        if (algoResult.baseHorse && algoResult.baseHorse.ordreArrivee === 1) {
+                            baseGagnantes++;
+                        }
+                        if (algoResult.nuggetHorse && algoResult.nuggetHorse.ordreArrivee === 1) {
+                            pepiteGagnantes++;
+                        }
+
+                        // Mise à jour visuelle en direct
+                        statBase.textContent = baseGagnantes;
+                        statPepite.textContent = pepiteGagnantes;
+                    }
+                } catch (e) {
+                    console.error("Erreur d'analyse sur " + r.name);
+                }
+            }
+
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété !</span>`;
+            statGlobal.textContent = `${coursesValidees} courses officiellement arrivées ont été analysées`;
         }
 
         window.onload = loadLivePmu;
