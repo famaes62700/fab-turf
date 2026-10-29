@@ -19,26 +19,35 @@ export default async function handler(req, res) {
         "Accept-Language": "fr-FR,fr;q=0.9"
     };
 
-    // Si une réunion (r) et une course (c) sont demandées, on va chercher les partants officiels
+    // Si une réunion (r) et une course (c) sont demandées : partants ET arrivée/rapports
     if (r && c) {
-        const participantUrls = [
-            `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`,
-            `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}/R${r}/C${c}/participants`
-        ];
+        try {
+            const [participantsRes, rapportsRes] = await Promise.all([
+                fetch(`https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/participants`, { headers }),
+                fetch(`https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}/R${r}/C${c}/rapports-definitifs`, { headers }).catch(() => null)
+            ]);
 
-        for (const url of participantUrls) {
-            try {
-                const response = await fetch(url, { headers });
-                if (response.ok) {
-                    const data = await response.json();
-                    return res.status(200).json(data);
-                }
-            } catch (e) {}
+            let participantsData = [];
+            if (participantsRes.ok) {
+                participantsData = await participantsRes.json();
+            }
+
+            let rapportsData = null;
+            if (rapportsRes && rapportsRes.ok) {
+                rapportsData = await rapportsRes.json();
+            }
+
+            return res.status(200).json({
+                participants: participantsData.participants || participantsData || [],
+                rapports: rapportsData
+            });
+
+        } catch (e) {
+            return res.status(500).json({ error: "Impossible de charger les données de cette course" });
         }
-        return res.status(500).json({ error: "Impossible de charger les partants de cette course" });
     }
 
-    // Sinon, on récupère le programme des réunions du jour
+    // Sinon, on récupère le programme complet des réunions
     const programmeUrls = [
         `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${date}`,
         `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${date}?specialisation=INTERNET`
