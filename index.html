@@ -383,9 +383,8 @@
                 let musiqueScore = evaluateMusique(musique);
                 let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
                 
-                // Calcul du score pépite bridé à 98% max pour éviter les dépassements de 100%
-                let rawNugget = (cote >= 5 && cote <= 20) ? Math.round(musiqueScore * 1.3) : musiqueScore;
-                let nuggetScore = Math.min(98, Math.max(10, rawNugget));
+                // Calcul du score pépite sans bridage artificiel (affiche le vrai score calculé)
+                let nuggetScore = (cote >= 5 && cote <= 20) ? Math.round(musiqueScore * 1.3) : musiqueScore;
 
                 return {
                     num: p.numPmu || p.numOrdre || (idx+1),
@@ -394,7 +393,7 @@
                     coteDisplay: rawCote,
                     cote: cote,
                     baseScore: Math.min(98, Math.max(10, baseScore)),
-                    nuggetScore: nuggetScore,
+                    nuggetScore: Math.max(10, nuggetScore),
                     ordreArrivee: p.ordreArrivee
                 };
             });
