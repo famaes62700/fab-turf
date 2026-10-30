@@ -172,13 +172,14 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
+        // Auto-Rafraîchissement toutes les 20 secondes (20 000 ms) pour les cotes et l'arrivée
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
             if (mIdx !== "" && cIdx !== "") {
                 fetchRaceData(); 
             }
-        }, 60000);
+        }, 20000);
 
         function formatTime(timeValue) {
             if (!timeValue) return '';
@@ -227,7 +228,7 @@
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-emerald-400">Prêt (${reunions.length} réunions) <i class="fa-solid fa-bolt ml-1" title="Auto-refresh activé"></i></span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400">Prêt (${reunions.length} réunions) <i class="fa-solid fa-bolt ml-1" title="Rafraîchissement 20s actif"></i></span>`;
                     
                     if (currentVal === "") {
                         autoSelectCurrentRace();
@@ -381,7 +382,10 @@
                 let coteScore = cote <= 3 ? 95 : (cote <= 6 ? 80 : (cote <= 12 ? 65 : (cote <= 25 ? 40 : 15)));
                 let musiqueScore = evaluateMusique(musique);
                 let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
-                let nuggetScore = (cote >= 5 && cote <= 20) ? Math.round(musiqueScore * 1.3) : musiqueScore;
+                
+                // Calcul du score pépite bridé à 98% max pour éviter les dépassements de 100%
+                let rawNugget = (cote >= 5 && cote <= 20) ? Math.round(musiqueScore * 1.3) : musiqueScore;
+                let nuggetScore = Math.min(98, Math.max(10, rawNugget));
 
                 return {
                     num: p.numPmu || p.numOrdre || (idx+1),
@@ -389,7 +393,7 @@
                     musique: musique,
                     coteDisplay: rawCote,
                     cote: cote,
-                    baseScore: baseScore,
+                    baseScore: Math.min(98, Math.max(10, baseScore)),
                     nuggetScore: nuggetScore,
                     ordreArrivee: p.ordreArrivee
                 };
@@ -465,7 +469,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Attente de 2 minutes (120 000 millisecondes) avant de passer à la course suivante
+                        // Attente de 2 minutes (120 000 millisecondes) après l'arrivée avant de passer à la course suivante
                         setTimeout(() => {
                             goToNextRace();
                         }, 120000);
