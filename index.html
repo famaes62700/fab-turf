@@ -99,8 +99,14 @@
             </select>
         </div>
 
+        <!-- BLON ARRIVÉE ET BOUTON DIRECT VIDÉO -->
         <div id="arrivalBlock" class="hidden bg-blue-950/50 border border-blue-500/40 rounded-xl p-3 space-y-2">
-            <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider"><i class="fa-solid fa-flag-checkered mr-1"></i> Arrivée Officielle</h2>
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider"><i class="fa-solid fa-flag-checkered mr-1"></i> Arrivée Officielle</h2>
+                <a id="liveVideoLink" href="https://www.pmu.fr/turf/en-direct/" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1 rounded font-bold shadow transition flex items-center">
+                    <i class="fa-solid fa-video mr-1.5"></i> Voir le Direct 🎥
+                </a>
+            </div>
             <div id="arrivalList" class="flex flex-wrap gap-2 text-xs font-bold text-white"></div>
         </div>
 
@@ -163,13 +169,14 @@
 <script>
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
+        let autoTransitionDone = false; // Empêche de boucler en boucle sur la même course
 
         // Auto-Rafraîchissement toutes les minutes (60 000 ms)
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
             if (mIdx !== "" && cIdx !== "") {
-                fetchRaceData(); // Rafraîchit silencieusement l'arrivée, les cotes et rapports
+                fetchRaceData(); 
             }
         }, 60000);
 
@@ -271,11 +278,11 @@
                 document.getElementById('meetingSelect').value = bestMIdx;
                 onMeetingChange();
                 document.getElementById('raceSelect').value = bestCIdx;
+                autoTransitionDone = false;
                 fetchRaceData();
             }
         }
 
-        // --- NOUVELLES FONCTIONS NAVIGATION (PRÉCÉDENTE / SUIVANTE) ---
         function getSortedRacesList() {
             let list = [];
             liveMeetingsData.forEach((m, mIdx) => {
@@ -290,11 +297,10 @@
                     }
                 });
             });
-            // Trie toutes les courses de la journée par ordre chronologique
             return list.sort((a, b) => a.time - b.time);
         }
 
-        function navigateAdjacentRace(direction) { // -1 pour précédente, 1 pour suivante
+        function navigateAdjacentRace(direction) { 
             let mIdx = parseInt(document.getElementById('meetingSelect').value);
             let cIdx = parseInt(document.getElementById('raceSelect').value);
             if (isNaN(mIdx) || isNaN(cIdx)) return;
@@ -309,6 +315,7 @@
                     document.getElementById('meetingSelect').value = targetRace.mIdx;
                     onMeetingChange();
                     document.getElementById('raceSelect').value = targetRace.cIdx;
+                    autoTransitionDone = false;
                     fetchRaceData();
                 } else {
                     let alertMsg = direction === 1 ? "Vous êtes sur la toute dernière course de la journée !" : "Vous êtes sur la toute première course de la journée !";
@@ -319,7 +326,6 @@
 
         function goToNextRace() { navigateAdjacentRace(1); }
         function goToPrevRace() { navigateAdjacentRace(-1); }
-        // --------------------------------------------------------------
 
         function onMeetingChange() {
             let mIdx = document.getElementById('meetingSelect').value;
@@ -347,6 +353,7 @@
         }
 
         function onRaceChange() {
+            autoTransitionDone = false;
             fetchRaceData();
         }
 
@@ -445,7 +452,9 @@
                 arrivalList.innerHTML = '';
                 let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a, b) => a.ordreArrivee - b.ordreArrivee);
 
-                if (arrivees.length > 0) {
+                let hasArrival = arrivees.length > 0;
+
+                if (hasArrival) {
                     arrivalBlock.classList.remove('hidden');
                     arrivees.slice(0, 5).forEach((p) => {
                         let div = document.createElement('div');
@@ -453,6 +462,15 @@
                         div.innerHTML = `<span class="text-blue-300">${p.ordreArrivee}er:</span> N°${p.numPmu || p.numOrdre} ${p.nom}`;
                         arrivalList.appendChild(div);
                     });
+
+                    // --- PASSAGE AUTOMATIQUE À LA COURSE SUIVANTE QUAND L'ARRIVÉE TOMBE ---
+                    if (!autoTransitionDone) {
+                        autoTransitionDone = true;
+                        // On attend 5 secondes pour laisser le temps de voir les résultats, puis on passe à la suivante
+                        setTimeout(() => {
+                            goToNextRace();
+                        }, 5000);
+                    }
                 } else {
                     arrivalBlock.classList.add('hidden');
                 }
