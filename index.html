@@ -217,13 +217,64 @@
                         select.appendChild(opt);
                     });
                     
-                    if (currentVal !== "") select.value = currentVal;
                     statusText.innerHTML = `<span class="text-emerald-400">Prêt (${reunions.length} réunions)</span>`;
+                    
+                    // AUTO-SÉLECTION DE LA COURSE EN COURS
+                    if (currentVal === "") {
+                        autoSelectCurrentRace();
+                    } else {
+                        select.value = currentVal;
+                    }
+
                 } else {
                     throw new Error("Aucune réunion");
                 }
             } catch (e) {
                 statusText.innerHTML = '<span class="text-red-400">Erreur réseau</span>';
+            }
+        }
+
+        // --- NOUVEAU : Fonction pour trouver la course immédiate ---
+        function autoSelectCurrentRace() {
+            let now = new Date().getTime();
+            let bestMIdx = 0, bestCIdx = 0;
+            let minDiff = Infinity; 
+            let minPastDiff = Infinity;
+            let pastMIdx = 0, pastCIdx = 0;
+
+            liveMeetingsData.forEach((m, mIdx) => {
+                let courses = m.courses || m.races || m.lesCourses || [];
+                courses.forEach((c, cIdx) => {
+                    if (c.heureDepart) {
+                        let departTime = new Date(c.heureDepart).getTime();
+                        let diff = departTime - now;
+                        
+                        if (diff > 0 && diff < minDiff) { 
+                            // Course la plus proche dans le futur
+                            minDiff = diff;
+                            bestMIdx = mIdx;
+                            bestCIdx = cIdx;
+                        } else if (diff <= 0 && Math.abs(diff) < minPastDiff) {
+                            // Course la plus récente si tout est fini
+                            minPastDiff = Math.abs(diff);
+                            pastMIdx = mIdx;
+                            pastCIdx = cIdx;
+                        }
+                    }
+                });
+            });
+
+            // S'il n'y a plus de course dans le futur, on prend la dernière passée
+            if (minDiff === Infinity) {
+                bestMIdx = pastMIdx;
+                bestCIdx = pastCIdx;
+            }
+
+            if (liveMeetingsData[bestMIdx]) {
+                document.getElementById('meetingSelect').value = bestMIdx;
+                onMeetingChange();
+                document.getElementById('raceSelect').value = bestCIdx;
+                fetchRaceData();
             }
         }
 
@@ -259,7 +310,10 @@
         async function refreshCurrentRace() {
             let mIdx = document.getElementById('meetingSelect').value;
             let rIdx = document.getElementById('raceSelect').value;
-            if (mIdx === "" || rIdx === "") return;
+            if (mIdx === "" || rIdx === "") {
+                await loadLivePmu();
+                return;
+            }
             await loadLivePmu();
             document.getElementById('meetingSelect').value = mIdx;
             onMeetingChange();
