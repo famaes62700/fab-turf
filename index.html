@@ -112,17 +112,22 @@
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg relative">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés</h2>
-                <div class="flex space-x-2">
-                    <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1 rounded border border-emerald-500/30 font-semibold transition flex items-center">
-                        <i class="fa-solid fa-rotate mr-1"></i> Actualiser
+                <div class="flex space-x-1.5">
+                    <!-- BOUTON PRÉCÉDENTE -->
+                    <button onclick="goToPrevRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg">
+                        <i class="fa-solid fa-backward-step"></i>
                     </button>
-                    <!-- NOUVEAU BOUTON SUIVANTE -->
-                    <button onclick="goToNextRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2.5 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg">
-                        Suivante <i class="fa-solid fa-forward-step ml-1"></i>
+                    <!-- ACTUALISER -->
+                    <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2 py-1 rounded border border-emerald-500/30 font-semibold transition flex items-center" title="Actualiser manuellement">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                    <!-- BOUTON SUIVANTE -->
+                    <button onclick="goToNextRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg">
+                        <i class="fa-solid fa-forward-step"></i>
                     </button>
                 </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mt-3">
                 <div class="bg-zinc-900/90 p-3 rounded-lg border border-emerald-500/40 space-y-1">
                     <div class="text-[10px] uppercase font-bold text-emerald-400">Base Solide (Banquier)</div>
                     <div id="top1Name" class="font-bold text-white text-sm">En attente...</div>
@@ -158,6 +163,15 @@
 <script>
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
+
+        // Auto-Rafraîchissement toutes les minutes (60 000 ms)
+        setInterval(() => {
+            let mIdx = document.getElementById('meetingSelect').value;
+            let cIdx = document.getElementById('raceSelect').value;
+            if (mIdx !== "" && cIdx !== "") {
+                fetchRaceData(); // Rafraîchit silencieusement l'arrivée, les cotes et rapports
+            }
+        }, 60000);
 
         function formatTime(timeValue) {
             if (!timeValue) return '';
@@ -206,7 +220,7 @@
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-emerald-400">Prêt (${reunions.length} réunions)</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400">Prêt (${reunions.length} réunions) <i class="fa-solid fa-bolt ml-1" title="Auto-refresh activé"></i></span>`;
                     
                     if (currentVal === "") {
                         autoSelectCurrentRace();
@@ -261,47 +275,51 @@
             }
         }
 
-        // --- NOUVEAU : Fonction "Course Suivante" ---
-        function goToNextRace() {
-            let mIdx = document.getElementById('meetingSelect').value;
-            let cIdx = document.getElementById('raceSelect').value;
-            if (mIdx === "" || cIdx === "") return;
-            
-            let currentMeeting = liveMeetingsData[mIdx];
-            let currentCourses = currentMeeting.courses || currentMeeting.races || currentMeeting.lesCourses || [];
-            let currentRace = currentCourses[cIdx];
-            
-            if (!currentRace || !currentRace.heureDepart) return;
-            let currentDepart = new Date(currentRace.heureDepart).getTime();
-            
-            let nextMIdx = -1;
-            let nextCIdx = -1;
-            let minDiff = Infinity;
-            
-            // Cherche la course dont l'heure de départ est juste après la course actuelle
-            liveMeetingsData.forEach((m, i) => {
+        // --- NOUVELLES FONCTIONS NAVIGATION (PRÉCÉDENTE / SUIVANTE) ---
+        function getSortedRacesList() {
+            let list = [];
+            liveMeetingsData.forEach((m, mIdx) => {
                 let courses = m.courses || m.races || m.lesCourses || [];
-                courses.forEach((c, j) => {
+                courses.forEach((c, cIdx) => {
                     if (c.heureDepart) {
-                        let diff = new Date(c.heureDepart).getTime() - currentDepart;
-                        if (diff > 0 && diff < minDiff) {
-                            minDiff = diff;
-                            nextMIdx = i;
-                            nextCIdx = j;
-                        }
+                        list.push({
+                            mIdx: mIdx,
+                            cIdx: cIdx,
+                            time: new Date(c.heureDepart).getTime()
+                        });
                     }
                 });
             });
-            
-            if (nextMIdx !== -1) {
-                document.getElementById('meetingSelect').value = nextMIdx;
-                onMeetingChange();
-                document.getElementById('raceSelect').value = nextCIdx;
-                fetchRaceData();
-            } else {
-                alert("Vous êtes sur la dernière course programmée aujourd'hui !");
+            // Trie toutes les courses de la journée par ordre chronologique
+            return list.sort((a, b) => a.time - b.time);
+        }
+
+        function navigateAdjacentRace(direction) { // -1 pour précédente, 1 pour suivante
+            let mIdx = parseInt(document.getElementById('meetingSelect').value);
+            let cIdx = parseInt(document.getElementById('raceSelect').value);
+            if (isNaN(mIdx) || isNaN(cIdx)) return;
+
+            let sortedRaces = getSortedRacesList();
+            let currentIndex = sortedRaces.findIndex(r => r.mIdx === mIdx && r.cIdx === cIdx);
+
+            if (currentIndex !== -1) {
+                let targetIndex = currentIndex + direction;
+                if (targetIndex >= 0 && targetIndex < sortedRaces.length) {
+                    let targetRace = sortedRaces[targetIndex];
+                    document.getElementById('meetingSelect').value = targetRace.mIdx;
+                    onMeetingChange();
+                    document.getElementById('raceSelect').value = targetRace.cIdx;
+                    fetchRaceData();
+                } else {
+                    let alertMsg = direction === 1 ? "Vous êtes sur la toute dernière course de la journée !" : "Vous êtes sur la toute première course de la journée !";
+                    alert(alertMsg);
+                }
             }
         }
+
+        function goToNextRace() { navigateAdjacentRace(1); }
+        function goToPrevRace() { navigateAdjacentRace(-1); }
+        // --------------------------------------------------------------
 
         function onMeetingChange() {
             let mIdx = document.getElementById('meetingSelect').value;
