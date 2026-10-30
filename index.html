@@ -234,7 +234,7 @@
             }
         }
 
-        // --- NOUVEAU : Fonction pour trouver la course immédiate ---
+        // --- NOUVEAU : Sélection avec maintien de 20 minutes après le départ ---
         function autoSelectCurrentRace() {
             let now = new Date().getTime();
             let bestMIdx = 0, bestCIdx = 0;
@@ -242,20 +242,23 @@
             let minPastDiff = Infinity;
             let pastMIdx = 0, pastCIdx = 0;
 
+            // Marge de 20 minutes (20 * 60 * 1000 millisecondes)
+            let bufferTemps = 20 * 60 * 1000; 
+
             liveMeetingsData.forEach((m, mIdx) => {
                 let courses = m.courses || m.races || m.lesCourses || [];
                 courses.forEach((c, cIdx) => {
                     if (c.heureDepart) {
                         let departTime = new Date(c.heureDepart).getTime();
-                        let diff = departTime - now;
+                        let diff = (departTime + bufferTemps) - now;
                         
                         if (diff > 0 && diff < minDiff) { 
-                            // Course la plus proche dans le futur
+                            // Course en cours (depuis moins de 20min) ou course à venir
                             minDiff = diff;
                             bestMIdx = mIdx;
                             bestCIdx = cIdx;
                         } else if (diff <= 0 && Math.abs(diff) < minPastDiff) {
-                            // Course la plus récente si tout est fini
+                            // Course totalement terminée (il y a plus de 20min)
                             minPastDiff = Math.abs(diff);
                             pastMIdx = mIdx;
                             pastCIdx = cIdx;
@@ -264,7 +267,6 @@
                 });
             });
 
-            // S'il n'y a plus de course dans le futur, on prend la dernière passée
             if (minDiff === Infinity) {
                 bestMIdx = pastMIdx;
                 bestCIdx = pastCIdx;
@@ -514,7 +516,6 @@
             let year = today.getFullYear();
             document.getElementById('currentYearText').textContent = year;
 
-            // --- 1. SEMAINE (Du lundi en cours au dimanche) ---
             let dayOfWeek = today.getDay() || 7; 
             let monday = new Date(today);
             monday.setDate(today.getDate() - (dayOfWeek - 1)); 
@@ -535,7 +536,6 @@
             document.getElementById('histWeekTotal').innerHTML = formatMoneyHTML(weekTotal, 'total');
             document.getElementById('histWeekTotal').className = weekTotal >= 0 ? "font-black text-emerald-400 text-sm" : "font-black text-red-400 text-sm";
 
-            // --- 2. MOIS PAR MOIS ---
             const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
             let monthsGrid = document.getElementById('monthsGrid');
             monthsGrid.innerHTML = '';
