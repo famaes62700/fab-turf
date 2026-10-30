@@ -383,7 +383,7 @@
                 let coteScore = cote <= 3 ? 90 : (cote <= 6 ? 75 : (cote <= 12 ? 60 : (cote <= 25 ? 35 : 15)));
                 let musiqueScore = evaluateMusique(musique);
                 
-                // Calculs réels sans plafond artificiel à 98%
+                // Calcul du score basé sur les mêmes métriques que le tableau (sans forcer 100%)
                 let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
                 let nuggetRaw = (cote >= 5 && cote <= 20) ? Math.round((coteScore * 0.3) + (musiqueScore * 0.7)) : musiqueScore;
 
@@ -393,8 +393,8 @@
                     musique: musique,
                     coteDisplay: rawCote,
                     cote: cote,
-                    baseScore: Math.min(100, Math.max(5, baseScore)),
-                    nuggetScore: Math.min(100, Math.max(5, nuggetRaw)),
+                    baseScore: Math.max(5, Math.min(99, baseScore)),
+                    nuggetScore: Math.max(5, Math.min(99, nuggetRaw)),
                     ordreArrivee: p.ordreArrivee
                 };
             });
@@ -550,7 +550,7 @@
                 }
                 score = (pts / count) * 10;
             }
-            return Math.min(100, Math.max(5, Math.round(score)));
+            return Math.max(5, Math.min(99, Math.round(score)));
         }
 
         function formatMoneyHTML(val, type) {
