@@ -37,15 +37,13 @@
             </div>
         </div>
 
-        <!-- BLOC HISTORIQUE (COMPTABILITÉ SEMAINE / MOIS) -->
+        <!-- BLOC HISTORIQUE -->
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Vos Gains Cumulés</h2>
                 <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
             <div class="space-y-4 max-h-96 overflow-y-auto pr-1">
-                <!-- Semaine Officielle (Lun - Dim) -->
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
                     <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Cette Semaine (Lun - Dim)</h3>
                     <div class="grid grid-cols-2 gap-2 text-xs mb-2">
@@ -58,19 +56,14 @@
                             <div id="histWeekPepite" class="font-bold text-white mt-0.5">--</div>
                         </div>
                     </div>
-                    <!-- Ligne TOTAL Semaine -->
                     <div class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center flex justify-center items-center space-x-2">
                         <span class="text-[10px] text-zinc-400 uppercase font-bold">Total Cumulé :</span>
                         <div id="histWeekTotal" class="font-black text-sm">--</div>
                     </div>
                 </div>
-
-                <!-- Bilan Mois par Mois -->
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
                     <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Mois par Mois (<span id="currentYearText"></span>)</h3>
-                    <div id="monthsGrid" class="space-y-2">
-                        <!-- Les 12 mois seront injectés ici avec leur colonne TOTAL -->
-                    </div>
+                    <div id="monthsGrid" class="space-y-2"></div>
                 </div>
             </div>
         </div>
@@ -81,29 +74,20 @@
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour (Pour 1€ parié)</h2>
                 <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Recherche des courses terminées...</div>
-            
+            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Recherche des courses...</div>
             <div class="grid grid-cols-2 gap-3 text-xs">
                 <div class="bg-zinc-800/80 p-3 rounded-lg border border-emerald-500/30 text-center relative overflow-hidden flex flex-col justify-between">
                     <div class="text-[10px] uppercase font-bold text-emerald-400 mb-1">Base Gagnante</div>
-                    <div id="statBase" class="text-2xl font-black text-white">0 <span class="text-xs font-normal text-zinc-400">/ 0</span></div>
-                    <div class="text-[9px] text-zinc-400 mt-0.5 mb-2">victoires sur ce total</div>
-                    <div id="gainBase" class="bg-emerald-950/50 text-emerald-300 py-1.5 px-1 rounded text-[11px] border border-emerald-500/20 leading-tight">
-                        Retours : 0.00 € <br><span class="text-emerald-400 font-bold">Bénéfice : 0.00 €</span>
-                    </div>
+                    <div id="statBase" class="text-2xl font-black text-white">0</div>
+                    <div id="gainBase" class="bg-emerald-950/50 text-emerald-300 py-1.5 px-1 rounded text-[11px] mt-2 border border-emerald-500/20">--</div>
                 </div>
                 <div class="bg-zinc-800/80 p-3 rounded-lg border border-amber-500/30 text-center relative overflow-hidden flex flex-col justify-between">
                     <div class="text-[10px] uppercase font-bold text-amber-400 mb-1">Pépite Gagnante</div>
-                    <div id="statPepite" class="text-2xl font-black text-white">0 <span class="text-xs font-normal text-zinc-400">/ 0</span></div>
-                    <div class="text-[9px] text-zinc-400 mt-0.5 mb-2">victoires sur ce total</div>
-                    <div id="gainPepite" class="bg-amber-950/50 text-amber-300 py-1.5 px-1 rounded text-[11px] border border-amber-500/20 leading-tight">
-                        Retours : 0.00 € <br><span class="text-amber-400 font-bold">Bénéfice : 0.00 €</span>
-                    </div>
+                    <div id="statPepite" class="text-2xl font-black text-white">0</div>
+                    <div id="gainPepite" class="bg-amber-950/50 text-amber-300 py-1.5 px-1 rounded text-[11px] mt-2 border border-amber-500/20">--</div>
                 </div>
             </div>
-            <div id="statGlobal" class="text-center text-[10px] text-zinc-400 mt-3 font-semibold bg-zinc-800/50 py-2 rounded-lg border border-zinc-700/50">
-                Mise totale simulée : 0 €
-            </div>
+            <div id="statGlobal" class="text-center text-[10px] text-zinc-400 mt-3 font-semibold bg-zinc-800/50 py-2 rounded-lg border border-zinc-700/50">Mise totale : 0 €</div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -128,9 +112,15 @@
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg relative">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés</h2>
-                <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1 rounded border border-emerald-500/30 font-semibold transition flex items-center">
-                    <i class="fa-solid fa-rotate mr-1"></i> Actualiser
-                </button>
+                <div class="flex space-x-2">
+                    <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1 rounded border border-emerald-500/30 font-semibold transition flex items-center">
+                        <i class="fa-solid fa-rotate mr-1"></i> Actualiser
+                    </button>
+                    <!-- NOUVEAU BOUTON SUIVANTE -->
+                    <button onclick="goToNextRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2.5 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg">
+                        Suivante <i class="fa-solid fa-forward-step ml-1"></i>
+                    </button>
+                </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div class="bg-zinc-900/90 p-3 rounded-lg border border-emerald-500/40 space-y-1">
@@ -165,8 +155,7 @@
             </div>
         </div>
     </main>
-
-    <script>
+<script>
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
 
@@ -219,13 +208,11 @@
                     
                     statusText.innerHTML = `<span class="text-emerald-400">Prêt (${reunions.length} réunions)</span>`;
                     
-                    // AUTO-SÉLECTION DE LA COURSE EN COURS
                     if (currentVal === "") {
                         autoSelectCurrentRace();
                     } else {
                         select.value = currentVal;
                     }
-
                 } else {
                     throw new Error("Aucune réunion");
                 }
@@ -234,15 +221,12 @@
             }
         }
 
-        // --- NOUVEAU : Sélection avec maintien de 20 minutes après le départ ---
         function autoSelectCurrentRace() {
             let now = new Date().getTime();
             let bestMIdx = 0, bestCIdx = 0;
             let minDiff = Infinity; 
             let minPastDiff = Infinity;
             let pastMIdx = 0, pastCIdx = 0;
-
-            // Marge de 20 minutes (20 * 60 * 1000 millisecondes)
             let bufferTemps = 20 * 60 * 1000; 
 
             liveMeetingsData.forEach((m, mIdx) => {
@@ -251,14 +235,11 @@
                     if (c.heureDepart) {
                         let departTime = new Date(c.heureDepart).getTime();
                         let diff = (departTime + bufferTemps) - now;
-                        
                         if (diff > 0 && diff < minDiff) { 
-                            // Course en cours (depuis moins de 20min) ou course à venir
                             minDiff = diff;
                             bestMIdx = mIdx;
                             bestCIdx = cIdx;
                         } else if (diff <= 0 && Math.abs(diff) < minPastDiff) {
-                            // Course totalement terminée (il y a plus de 20min)
                             minPastDiff = Math.abs(diff);
                             pastMIdx = mIdx;
                             pastCIdx = cIdx;
@@ -277,6 +258,48 @@
                 onMeetingChange();
                 document.getElementById('raceSelect').value = bestCIdx;
                 fetchRaceData();
+            }
+        }
+
+        // --- NOUVEAU : Fonction "Course Suivante" ---
+        function goToNextRace() {
+            let mIdx = document.getElementById('meetingSelect').value;
+            let cIdx = document.getElementById('raceSelect').value;
+            if (mIdx === "" || cIdx === "") return;
+            
+            let currentMeeting = liveMeetingsData[mIdx];
+            let currentCourses = currentMeeting.courses || currentMeeting.races || currentMeeting.lesCourses || [];
+            let currentRace = currentCourses[cIdx];
+            
+            if (!currentRace || !currentRace.heureDepart) return;
+            let currentDepart = new Date(currentRace.heureDepart).getTime();
+            
+            let nextMIdx = -1;
+            let nextCIdx = -1;
+            let minDiff = Infinity;
+            
+            // Cherche la course dont l'heure de départ est juste après la course actuelle
+            liveMeetingsData.forEach((m, i) => {
+                let courses = m.courses || m.races || m.lesCourses || [];
+                courses.forEach((c, j) => {
+                    if (c.heureDepart) {
+                        let diff = new Date(c.heureDepart).getTime() - currentDepart;
+                        if (diff > 0 && diff < minDiff) {
+                            minDiff = diff;
+                            nextMIdx = i;
+                            nextCIdx = j;
+                        }
+                    }
+                });
+            });
+            
+            if (nextMIdx !== -1) {
+                document.getElementById('meetingSelect').value = nextMIdx;
+                onMeetingChange();
+                document.getElementById('raceSelect').value = nextCIdx;
+                fetchRaceData();
+            } else {
+                alert("Vous êtes sur la dernière course programmée aujourd'hui !");
             }
         }
 
@@ -491,7 +514,6 @@
             return Math.min(98, Math.max(10, Math.round(score)));
         }
 
-        // --- CALENDRIER : SEMAINE ET MOIS AVEC TOTAUX ---
         function formatMoneyHTML(val, type) {
             if (val === 0) return `<span class="text-zinc-500">0.00 €</span>`;
             let color = val > 0 ? (type === 'pepite' ? 'text-amber-400' : 'text-emerald-400') : 'text-red-400';
@@ -651,7 +673,6 @@
                         gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'} font-bold">Bénéfice : ${netPepite > 0 ? '+' : ''}${netPepite.toFixed(2)} €</span>`;
                         statGlobal.textContent = `Bilan sur ${coursesValidees} courses (Mise : ${coursesValidees} €)`;
 
-                        // SAUVEGARDE LOCALE 
                         localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
                             netPepite: netPepite
