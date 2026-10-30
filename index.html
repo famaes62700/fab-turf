@@ -380,13 +380,12 @@
                               : (p.probabiliteEvolution ? p.probabiliteEvolution : "15.0");
                 let cote = parseFloat(String(rawCote).replace(',', '.')) || 15.0;
                 
-                let coteScore = cote <= 3 ? 95 : (cote <= 6 ? 80 : (cote <= 12 ? 65 : (cote <= 25 ? 40 : 15)));
+                let coteScore = cote <= 3 ? 90 : (cote <= 6 ? 75 : (cote <= 12 ? 60 : (cote <= 25 ? 35 : 15)));
                 let musiqueScore = evaluateMusique(musique);
-                let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
                 
-                // Calcul du score pépite basé sur une pondération saine (bridé proprement entre 10% et 98% max)
-                let nuggetRaw = (cote >= 5 && cote <= 20) ? Math.round((coteScore * 0.4) + (musiqueScore * 0.6)) : musiqueScore;
-                let nuggetScore = Math.min(98, Math.max(10, nuggetRaw));
+                // Calculs réels sans plafond artificiel à 98%
+                let baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
+                let nuggetRaw = (cote >= 5 && cote <= 20) ? Math.round((coteScore * 0.3) + (musiqueScore * 0.7)) : musiqueScore;
 
                 return {
                     num: p.numPmu || p.numOrdre || (idx+1),
@@ -394,8 +393,8 @@
                     musique: musique,
                     coteDisplay: rawCote,
                     cote: cote,
-                    baseScore: Math.min(98, Math.max(10, baseScore)),
-                    nuggetScore: nuggetScore,
+                    baseScore: Math.min(100, Math.max(5, baseScore)),
+                    nuggetScore: Math.min(100, Math.max(5, nuggetRaw)),
                     ordreArrivee: p.ordreArrivee
                 };
             });
@@ -551,7 +550,7 @@
                 }
                 score = (pts / count) * 10;
             }
-            return Math.min(98, Math.max(10, Math.round(score)));
+            return Math.min(100, Math.max(5, Math.round(score)));
         }
 
         function formatMoneyHTML(val, type) {
