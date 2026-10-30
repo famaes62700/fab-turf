@@ -110,12 +110,12 @@
             <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
         </div>
 
-        <!-- BLOC CHEVAUX CLÉS + NAVIGATION ET LIEN DIRECT EXACT -->
+        <!-- BLOC CHEVAUX CLÉS + NAVIGATION ET LIEN DIRECT EQUIDIA -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg relative">
             <div class="flex flex-wrap justify-between items-center gap-2">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés</h2>
                 <div class="flex items-center space-x-1.5 flex-wrap">
-                    <!-- LIEN DIRECT EXACT FOURNI -->
+                    <!-- LIEN DIRECT EQUIDIA -->
                     <a href="https://www.equidia.fr/direct?utm_source=intern&utm_medium=header_menu&utm_campaign=Home" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1 rounded font-bold shadow transition flex items-center">
                         <i class="fa-solid fa-video mr-1.5"></i> Direct 🎥
                     </a>
@@ -465,9 +465,10 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
+                        // Attente de 2 minutes (120 000 millisecondes) avant de passer à la course suivante
                         setTimeout(() => {
                             goToNextRace();
-                        }, 5000);
+                        }, 120000);
                     }
                 } else {
                     arrivalBlock.classList.add('hidden');
