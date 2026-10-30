@@ -99,14 +99,9 @@
             </select>
         </div>
 
-        <!-- BLON ARRIVÉE ET BOUTON DIRECT VIDÉO -->
+        <!-- BLOC ARRIVÉE OFFICIELLE -->
         <div id="arrivalBlock" class="hidden bg-blue-950/50 border border-blue-500/40 rounded-xl p-3 space-y-2">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider"><i class="fa-solid fa-flag-checkered mr-1"></i> Arrivée Officielle</h2>
-                <a id="liveVideoLink" href="https://www.pmu.fr/turf/en-direct/" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1 rounded font-bold shadow transition flex items-center">
-                    <i class="fa-solid fa-video mr-1.5"></i> Voir le Direct 🎥
-                </a>
-            </div>
+            <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider"><i class="fa-solid fa-flag-checkered mr-1"></i> Arrivée Officielle</h2>
             <div id="arrivalList" class="flex flex-wrap gap-2 text-xs font-bold text-white"></div>
         </div>
 
@@ -115,12 +110,17 @@
             <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
         </div>
 
+        <!-- BLOC CHEVAUX CLÉS + NAVIGATION ET BOUTON DIRECT -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-xl p-4 space-y-3 shadow-lg relative">
-            <div class="flex justify-between items-center">
+            <div class="flex flex-wrap justify-between items-center gap-2">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Nos 2 Chevaux Clés</h2>
-                <div class="flex space-x-1.5">
+                <div class="flex items-center space-x-1.5 flex-wrap">
+                    <!-- BOUTON DIRECT VIDÉO CORRIGÉ -->
+                    <a href="https://www.pmu.fr/turf/courses-en-direct/" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1 rounded font-bold shadow transition flex items-center">
+                        <i class="fa-solid fa-video mr-1.5"></i> Direct 🎥
+                    </a>
                     <!-- BOUTON PRÉCÉDENTE -->
-                    <button onclick="goToPrevRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg">
+                    <button onclick="goToPrevRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg" title="Course précédente">
                         <i class="fa-solid fa-backward-step"></i>
                     </button>
                     <!-- ACTUALISER -->
@@ -128,7 +128,7 @@
                         <i class="fa-solid fa-rotate"></i>
                     </button>
                     <!-- BOUTON SUIVANTE -->
-                    <button onclick="goToNextRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg">
+                    <button onclick="goToNextRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition flex items-center shadow-lg" title="Course suivante">
                         <i class="fa-solid fa-forward-step"></i>
                     </button>
                 </div>
@@ -166,12 +166,12 @@
             </div>
         </div>
     </main>
-<script>
+
+    <script>
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
-        let autoTransitionDone = false; // Empêche de boucler en boucle sur la même course
+        let autoTransitionDone = false;
 
-        // Auto-Rafraîchissement toutes les minutes (60 000 ms)
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -463,10 +463,8 @@
                         arrivalList.appendChild(div);
                     });
 
-                    // --- PASSAGE AUTOMATIQUE À LA COURSE SUIVANTE QUAND L'ARRIVÉE TOMBE ---
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // On attend 5 secondes pour laisser le temps de voir les résultats, puis on passe à la suivante
                         setTimeout(() => {
                             goToNextRace();
                         }, 5000);
