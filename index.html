@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algo Placé 1€ Forcé</title>
+    <title>PMU Direct - Comparatif Gagnant / Placé</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -40,7 +40,7 @@
         <!-- BLOC HISTORIQUE -->
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Gains Cumulés (100% Placé)</h2>
+                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Gains Cumulés (Comparatif Mensuel)</h2>
                 <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="space-y-4 max-h-96 overflow-y-auto pr-1">
@@ -48,17 +48,13 @@
                     <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Cette Semaine (Lun - Dim)</h3>
                     <div class="grid grid-cols-2 gap-2 text-xs mb-2">
                         <div class="text-center bg-emerald-950/30 p-2 rounded border border-emerald-500/20">
-                            <div class="text-[9px] text-emerald-400 uppercase">Base (Net)</div>
-                            <div id="histWeekBase" class="font-bold text-white mt-0.5">--</div>
+                            <div class="text-[9px] text-emerald-400 uppercase">100% Placé (Net)</div>
+                            <div id="histWeekPlace" class="font-bold text-white mt-0.5">--</div>
                         </div>
-                        <div class="text-center bg-amber-950/30 p-2 rounded border border-amber-500/20">
-                            <div class="text-[9px] text-amber-400 uppercase">Pépite (Net)</div>
-                            <div id="histWeekPepite" class="font-bold text-white mt-0.5">--</div>
+                        <div class="text-center bg-indigo-950/30 p-2 rounded border border-indigo-500/20">
+                            <div class="text-[9px] text-indigo-400 uppercase">100% Gagnant (Net)</div>
+                            <div id="histWeekGagnant" class="font-bold text-white mt-0.5">--</div>
                         </div>
-                    </div>
-                    <div class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center flex justify-center items-center space-x-2">
-                        <span class="text-[10px] text-zinc-400 uppercase font-bold">Total Cumulé :</span>
-                        <div id="histWeekTotal" class="font-black text-sm">--</div>
                     </div>
                 </div>
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
@@ -68,32 +64,40 @@
             </div>
         </div>
 
-        <!-- BLOC STATISTIQUES DU JOUR -->
-        <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2">
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour (1€ Placé)</h2>
+        <!-- BLOC STATISTIQUES DU JOUR (AVEC COMPARATIF GAGNANT / PLACE) -->
+        <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2 space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Comparatif du Jour (Placé vs Gagnant)</h2>
                 <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Recherche des courses...</div>
-            <div class="grid grid-cols-2 gap-3 text-xs">
-                <div class="bg-zinc-800/80 p-2.5 rounded-lg border border-emerald-500/30 flex flex-col justify-between">
-                    <div class="text-[10px] uppercase font-bold text-emerald-400 mb-2 flex justify-between"><span>Base</span><span class="text-zinc-500">1€/crse</span></div>
-                    <div class="flex justify-around items-center mb-2">
-                        <div class="text-center"><div id="statBaseG" class="text-xl font-black text-white">0</div><div class="text-[9px] text-zinc-400">Gagnant</div></div>
-                        <div class="text-center"><div id="statBaseP" class="text-xl font-black text-emerald-400">0</div><div class="text-[9px] text-emerald-400">Placé</div></div>
-                    </div>
-                    <div id="gainBase" class="bg-emerald-950/50 text-emerald-300 py-1.5 px-1 rounded text-[11px] border border-emerald-500/20 text-center leading-tight">--</div>
+            
+            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400">Recherche des courses...</div>
+
+            <!-- LIGNE COMPARATIVE : JOUÉ UNIQUEMENT GAGNANT -->
+            <div class="bg-zinc-800/90 p-3 rounded-lg border border-indigo-500/40">
+                <div class="text-[10px] uppercase font-bold text-indigo-300 mb-2 flex justify-between items-center">
+                    <span><i class="fa-solid fa-star mr-1"></i> Option 100% Gagnant (2€/crse : 1€ Base + 1€ Pépite)</span>
+                    <span id="statGagnantGlobalScore" class="text-white font-mono">--</span>
                 </div>
-                <div class="bg-zinc-800/80 p-2.5 rounded-lg border border-amber-500/30 flex flex-col justify-between">
-                    <div class="text-[10px] uppercase font-bold text-amber-400 mb-2 flex justify-between"><span>Pépite</span><span class="text-zinc-500">1€/crse</span></div>
-                    <div class="flex justify-around items-center mb-2">
-                        <div class="text-center"><div id="statPepiteG" class="text-xl font-black text-white">0</div><div class="text-[9px] text-zinc-400">Gagnant</div></div>
-                        <div class="text-center"><div id="statPepiteP" class="text-xl font-black text-amber-400">0</div><div class="text-[9px] text-amber-400">Placé</div></div>
-                    </div>
-                    <div id="gainPepite" class="bg-amber-950/50 text-amber-300 py-1.5 px-1 rounded text-[11px] border border-amber-500/20 text-center leading-tight">--</div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div id="gainGagnantBase" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">Base : --</div>
+                    <div id="gainGagnantPepite" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">Pépite : --</div>
                 </div>
             </div>
-            <div id="statGlobal" class="text-center text-[10px] text-zinc-400 mt-3 font-semibold bg-zinc-800/50 py-2 rounded-lg border border-zinc-700/50">Mise totale : 0 €</div>
+
+            <!-- LIGNE COMPARATIVE : JOUÉ UNIQUEMENT PLACÉ -->
+            <div class="bg-zinc-800/90 p-3 rounded-lg border border-emerald-500/40">
+                <div class="text-[10px] uppercase font-bold text-emerald-300 mb-2 flex justify-between items-center">
+                    <span><i class="fa-solid fa-shield-halved mr-1"></i> Option 100% Placé (2€/crse : 1€ Base + 1€ Pépite)</span>
+                    <span id="statPlaceGlobalScore" class="text-white font-mono">--</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div id="gainPlaceBase" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">Base : --</div>
+                    <div id="gainPlacePepite" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">Pépite : --</div>
+                </div>
+            </div>
+
+            <div id="statGlobal" class="text-center text-[10px] text-zinc-400 font-semibold bg-zinc-800/50 py-2 rounded-lg border border-zinc-700/50">Mise totale : 0 €</div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -411,16 +415,10 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // =======================================================
-        // CORRECTIF ULTIME 1€ (ANTI-MULTIPLICATION STRICT)
-        // =======================================================
         function cleanRapportValue(rawVal, chevalCote) {
             let v = parseFloat(rawVal || 0);
             if (v <= 0) return 0;
-            
-            // Si la valeur est supérieure à la cote, ou dépasse de manière anormale 20, 
-            // c'est qu'elle est codée en dixièmes ou centièmes (ex: 250 au lieu de 2.50)
-            while (v > chevalCote || v > 30) {
+            while (v > chevalCote || v > 50) {
                 v = v / 10;
             }
             return parseFloat(v.toFixed(2));
@@ -647,18 +645,17 @@
 
         function formatMoneyHTML(val, type) {
             if (val === 0) return `<span class="text-zinc-500">0.00 €</span>`;
-            let color = val > 0 ? (type === 'pepite' ? 'text-amber-400' : 'text-emerald-400') : 'text-red-400';
-            if (type === 'total' && val > 0) color = 'text-white';
+            let color = val > 0 ? (type === 'gagnant' ? 'text-indigo-400' : 'text-emerald-400') : 'text-red-400';
             let sign = val > 0 ? '+' : '';
             return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // CLÉ V8 : Force le recalcul avec la calibration stricte 1€
+        // CLÉ V9 : Sauvegarde séparée Placé et Gagnant pour comparaison
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v8_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v9_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
-            return { netBase: 0, netPepite: 0 };
+            return { netPlace: 0, netGagnant: 0 };
         }
 
         function showHistoryStats() {
@@ -674,54 +671,44 @@
             let monday = new Date(today);
             monday.setDate(today.getDate() - (dayOfWeek - 1)); 
             
-            let weekBase = 0, weekPepite = 0;
+            let weekPlace = 0, weekGagnant = 0;
             for(let i=0; i<7; i++) {
                 let d = new Date(monday);
                 d.setDate(monday.getDate() + i);
                 let s = getStatForDateObj(d);
-                weekBase += s.netBase;
-                weekPepite += s.netPepite;
+                weekPlace += s.netPlace;
+                weekGagnant += s.netGagnant;
             }
-            
-            let weekTotal = weekBase + weekPepite;
 
-            document.getElementById('histWeekBase').innerHTML = formatMoneyHTML(weekBase, 'base');
-            document.getElementById('histWeekPepite').innerHTML = formatMoneyHTML(weekPepite, 'pepite');
-            document.getElementById('histWeekTotal').innerHTML = formatMoneyHTML(weekTotal, 'total');
-            document.getElementById('histWeekTotal').className = weekTotal >= 0 ? "font-black text-emerald-400 text-sm" : "font-black text-red-400 text-sm";
+            document.getElementById('histWeekPlace').innerHTML = formatMoneyHTML(weekPlace, 'place');
+            document.getElementById('histWeekGagnant').innerHTML = formatMoneyHTML(weekGagnant, 'gagnant');
 
             const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
             let monthsGrid = document.getElementById('monthsGrid');
             monthsGrid.innerHTML = '';
 
             for (let m = 0; m < 12; m++) {
-                let totalBase = 0;
-                let totalPepite = 0;
+                let totalPlace = 0;
+                let totalGagnant = 0;
                 let daysInMonth = new Date(year, m + 1, 0).getDate(); 
                 
                 for (let d = 1; d <= daysInMonth; d++) {
                     let s = getStatForDateObj(new Date(year, m, d));
-                    totalBase += s.netBase;
-                    totalPepite += s.netPepite;
+                    totalPlace += s.netPlace;
+                    totalGagnant += s.netGagnant;
                 }
-                
-                let monthTotal = totalBase + totalPepite;
 
                 let div = document.createElement('div');
                 div.className = "flex justify-between items-center bg-zinc-900 p-1.5 rounded border border-zinc-700/50 text-xs";
                 div.innerHTML = `
                     <div class="w-14 font-bold text-zinc-400 pl-1">${monthNames[m]}</div>
                     <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
-                        <span class="text-[8px] text-zinc-500 uppercase block mb-0.5">Base</span>
-                        ${formatMoneyHTML(totalBase, 'base')}
+                        <span class="text-[8px] text-emerald-400 uppercase block mb-0.5">Placé (Net)</span>
+                        ${formatMoneyHTML(totalPlace, 'place')}
                     </div>
                     <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
-                        <span class="text-[8px] text-zinc-500 uppercase block mb-0.5">Pépite</span>
-                        ${formatMoneyHTML(totalPepite, 'pepite')}
-                    </div>
-                    <div class="flex-1 text-center border-l border-zinc-700/50 bg-zinc-800/50 rounded-r py-1 px-1">
-                        <span class="text-[8px] font-bold text-zinc-300 uppercase block mb-0.5">Total</span>
-                        ${formatMoneyHTML(monthTotal, 'total')}
+                        <span class="text-[8px] text-indigo-400 uppercase block mb-0.5">Gagnant (Net)</span>
+                        ${formatMoneyHTML(totalGagnant, 'gagnant')}
                     </div>
                 `;
                 monthsGrid.appendChild(div);
@@ -732,20 +719,15 @@
             document.getElementById('historyBlock').classList.add('hidden');
             let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
-            let statBaseG = document.getElementById('statBaseG');
-            let statBaseP = document.getElementById('statBaseP');
-            let statPepiteG = document.getElementById('statPepiteG');
-            let statPepiteP = document.getElementById('statPepiteP');
-            let gainBaseEl = document.getElementById('gainBase');
-            let gainPepiteEl = document.getElementById('gainPepite');
+            let statGagnantGlobalScore = document.getElementById('statGagnantGlobalScore');
+            let statPlaceGlobalScore = document.getElementById('statPlaceGlobalScore');
+            let gainGagnantBase = document.getElementById('gainGagnantBase');
+            let gainGagnantPepite = document.getElementById('gainGagnantPepite');
+            let gainPlaceBase = document.getElementById('gainPlaceBase');
+            let gainPlacePepite = document.getElementById('gainPlacePepite');
             let statGlobal = document.getElementById('statGlobal');
 
             statsBlock.classList.remove('hidden');
-            statBaseG.textContent = '0'; statBaseP.textContent = '0';
-            statPepiteG.textContent = '0'; statPepiteP.textContent = '0';
-            gainBaseEl.innerHTML = `Retours : 0.00 € <br><span class="text-emerald-400 font-bold">Bénéfice : 0.00 €</span>`;
-            gainPepiteEl.innerHTML = `Retours : 0.00 € <br><span class="text-amber-400 font-bold">Bénéfice : 0.00 €</span>`;
-            statGlobal.textContent = "Recherche en cours...";
             statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses...";
 
             let dateInput = document.getElementById('raceDate').value;
@@ -769,12 +751,13 @@
                 return;
             }
 
-            let baseWin = 0, basePlc = 0, pepiteWin = 0, pepitePlc = 0;
-            let totalGainBase = 0, totalGainPepite = 0, coursesValidees = 0;
+            let totalGainGagnantBase = 0, totalGainGagnantPepite = 0;
+            let totalGainPlaceBase = 0, totalGainPlacePepite = 0;
+            let coursesValidees = 0;
 
             for (let i = 0; i < finishedRaces.length; i++) {
                 let r = finishedRaces[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse en cours (${i+1}/${finishedRaces.length}) : ${r.name}`;
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse (${i+1}/${finishedRaces.length}) : ${r.name}`;
 
                 try {
                     const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
@@ -787,73 +770,78 @@
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
 
-                        // --- VERIFICATION BASE ---
+                        // --- CALCUL GAGNANT ---
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
                             let g = extractRapport(data, algoResult.baseHorse.num, 'G', algoResult.baseHorse.cote);
-                            let p = extractRapport(data, algoResult.baseHorse.num, 'P', algoResult.baseHorse.cote);
-                            
-                            let estGagnant = (arrivee === 1);
-                            let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
-
-                            if (g > 0 || estGagnant) baseWin++;
-                            
-                            if (p > 0) {
-                                basePlc++;
-                                totalGainBase += p;
-                            } else if (estPlace) {
-                                basePlc++;
-                                let pEstime = Math.max(1.10, algoResult.baseHorse.cote / 4.5);
-                                totalGainBase += parseFloat(pEstime.toFixed(2));
-                            }
+                            if (g === 0 && arrivee === 1) g = algoResult.baseHorse.cote; // Fallback cote si rapport manquant
+                            if (arrivee === 1) totalGainGagnantBase += g;
                         }
-
-                        // --- VERIFICATION PÉPITE ---
                         if (algoResult.nuggetHorse) {
                             let arrivee = algoResult.nuggetHorse.ordreArrivee;
                             let g = extractRapport(data, algoResult.nuggetHorse.num, 'G', algoResult.nuggetHorse.cote);
-                            let p = extractRapport(data, algoResult.nuggetHorse.num, 'P', algoResult.nuggetHorse.cote);
-                            
-                            let estGagnant = (arrivee === 1);
-                            let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
+                            if (g === 0 && arrivee === 1) g = algoResult.nuggetHorse.cote;
+                            if (arrivee === 1) totalGainGagnantPepite += g;
+                        }
 
-                            if (g > 0 || estGagnant) pepiteWin++;
-                            
+                        // --- CALCUL PLACÉ ---
+                        if (algoResult.baseHorse) {
+                            let arrivee = algoResult.baseHorse.ordreArrivee;
+                            let p = extractRapport(data, algoResult.baseHorse.num, 'P', algoResult.baseHorse.cote);
+                            let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
                             if (p > 0) {
-                                pepitePlc++;
-                                totalGainPepite += p;
+                                totalGainPlaceBase += p;
                             } else if (estPlace) {
-                                pepitePlc++;
+                                let pEstime = Math.max(1.10, algoResult.baseHorse.cote / 4.5);
+                                totalGainPlaceBase += parseFloat(pEstime.toFixed(2));
+                            }
+                        }
+                        if (algoResult.nuggetHorse) {
+                            let arrivee = algoResult.nuggetHorse.ordreArrivee;
+                            let p = extractRapport(data, algoResult.nuggetHorse.num, 'P', algoResult.nuggetHorse.cote);
+                            let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
+                            if (p > 0) {
+                                totalGainPlacePepite += p;
+                            } else if (estPlace) {
                                 let pEstime = Math.max(1.10, algoResult.nuggetHorse.cote / 4.5);
-                                totalGainPepite += parseFloat(pEstime.toFixed(2));
+                                totalGainPlacePepite += parseFloat(pEstime.toFixed(2));
                             }
                         }
 
-                        // Coût : 1€ Placé par cheval par course
-                        let coutTotalParCheval = coursesValidees * 1;
-                        let netBase = totalGainBase - coutTotalParCheval;
-                        let netPepite = totalGainPepite - coutTotalParCheval;
+                        // Mises & Bénéfices
+                        let miseTotaleGagnant = coursesValidees * 2; // 1€ base + 1€ pépite
+                        let miseTotalePlace = coursesValidees * 2;   // 1€ base + 1€ pépite
                         
-                        statBaseG.textContent = baseWin;
-                        statBaseP.textContent = basePlc;
-                        statPepiteG.textContent = pepiteWin;
-                        statPepiteP.textContent = pepitePlc;
+                        let netGagnantBase = totalGainGagnantBase - coursesValidees;
+                        let netGagnantPepite = totalGainGagnantPepite - coursesValidees;
+                        let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - miseTotaleGagnant;
 
-                        gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${netBase >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold">Bénéfice : ${netBase > 0 ? '+' : ''}${netBase.toFixed(2)} €</span>`;
-                        gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'} font-bold">Bénéfice : ${netPepite > 0 ? '+' : ''}${netPepite.toFixed(2)} €</span>`;
-                        
-                        let miseAbsolue = coursesValidees * 2; // 1€ base + 1€ pépite
-                        statGlobal.textContent = `Bilan sur ${coursesValidees} courses validées (Mise absolue : ${miseAbsolue} €)`;
+                        let netPlaceBase = totalGainPlaceBase - coursesValidees;
+                        let netPlacePepite = totalGainPlacePepite - coursesValidees;
+                        let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - miseTotalePlace;
 
-                        // SAUVEGARDE EN V8
-                        localStorage.setItem(`pmu_stats_v8_${ddmmyyyy}`, JSON.stringify({
-                            netBase: netBase,
-                            netPepite: netPepite
+                        // Affichage Gagnant
+                        statGagnantGlobalScore.innerHTML = `Bénéfice Net : <span class="${netGagnantTotal >= 0 ? 'text-indigo-400' : 'text-red-400'} font-black">${netGagnantTotal > 0 ? '+' : ''}${netGagnantTotal.toFixed(2)} €</span>`;
+                        gainGagnantBase.innerHTML = `Base (G) : Retours ${totalGainBaseUnitaire = totalGainGagnantBase.toFixed(2)}€ | <span class="${netGagnantBase >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${netGagnantBase > 0 ? '+' : ''}${netGagnantBase.toFixed(2)}€</span>`;
+                        gainGagnantPepite.innerHTML = `Pépite (G) : Retours ${totalGainGagnantPepite.toFixed(2)}€ | <span class="${netGagnantPepite >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${netGagnantPepite > 0 ? '+' : ''}${netGagnantPepite.toFixed(2)}€</span>`;
+
+                        // Affichage Placé
+                        statPlaceGlobalScore.innerHTML = `Bénéfice Net : <span class="${netPlaceTotal >= 0 ? 'text-emerald-400' : 'text-red-400'} font-black">${netPlaceTotal > 0 ? '+' : ''}${netPlaceTotal.toFixed(2)} €</span>`;
+                        gainPlaceBase.innerHTML = `Base (P) : Retours ${totalGainPlaceBase.toFixed(2)}€ | <span class="${netPlaceBase >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${netPlaceBase > 0 ? '+' : ''}${netPlaceBase.toFixed(2)}€</span>`;
+                        gainPlacePepite.innerHTML = `Pépite (P) : Retours ${totalGainPlacePepite.toFixed(2)}€ | <span class="${netPlacePepite >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${netPlacePepite > 0 ? '+' : ''}${netPlacePepite.toFixed(2)}€</span>`;
+
+                        let miseAbsolue = coursesValidees * 4; // 2€ base + 2€ pépite (les deux modes combinés pour test)
+                        statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
+
+                        // SAUVEGARDE EN V9
+                        localStorage.setItem(`pmu_stats_v9_${ddmmyyyy}`, JSON.stringify({
+                            netPlace: netPlaceTotal,
+                            netGagnant: netGagnantTotal
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan strict 1€ mis à jour avec succès !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Comparatif calculé avec succès !</span>`;
         }
 
         window.onload = loadLivePmu;
