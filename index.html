@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Bilan Complet Couplés & Simple (Base 1€)</title>
+    <title>PMU Direct - Base 1€ Forcée</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -453,12 +453,15 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // CONVERSION ROBUSTE BASE 1€ : Division systématique par 10 de tous les rapports bruts renvoyés par l'API PMU
+        // CORRECTION STRICTE BASE 1€ : L'API PMU renvoie parfois les rapports en base 10€ (ex: 45 pour 4.50€). On divise par 10 s'il est supérieur à 10.
         function cleanRapportValue(rawVal) {
             let v = parseFloat(rawVal || 0);
             if (v <= 0) return 0;
-            // Si le rapport dépasse 100 et semble être en base 10€, ou de manière générale, on divise par 10 pour l'adapter à la mise de 1€/2€
-            return parseFloat((v / 10).toFixed(2));
+            // Si le montant dépasse 10, c'est l'indice brut PMU pour 10€ -> on ramène pour 1€
+            if (v > 10) {
+                v = v / 10;
+            }
+            return parseFloat(v.toFixed(2));
         }
 
         function extractCoupléRapport(data, num1, num2, typeCouplé) {
@@ -735,7 +738,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v19_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v20_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -878,13 +881,13 @@
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
                             let g = extractRapport(data, algoResult.baseHorse.num, 'G');
-                            if (g === 0 && arrivee === 1) g = algoResult.baseHorse.cote / 10;
+                            if (g === 0 && arrivee === 1) g = algoResult.baseHorse.cote;
                             if (arrivee === 1) { gagBaseWins++; totalGainGagnantBase += g; }
                         }
                         if (algoResult.nuggetHorse) {
                             let arrivee = algoResult.nuggetHorse.ordreArrivee;
                             let g = extractRapport(data, algoResult.nuggetHorse.num, 'G');
-                            if (g === 0 && arrivee === 1) g = algoResult.nuggetHorse.cote / 10;
+                            if (g === 0 && arrivee === 1) g = algoResult.nuggetHorse.cote;
                             if (arrivee === 1) { gagPepiteWins++; totalGainGagnantPepite += g; }
                         }
 
@@ -896,7 +899,7 @@
                             if (p > 0) {
                                 plcBaseWins++; totalGainPlaceBase += p;
                             } else if (estPlace) {
-                                plcBaseWins++; totalGainPlaceBase += parseFloat(Math.max(1.10, (algoResult.baseHorse.cote / 10) / 2.5).toFixed(2));
+                                plcBaseWins++; totalGainPlaceBase += parseFloat(Math.max(1.10, algoResult.baseHorse.cote / 4.5).toFixed(2));
                             }
                         }
                         if (algoResult.nuggetHorse) {
@@ -906,7 +909,7 @@
                             if (p > 0) {
                                 plcPepiteWins++; totalGainPlacePepite += p;
                             } else if (estPlace) {
-                                plcPepiteWins++; totalGainPlacePepite += parseFloat(Math.max(1.10, (algoResult.nuggetHorse.cote / 10) / 2.5).toFixed(2));
+                                plcPepiteWins++; totalGainPlacePepite += parseFloat(Math.max(1.10, algoResult.nuggetHorse.cote / 4.5).toFixed(2));
                             }
                         }
 
@@ -923,11 +926,11 @@
 
                             if (cg > 0 || (arrBase <= 2 && arrPepite <= 2)) {
                                 coupleGagnantWins++;
-                                totalGainCoupleGagnant += (cg > 0 ? cg : ((algoResult.baseHorse.cote * algoResult.nuggetHorse.cote) / 100));
+                                totalGainCoupleGagnant += (cg > 0 ? cg : ((algoResult.baseHorse.cote * algoResult.nuggetHorse.cote) / 10));
                             }
                             if (cp > 0 || ((arrBase <= 3 && arrPepite <= 3) && partants.length >= 8)) {
                                 couplePlaceWins++;
-                                totalGainCouplePlace += (cp > 0 ? cp : 2.5);
+                                totalGainCouplePlace += (cp > 0 ? cp : 5.0);
                             }
                         }
 
@@ -956,7 +959,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v19_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v20_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
@@ -965,7 +968,7 @@
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complet (Simple + Couplés) mis à jour !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan calculé avec succès en base 1€ stricte !</span>`;
         }
 
         window.onload = loadLivePmu;
