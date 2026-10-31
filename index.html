@@ -733,4 +733,56 @@
                     if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
-                        let rapportsList =
+                        let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+
+                        if (algoResult.baseHorse) {
+                            let g = getRapportPari(rapportsList, algoResult.baseHorse.num, 'G');
+                            let p = getRapportPari(rapportsList, algoResult.baseHorse.num, 'P');
+                            if (g > 0 || algoResult.baseHorse.ordreArrivee === 1) baseWin++;
+                            if (p > 0 || (algoResult.baseHorse.ordreArrivee >= 1 && algoResult.baseHorse.ordreArrivee <= 3)) basePlc++;
+                            
+                            // On ajoute UNIQUEMENT le rapport placé aux gains
+                            totalGainBase += p;
+                        }
+
+                        if (algoResult.nuggetHorse) {
+                            let g = getRapportPari(rapportsList, algoResult.nuggetHorse.num, 'G');
+                            let p = getRapportPari(rapportsList, algoResult.nuggetHorse.num, 'P');
+                            if (g > 0 || algoResult.nuggetHorse.ordreArrivee === 1) pepiteWin++;
+                            if (p > 0 || (algoResult.nuggetHorse.ordreArrivee >= 1 && algoResult.nuggetHorse.ordreArrivee <= 3)) pepitePlc++;
+                            
+                            // On ajoute UNIQUEMENT le rapport placé aux gains
+                            totalGainPepite += p;
+                        }
+
+                        // Coût : 1€ Placé par cheval par course
+                        let coutTotalParCheval = coursesValidees * 1;
+                        let netBase = totalGainBase - coutTotalParCheval;
+                        let netPepite = totalGainPepite - coutTotalParCheval;
+                        
+                        statBaseG.textContent = baseWin;
+                        statBaseP.textContent = basePlc;
+                        statPepiteG.textContent = pepiteWin;
+                        statPepiteP.textContent = pepitePlc;
+
+                        gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${netBase >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold">Bénéfice : ${netBase > 0 ? '+' : ''}${netBase.toFixed(2)} €</span>`;
+                        gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'} font-bold">Bénéfice : ${netPepite > 0 ? '+' : ''}${netPepite.toFixed(2)} €</span>`;
+                        
+                        let miseAbsolue = coursesValidees * 2; // 1€ base + 1€ pépite
+                        statGlobal.textContent = `Bilan sur ${coursesValidees} courses validées (Mise absolue : ${miseAbsolue} €)`;
+
+                        // SAUVEGARDE EN V3
+                        localStorage.setItem(`pmu_stats_v3_${ddmmyyyy}`, JSON.stringify({
+                            netBase: netBase,
+                            netPepite: netPepite
+                        }));
+                    }
+                } catch (e) {}
+            }
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété et mis à jour !</span>`;
+        }
+
+        window.onload = loadLivePmu;
+    </script>
+</body>
+</html>
