@@ -148,7 +148,11 @@
         </div>
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden text-xs">
-            <div id="raceInfoDetails" class="p-3 border-b border-zinc-800 font-bold text-zinc-300">Partants & Cotes</div>
+            <div class="p-3 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center">
+                <span id="raceInfoDetails">Partants & Cotes</span>
+                <!-- NOUVEAU BADGE DISCIPLINE -->
+                <span id="disciplineBadge" class="hidden px-2 py-1 bg-indigo-900/50 text-indigo-300 border border-indigo-500/30 rounded text-[10px] uppercase tracking-widest font-bold"></span>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
@@ -529,8 +533,22 @@
                     tr.innerHTML = `<td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-2.5">${p.baseScore}%</td>`;
                     tbody.appendChild(tr);
                 });
-                let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
-                document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
+                
+                // NOUVEAU : MISE A JOUR DU BLOC D'INFORMATION ET DE LA DISCIPLINE
+                let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)}` : '';
+                let distInfo = race.distance ? ` — ${race.distance}m` : '';
+                document.getElementById('raceInfoDetails').textContent = `${timeInfo}${distInfo} — Partants & Cotes`;
+                
+                let badge = document.getElementById('disciplineBadge');
+                if (race.discipline) {
+                    // Nettoyage et formatage (ex: "TROT_ATTELE" devient "Trot attelé")
+                    let dFormatee = race.discipline.replace(/_/g, ' ').toLowerCase();
+                    badge.textContent = dFormatee.charAt(0).toUpperCase() + dFormatee.slice(1);
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+                
             } catch (e) {}
         }
 
