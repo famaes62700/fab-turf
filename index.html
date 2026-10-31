@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Base 1€ Stricte & Définitive</title>
+    <title>PMU Direct - Algorithme & Base 1€ Exacte</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -112,14 +112,14 @@
                         <span><i class="fa-solid fa-link mr-1"></i> Couplé Gagnant (1€/crse)</span>
                         <span id="statCoupleGagnantScore" class="text-white font-mono">--</span>
                     </div>
-                    <div id="gainCoupleGagnant" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center text-[11px] text-zinc-300">--</div>
+                    <div id="gainCoupleGagnant" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">--</div>
                 </div>
                 <div class="bg-zinc-800/90 p-3 rounded-lg border border-blue-500/40 space-y-2">
                     <div class="text-[10px] uppercase font-bold text-blue-300 flex justify-between items-center">
                         <span><i class="fa-solid fa-link-slash mr-1"></i> Couplé Placé (1€/crse)</span>
                         <span id="statCouplePlaceScore" class="text-white font-mono">--</span>
                     </div>
-                    <div id="gainCouplePlace" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center text-[11px] text-zinc-300">--</div>
+                    <div id="gainCouplePlace" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">--</div>
                 </div>
             </div>
 
@@ -424,10 +424,20 @@
         function computeAlgorithm(partants) {
             let processed = partants.map((p, idx) => {
                 let musique = p.musique || p.form || "0p";
-                let rawCote = (p.dernierRapportDirect && p.dernierRapportDirect.rapport) 
-                              ? p.dernierRapportDirect.rapport 
-                              : (p.probabiliteEvolution ? p.probabiliteEvolution : "15.0");
-                let cote = parseFloat(String(rawCote).replace(',', '.')) || 15.0;
+                
+                // Recherche approfondie de la cote (pour inclure les courses étrangères PMU)
+                let rawCote = null;
+                if (p.dernierRapportDirect && p.dernierRapportDirect.rapport) {
+                    rawCote = p.dernierRapportDirect.rapport;
+                } else if (p.dernierRapportReference && p.dernierRapportReference.rapport) {
+                    rawCote = p.dernierRapportReference.rapport;
+                } else if (p.cotes && p.cotes.length > 0) {
+                    rawCote = p.cotes[0].rapport;
+                } else if (p.probabiliteEvolution) {
+                    rawCote = p.probabiliteEvolution;
+                }
+
+                let cote = parseFloat(String(rawCote || "15.0").replace(',', '.')) || 15.0;
                 
                 let coteScore = cote <= 3 ? 90 : (cote <= 6 ? 75 : (cote <= 12 ? 60 : (cote <= 25 ? 35 : 15)));
                 let musiqueScore = evaluateMusique(musique);
@@ -439,7 +449,7 @@
                     num: p.numPmu || p.numOrdre || (idx+1),
                     nom: p.nom || "Cheval",
                     musique: musique,
-                    coteDisplay: rawCote,
+                    coteDisplay: rawCote || "15.0",
                     cote: cote,
                     baseScore: Math.max(5, Math.min(99, baseScore)),
                     nuggetScore: Math.max(5, Math.min(99, nuggetRaw)),
@@ -453,12 +463,13 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // --- CONVERSION STRICTE ET INFAILLIBLE EN BASE 1€ ---
-        // L'API PMU transmet des rapports pour 10€ (ex: 45 pour 4.50€). On divise obligatoirement par 10.
+        // --- CONVERSION EXACTE BASE 1€ ---
+        // L'API PMU transmet les dividendes en centimes d'euros (ex: 450 = 4,50€).
+        // On divise obligatoirement par 100 !
         function cleanRapportValue(rawVal) {
             let v = parseFloat(rawVal || 0);
             if (v <= 0) return 0;
-            return parseFloat((v / 10).toFixed(2));
+            return parseFloat((v / 100).toFixed(2));
         }
 
         function extractCoupléRapport(data, num1, num2, typeCouplé) {
@@ -735,7 +746,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v22_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v23_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -874,21 +885,21 @@
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
 
-                        // 1. GAGNANT SIMPLE (Utilisation systématique de cleanRapportValue pour forcer la base 1€)
+                        // 1. GAGNANT SIMPLE
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
                             let g = extractRapport(data, algoResult.baseHorse.num, 'G');
-                            if (g === 0 && arrivee === 1) g = cleanRapportValue(algoResult.baseHorse.cote);
+                            if (g === 0 && arrivee === 1) g = algoResult.baseHorse.cote;
                             if (arrivee === 1) { gagBaseWins++; totalGainGagnantBase += g; }
                         }
                         if (algoResult.nuggetHorse) {
                             let arrivee = algoResult.nuggetHorse.ordreArrivee;
                             let g = extractRapport(data, algoResult.nuggetHorse.num, 'G');
-                            if (g === 0 && arrivee === 1) g = cleanRapportValue(algoResult.nuggetHorse.cote);
+                            if (g === 0 && arrivee === 1) g = algoResult.nuggetHorse.cote;
                             if (arrivee === 1) { gagPepiteWins++; totalGainGagnantPepite += g; }
                         }
 
-                        // 2. PLACÉ SIMPLE (Utilisation systématique de cleanRapportValue pour forcer la base 1€)
+                        // 2. PLACÉ SIMPLE
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
                             let p = extractRapport(data, algoResult.baseHorse.num, 'P');
@@ -896,7 +907,7 @@
                             if (p > 0) {
                                 plcBaseWins++; totalGainPlaceBase += p;
                             } else if (estPlace) {
-                                plcBaseWins++; totalGainPlaceBase += parseFloat(Math.max(1.10, cleanRapportValue(algoResult.baseHorse.cote) / 2.5).toFixed(2));
+                                plcBaseWins++; totalGainPlaceBase += parseFloat(Math.max(1.10, algoResult.baseHorse.cote / 3.5).toFixed(2));
                             }
                         }
                         if (algoResult.nuggetHorse) {
@@ -906,11 +917,11 @@
                             if (p > 0) {
                                 plcPepiteWins++; totalGainPlacePepite += p;
                             } else if (estPlace) {
-                                plcPepiteWins++; totalGainPlacePepite += parseFloat(Math.max(1.10, cleanRapportValue(algoResult.nuggetHorse.cote) / 2.5).toFixed(2));
+                                plcPepiteWins++; totalGainPlacePepite += parseFloat(Math.max(1.10, algoResult.nuggetHorse.cote / 3.5).toFixed(2));
                             }
                         }
 
-                        // 3. COUPLÉS (Base + Pépite - Divisés par 10)
+                        // 3. COUPLÉS
                         if (algoResult.baseHorse && algoResult.nuggetHorse) {
                             let numBase = algoResult.baseHorse.num;
                             let numPepite = algoResult.nuggetHorse.num;
@@ -923,7 +934,7 @@
 
                             if (cg > 0 || (arrBase <= 2 && arrPepite <= 2)) {
                                 coupleGagnantWins++;
-                                totalGainCoupleGagnant += (cg > 0 ? cg : cleanRapportValue(algoResult.baseHorse.cote * algoResult.nuggetHorse.cote));
+                                totalGainCoupleGagnant += (cg > 0 ? cg : (algoResult.baseHorse.cote * algoResult.nuggetHorse.cote / 10));
                             }
                             if (cp > 0 || ((arrBase <= 3 && arrPepite <= 3) && partants.length >= 8)) {
                                 couplePlaceWins++;
@@ -937,26 +948,27 @@
                         let netCoupledGag = totalGainCoupleGagnant - coursesValidees;
                         let netCoupledPlc = totalGainCouplePlace - coursesValidees;
 
-                        // Affichage Simple Gagnant / Placé
+                        // Affichage Simple Gagnant
                         statGagnantGlobalScore.innerHTML = `Bénéfice Net : <span class="${netGagnantTotal >= 0 ? 'text-indigo-400' : 'text-red-400'} font-black">${netGagnantTotal > 0 ? '+' : ''}${netGagnantTotal.toFixed(2)} €</span>`;
-                        gainGagnantBase.innerHTML = `Base (G) [${gagBaseWins}/${coursesValidees}] : ${totalGainGagnantBase.toFixed(2)}€ | <span class="${(totalGainGagnantBase - coursesValidees) >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${((totalGainGagnantBase - coursesValidees) > 0 ? '+' : '')}${(totalGainGagnantBase - coursesValidees).toFixed(2)}€</span>`;
-                        gainGagnantPepite.innerHTML = `Pépite (G) [${gagPepiteWins}/${coursesValidees}] : ${totalGainGagnantPepite.toFixed(2)}€ | <span class="${(totalGainGagnantPepite - coursesValidees) >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${((totalGainGagnantPepite - coursesValidees) > 0 ? '+' : '')}${(totalGainGagnantPepite - coursesValidees).toFixed(2)}€</span>`;
+                        gainGagnantBase.innerHTML = `Base (G) [${gagBaseWins}/${coursesValidees}] : ${totalGainGagnantBase.toFixed(2)}€<br><span class="${(totalGainGagnantBase - coursesValidees) >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${((totalGainGagnantBase - coursesValidees) > 0 ? '+' : '')}${(totalGainGagnantBase - coursesValidees).toFixed(2)}€</span>`;
+                        gainGagnantPepite.innerHTML = `Pépite (G) [${gagPepiteWins}/${coursesValidees}] : ${totalGainGagnantPepite.toFixed(2)}€<br><span class="${(totalGainGagnantPepite - coursesValidees) >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${((totalGainGagnantPepite - coursesValidees) > 0 ? '+' : '')}${(totalGainGagnantPepite - coursesValidees).toFixed(2)}€</span>`;
 
+                        // Affichage Simple Placé
                         statPlaceGlobalScore.innerHTML = `Bénéfice Net : <span class="${netPlaceTotal >= 0 ? 'text-emerald-400' : 'text-red-400'} font-black">${netPlaceTotal > 0 ? '+' : ''}${netPlaceTotal.toFixed(2)} €</span>`;
-                        gainPlaceBase.innerHTML = `Base (P) [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€ | <span class="${(totalGainPlaceBase - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlaceBase - coursesValidees) > 0 ? '+' : '')}${(totalGainPlaceBase - coursesValidees).toFixed(2)}€</span>`;
-                        gainPlacePepite.innerHTML = `Pépite (P) [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€ | <span class="${(totalGainPlacePepite - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlacePepite - coursesValidees) > 0 ? '+' : '')}${(totalGainPlacePepite - coursesValidees).toFixed(2)}€</span>`;
+                        gainPlaceBase.innerHTML = `Base (P) [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€<br><span class="${(totalGainPlaceBase - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlaceBase - coursesValidees) > 0 ? '+' : '')}${(totalGainPlaceBase - coursesValidees).toFixed(2)}€</span>`;
+                        gainPlacePepite.innerHTML = `Pépite (P) [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€<br><span class="${(totalGainPlacePepite - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlacePepite - coursesValidees) > 0 ? '+' : '')}${(totalGainPlacePepite - coursesValidees).toFixed(2)}€</span>`;
 
-                        // Affichage Couplés
+                        // Affichage Couplés (Aligné sur le même visuel que les simples)
                         statCoupleGagnantScore.innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
-                        gainCoupleGagnant.innerHTML = `Réussite : [${coupleGagnantWins}/${coursesValidees}] | Retours : ${totalGainCoupleGagnant.toFixed(2)} €`;
+                        gainCoupleGagnant.innerHTML = `Réussite [${coupleGagnantWins}/${coursesValidees}] : ${totalGainCoupleGagnant.toFixed(2)}€<br><span class="${netCoupledGag >= 0 ? 'text-purple-300' : 'text-red-400'} font-bold">Net : ${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)}€</span>`;
 
                         statCouplePlaceScore.innerHTML = `Bénéfice Net : <span class="${netCoupledPlc >= 0 ? 'text-blue-400' : 'text-red-400'} font-black">${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)} €</span>`;
-                        gainCouplePlace.innerHTML = `Réussite : [${couplePlaceWins}/${coursesValidees}] | Retours : ${totalGainCouplePlace.toFixed(2)} €`;
+                        gainCouplePlace.innerHTML = `Réussite [${couplePlaceWins}/${coursesValidees}] : ${totalGainCouplePlace.toFixed(2)}€<br><span class="${netCoupledPlc >= 0 ? 'text-blue-300' : 'text-red-400'} font-bold">Net : ${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)}€</span>`;
 
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v22_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v23_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
@@ -965,7 +977,7 @@
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan calculé avec succès en base 1€ stricte !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan 100% calibré sur 1€ (Même design) !</span>`;
         }
 
         window.onload = loadLivePmu;
