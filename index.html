@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algo Placé Ultime</title>
+    <title>PMU Direct - Algo Placé Précis</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -412,8 +412,17 @@
         }
 
         // ==========================================
-        // SCANNER RECURSIF "RAYON X" POUR LES RAPPORTS
+        // CORRECTIF ANTI-MULTIPLICATION (1€ STRICT)
         // ==========================================
+        function cleanRapportValue(rawVal) {
+            let v = parseFloat(rawVal || 0);
+            if (v <= 0) return 0;
+            // Si le rapport dépasse 50 (ex: 125 au lieu de 12.50), c'est qu'il est en centimes ou multiplié par 10/100
+            if (v > 50) v = v / 10;
+            if (v > 50) v = v / 10; // Double sécurité si x100
+            return v;
+        }
+
         function getAllRapportsForDisplay(data) {
             let results = [];
             function search(o, parentType) {
@@ -426,8 +435,8 @@
                         if (o.combinaison || o.cheval || o.numPmu) {
                             let combo = o.combinaison || o.cheval || o.numPmu;
                             if (!String(combo).includes('-')) {
-                                let v = parseFloat(o.dividendePourUnEuro || o.rapportPourUnEuro || o.dividende || o.rapport || o.montant || o.gainEuro || 0);
-                                if (v >= 100 && o.dividendePourUnEuro === undefined && o.rapportPourUnEuro === undefined) v = v / 100;
+                                let rawV = o.dividendePourUnEuro || o.rapportPourUnEuro || o.dividende || o.rapport || o.montant || o.gainEuro || 0;
+                                let v = cleanRapportValue(rawV);
                                 if (v > 0) {
                                     let lib = (o.libelleRapport || o.libelle || "Rapport").toUpperCase();
                                     let libDisplay = lib.includes('PLAC') ? 'Placé' : (lib.includes('GAGN') ? 'Gagnant' : lib);
@@ -472,8 +481,8 @@
                             }
 
                             if ((typeRapport === 'G' && isG) || (typeRapport === 'P' && isP)) {
-                                let v = parseFloat(o.dividendePourUnEuro || o.rapportPourUnEuro || o.dividende || o.rapport || o.montant || o.gainEuro || 0);
-                                if (v >= 100 && o.dividendePourUnEuro === undefined && o.rapportPourUnEuro === undefined) v = v / 100;
+                                let rawV = o.dividendePourUnEuro || o.rapportPourUnEuro || o.dividende || o.rapport || o.montant || o.gainEuro || 0;
+                                let v = cleanRapportValue(rawV);
                                 if (v > maxGain) maxGain = v;
                             }
                         }
@@ -538,7 +547,6 @@
                 let reportsGrid = document.getElementById('reportsGrid');
                 reportsGrid.innerHTML = '';
                 
-                // Utilisation du Scanner Récursif pour l'affichage visuel
                 let allRapportsDisplay = getAllRapportsForDisplay(data);
                 
                 if (allRapportsDisplay.length > 0) {
@@ -642,9 +650,9 @@
             return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // CLÉ V5 : Force le recalcul avec le scanner et l'estimation prudente
+        // CLÉ V6 : Force le recalcul avec le correctif anti-multiplication
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v5_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v6_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netBase: 0, netPepite: 0 };
@@ -791,7 +799,6 @@
                                 basePlc++;
                                 totalGainBase += p;
                             } else if (estPlace) {
-                                // BOUCLIER D'ESTIMATION : si les serveurs ont supprimé l'archive
                                 basePlc++;
                                 let pEstime = Math.max(1.10, algoResult.baseHorse.cote / 4.5);
                                 totalGainBase += parseFloat(pEstime.toFixed(2));
@@ -813,7 +820,6 @@
                                 pepitePlc++;
                                 totalGainPepite += p;
                             } else if (estPlace) {
-                                // BOUCLIER D'ESTIMATION : si les serveurs ont supprimé l'archive
                                 pepitePlc++;
                                 let pEstime = Math.max(1.10, algoResult.nuggetHorse.cote / 4.5);
                                 totalGainPepite += parseFloat(pEstime.toFixed(2));
@@ -836,15 +842,15 @@
                         let miseAbsolue = coursesValidees * 2; // 1€ base + 1€ pépite
                         statGlobal.textContent = `Bilan sur ${coursesValidees} courses validées (Mise absolue : ${miseAbsolue} €)`;
 
-                        // SAUVEGARDE EN V5
-                        localStorage.setItem(`pmu_stats_v5_${ddmmyyyy}`, JSON.stringify({
+                        // SAUVEGARDE EN V6
+                        localStorage.setItem(`pmu_stats_v6_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
                             netPepite: netPepite
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété avec succès !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan corrigé et mis à jour !</span>`;
         }
 
         window.onload = loadLivePmu;
