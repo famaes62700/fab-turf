@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version Finale Wolvega & Rapports)</title>
+    <title>PMU Direct - Algorithme & Base 1€ Exacte (Wolvega Direct Fix)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -426,34 +426,33 @@
             await fetchRaceData(false);
         }
 
-        // --- EXTRACTEUR ULTIME DES COTES INTERNATIONALES (WOLVEGA & ETRANGER) ---
+        // --- EXTRACTEUR D'EXCELLENCE POUR LES COTES ÉTRANGÈRES ET INTERNATIONALES ---
         function getHorseCoteFromFullData(raceData, horseNum, participantObj) {
             if (!raceData) return null;
             let foundCote = null;
 
-            // 1. Analyse des tableaux de cotes spécifiques web pmu.fr / e-pmu international
-            let possibleContainers = [
+            // 1. Analyse directe des listes de paris web et e-pmu (gère les cotes e-simples / e-gagnant)
+            let parisBlocks = [
                 raceData.paris, raceData.e_paris, raceData.cotesDirectes, 
                 raceData.e_simples, raceData.cotesReference, raceData.rapportsReference,
-                raceData.cotes, raceData.participants, raceData.lesCotes
+                raceData.cotes, raceData.lesCotes, raceData.e_cotes
             ];
 
-            possibleContainers.forEach(container => {
-                if (Array.isArray(container)) {
-                    container.forEach(el => {
+            parisBlocks.forEach(block => {
+                if (Array.isArray(block)) {
+                    block.forEach(el => {
                         if (!el) return;
-                        let subItems = el.cotes || el.lesCotes || el.participants || el.azarards || el.rapports || [el];
-                        if (Array.isArray(subItems)) {
-                            subItems.forEach(item => {
+                        let items = el.cotes || el.lesCotes || el.participants || el.azarards || el.rapports || [el];
+                        if (Array.isArray(items)) {
+                            items.forEach(item => {
                                 let num = item.numPmu || item.cheval || item.combinaison || item.numero || item.partantNumero;
                                 if (num !== undefined && parseInt(num) === parseInt(horseNum)) {
-                                    let rawVal = item.rapport || item.cote || item.valeur || item.rapportPourUnEuro || item.dernierRapport || item.dividende || item.dividendePourUnEuro;
-                                    if (rawVal !== undefined && rawVal !== null && rawVal !== "") {
-                                        let v = parseFloat(String(rawVal).replace(',', '.'));
+                                    let raw = item.rapport || item.cote || item.valeur || item.rapportPourUnEuro || item.dernierRapport || item.dividende;
+                                    if (raw !== undefined && raw !== null && raw !== "") {
+                                        let v = parseFloat(String(raw).replace(',', '.'));
                                         if (!isNaN(v) && v > 0) {
-                                            // Normalisation intelligente des cotes e-PMU et internationales
                                             if (v > 100 && v % 10 === 0) v = v / 100;
-                                            else if (v >= 10 && !String(rawVal).includes('.') && !String(rawVal).includes(',')) v = v / 10;
+                                            else if (v >= 10 && !String(raw).includes('.') && !String(raw).includes(',')) v = v / 10;
                                             foundCote = v;
                                         }
                                     }
@@ -465,32 +464,32 @@
             });
             if (foundCote !== null) return foundCote;
 
-            // 2. Recherche directe sur le participant standard
+            // 2. Recherche dans l'objet participant lui-même
             if (participantObj) {
-                let direct = participantObj.dernierRapportDirect?.rapport || 
-                             participantObj.dernierRapportReference?.rapport || 
-                             participantObj.cotes?.[0]?.rapport || 
-                             participantObj.probabiliteEvolution || 
-                             participantObj.cote || 
-                             participantObj.e_cote;
-                if (direct !== undefined && direct !== null && direct !== "") {
-                    let v = parseFloat(String(direct).replace(',', '.'));
+                let directCote = participantObj.dernierRapportDirect?.rapport || 
+                                 participantObj.dernierRapportReference?.rapport || 
+                                 participantObj.cotes?.[0]?.rapport || 
+                                 participantObj.probabiliteEvolution || 
+                                 participantObj.cote || 
+                                 participantObj.e_cote;
+                if (directCote !== undefined && directCote !== null && directCote !== "") {
+                    let v = parseFloat(String(directCote).replace(',', '.'));
                     if (!isNaN(v) && v > 0) {
-                        if (v >= 10 && !String(direct).includes('.') && !String(direct).includes(',')) v = v / 10;
+                        if (v >= 10 && !String(directCote).includes('.') && !String(directCote).includes(',')) v = v / 10;
                         return v;
                     }
                 }
             }
 
-            // 3. Balayage profond récursif final
-            function deepSearch(obj) {
+            // 3. Analyse récursive en profondeur de secours
+            function recursiveScan(obj) {
                 if (!obj || typeof obj !== 'object' || foundCote !== null) return;
                 if (Array.isArray(obj)) {
-                    for (let item of obj) deepSearch(item);
+                    for (let x of obj) recursiveScan(x);
                 } else {
-                    let numCheval = obj.numPmu || obj.cheval || obj.combinaison || obj.numero;
-                    if (numCheval !== undefined && parseInt(numCheval) === parseInt(horseNum)) {
-                        let r = obj.rapport || obj.rapportPourUnEuro || obj.dividende || obj.dividendePourUnEuro || obj.cote || obj.valeur;
+                    let num = obj.numPmu || obj.cheval || obj.combinaison || obj.numero;
+                    if (num !== undefined && parseInt(num) === parseInt(horseNum)) {
+                        let r = obj.rapport || obj.rapportPourUnEuro || obj.dividende || obj.cote || obj.valeur;
                         if (r !== undefined && r !== null && r !== "") {
                             let v = parseFloat(String(r).replace(',', '.'));
                             if (!isNaN(v) && v > 0) {
@@ -500,12 +499,12 @@
                             }
                         }
                     }
-                    for (let key in obj) {
-                        if (typeof obj[key] === 'object') deepSearch(obj[key]);
+                    for (let k in obj) {
+                        if (typeof obj[k] === 'object') recursiveScan(obj[k]);
                     }
                 }
             }
-            deepSearch(raceData);
+            recursiveScan(raceData);
             return foundCote;
         }
 
@@ -835,7 +834,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v31_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v32_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -1054,7 +1053,7 @@
                         gainPlacePepite.innerHTML = `Pépite [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€<br><span class="${(totalGainPlacePepite - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlacePepite - coursesValidees) > 0 ? '+' : '')}${(totalGainPlacePepite - coursesValidees).toFixed(2)}€</span>`;
 
                         // Couplés (Alignement structurel complet)
-                        statCoupleGagnantScore.innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.getvalue ? netCoupledGag.getvalue() : netCoupledGag.toFixed(2)} €</span>`;
+                        statCoupleGagnantScore.innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
                         gainCoupleGagnant.innerHTML = `Combiné [${coupleGagnantWins}/${coursesValidees}] : ${totalGainCoupleGagnant.toFixed(2)}€<br><span class="${netCoupledGag >= 0 ? 'text-purple-300' : 'text-red-400'} font-bold">Net : ${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)}€</span>`;
 
                         statCouplePlaceScore.innerHTML = `Bénéfice Net : <span class="${netCoupledPlc >= 0 ? 'text-blue-400' : 'text-red-400'} font-black">${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)} €</span>`;
@@ -1063,7 +1062,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v31_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v32_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
