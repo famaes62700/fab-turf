@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Couplés Net & Rapports</title>
+    <title>PMU Direct - Couplés Bénéfice Net</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -100,18 +100,18 @@
             <!-- OPTIONS COUPLÉS -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div class="bg-zinc-800/90 p-2.5 rounded-lg border border-purple-500/40 space-y-1">
-                    <div class="text-[10px] uppercase font-bold text-purple-300 flex justify-between">
+                    <div class="text-[10px] uppercase font-bold text-purple-300 flex justify-between items-center">
                         <span>Couplé Gagnant (1€)</span>
                         <span id="statCoupleGagnantScore" class="text-white font-mono">--</span>
                     </div>
-                    <div id="gainCoupleGagnant" class="text-[11px] text-zinc-300">--</div>
+                    <div id="gainCoupleGagnant" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">--</div>
                 </div>
                 <div class="bg-zinc-800/90 p-2.5 rounded-lg border border-blue-500/40 space-y-1">
-                    <div class="text-[10px] uppercase font-bold text-blue-300 flex justify-between">
+                    <div class="text-[10px] uppercase font-bold text-blue-300 flex justify-between items-center">
                         <span>Couplé Placé (1€)</span>
                         <span id="statCouplePlaceScore" class="text-white font-mono">--</span>
                     </div>
-                    <div id="gainCouplePlace" class="text-[11px] text-zinc-300">--</div>
+                    <div id="gainCouplePlace" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">--</div>
                 </div>
             </div>
 
@@ -728,7 +728,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v14_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v15_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0 };
@@ -926,24 +926,24 @@
                         gainPlaceBase.innerHTML = `Base (P) [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€ | <span class="${(totalGainPlaceBase - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlaceBase - coursesValidees) > 0 ? '+' : '')}${(totalGainPlaceBase - coursesValidees).toFixed(2)}€</span>`;
                         gainPlacePepite.innerHTML = `Pépite (P) [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€ | <span class="${(totalGainPlacePepite - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlacePepite - coursesValidees) > 0 ? '+' : '')}${(totalGainPlacePepite - coursesValidees).toFixed(2)}€</span>`;
 
-                        // Affichage Couplés avec mention Bénéfice Net
+                        // Affichage Couplés avec Mention Bénéfice Net claire
                         statCoupleGagnantScore.innerHTML = `<span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
-                        gainCoupleGagnant.innerHTML = `Réussite : [${coupleGagnantWins}/${coursesValidees}] | Retours : ${totalGainCoupleGagnant.toFixed(2)}€ | <span class="${netCoupledGag >= 0 ? 'text-purple-300' : 'text-red-400'} font-bold">Net : ${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)}€</span>`;
+                        gainCoupleGagnant.innerHTML = `Réussite : [${coupleGagnantWins}/${coursesValidees}] | <span class="text-zinc-300">Retours : ${totalGainCoupleGagnant.toFixed(2)}€</span> | <span class="${netCoupledGag >= 0 ? 'text-purple-300' : 'text-red-400'} font-bold">Bénéfice Net : ${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)}€</span>`;
 
                         statCouplePlaceScore.innerHTML = `<span class="${netCoupledPlc >= 0 ? 'text-blue-400' : 'text-red-400'} font-black">${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)} €</span>`;
-                        gainCouplePlace.innerHTML = `Réussite : [${couplePlaceWins}/${coursesValidees}] | Retours : ${totalGainCouplePlace.toFixed(2)}€ | <span class="${netCoupledPlc >= 0 ? 'text-blue-300' : 'text-red-400'} font-bold">Net : ${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)}€</span>`;
+                        gainCouplePlace.innerHTML = `Réussite : [${couplePlaceWins}/${coursesValidees}] | <span class="text-zinc-300">Retours : ${totalGainCouplePlace.toFixed(2)}€</span> | <span class="${netCoupledPlc >= 0 ? 'text-blue-300' : 'text-red-400'} font-bold">Bénéfice Net : ${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)}€</span>`;
 
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v14_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v15_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complet mis à jour avec le net des couplés !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complet mis à jour avec le bénéfice net des couplés !</span>`;
         }
 
         window.onload = loadLivePmu;
