@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algo Placé</title>
+    <title>PMU Direct - Algo Placé Pro</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -71,7 +71,7 @@
         <!-- BLOC STATISTIQUES DU JOUR -->
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour (1€ Placé uniquement)</h2>
+                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour (1€ Placé)</h2>
                 <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Recherche des courses...</div>
@@ -80,7 +80,7 @@
                     <div class="text-[10px] uppercase font-bold text-emerald-400 mb-2 flex justify-between"><span>Base</span><span class="text-zinc-500">1€/crse</span></div>
                     <div class="flex justify-around items-center mb-2">
                         <div class="text-center"><div id="statBaseG" class="text-xl font-black text-white">0</div><div class="text-[9px] text-zinc-400">Gagnant</div></div>
-                        <div class="text-center"><div id="statBaseP" class="text-xl font-black text-white">0</div><div class="text-[9px] text-emerald-400">Placé</div></div>
+                        <div class="text-center"><div id="statBaseP" class="text-xl font-black text-emerald-400">0</div><div class="text-[9px] text-emerald-400">Placé</div></div>
                     </div>
                     <div id="gainBase" class="bg-emerald-950/50 text-emerald-300 py-1.5 px-1 rounded text-[11px] border border-emerald-500/20 text-center leading-tight">--</div>
                 </div>
@@ -88,7 +88,7 @@
                     <div class="text-[10px] uppercase font-bold text-amber-400 mb-2 flex justify-between"><span>Pépite</span><span class="text-zinc-500">1€/crse</span></div>
                     <div class="flex justify-around items-center mb-2">
                         <div class="text-center"><div id="statPepiteG" class="text-xl font-black text-white">0</div><div class="text-[9px] text-zinc-400">Gagnant</div></div>
-                        <div class="text-center"><div id="statPepiteP" class="text-xl font-black text-white">0</div><div class="text-[9px] text-amber-400">Placé</div></div>
+                        <div class="text-center"><div id="statPepiteP" class="text-xl font-black text-amber-400">0</div><div class="text-[9px] text-amber-400">Placé</div></div>
                     </div>
                     <div id="gainPepite" class="bg-amber-950/50 text-amber-300 py-1.5 px-1 rounded text-[11px] border border-amber-500/20 text-center leading-tight">--</div>
                 </div>
@@ -408,31 +408,47 @@
             let baseHorse = sortedByBase[0];
             let remaining = processed.filter(p => p.num !== baseHorse?.num);
             let nuggetHorse = remaining.sort((a, b) => b.nuggetScore - a.nuggetScore)[0];
-            return { processed, baseHorse, nuggetHorse };
+            return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
+        // NOUVEAU DÉCODEUR DE RAPPORTS PMU (Infaillible)
         function getRapportPari(listeRapports, horseNum, typeRapport) {
             let maxGain = 0;
-            if (!listeRapports || listeRapports.length === 0) return 0;
+            if (!listeRapports || !Array.isArray(listeRapports)) return 0;
+
             listeRapports.forEach(repGroup => {
                 let typePari = (repGroup.typePari || repGroup.libellePari || "").toUpperCase();
+                
                 if (typePari.includes('SIMPLE') || typePari === 'PARI') {
                     let details = repGroup.rapports || repGroup.dividendes || [];
+                    
                     details.forEach(r => {
-                        let libelle = (r.libelleRapport || "").toUpperCase();
-                        let combo = String(r.combinaison || r.cheval || "");
+                        let libelle = (r.libelleRapport || r.libelle || "").toUpperCase();
+                        let combo = String(r.combinaison || r.cheval || r.numPmu || "");
+                        
                         if (combo === String(horseNum)) {
-                            let isMatch = false;
-                            if (typeRapport === 'G' && (libelle.includes('GAGNANT') || libelle === 'G')) isMatch = true;
-                            if (typeRapport === 'P' && (libelle.includes('PLAC') || libelle === 'P' || libelle === 'PLACE')) isMatch = true;
+                            // Détection intelligente du type (Gagnant ou Placé)
+                            let isGagnant = libelle.includes('GAGNANT') || libelle === 'G' || typePari.includes('GAGNANT');
+                            let isPlace = libelle.includes('PLAC') || libelle === 'P' || typePari.includes('PLACE');
                             
-                            if (isMatch) {
-                                let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
-                                if (montant) {
-                                    let val = parseFloat(montant);
-                                    if (val > 100) val = val / 100;
-                                    if (val > maxGain) maxGain = val;
+                            // Parfois le PMU met tout dans un type "SIMPLE_PLACE" et ne remplit pas le libellé
+                            if (!isGagnant && !isPlace) {
+                                if (typePari.includes('PLACE')) isPlace = true;
+                                else if (typePari.includes('GAGNANT')) isGagnant = true;
+                            }
+
+                            if ((typeRapport === 'G' && isGagnant) || (typeRapport === 'P' && isPlace)) {
+                                let val = 0;
+                                if (r.dividendePourUnEuro !== undefined) val = parseFloat(r.dividendePourUnEuro);
+                                else if (r.rapportPourUnEuro !== undefined) val = parseFloat(r.rapportPourUnEuro);
+                                else {
+                                    let m = r.dividende || r.rapport || r.montant || r.gainEuro;
+                                    if (m !== undefined) {
+                                        val = parseFloat(m);
+                                        if (val >= 100 && Number.isInteger(val)) val = val / 100;
+                                    }
                                 }
+                                if (val > maxGain) maxGain = val;
                             }
                         }
                     });
@@ -461,7 +477,10 @@
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
                 const data = await res.json();
                 let partants = data.participants || [];
-                let rapportsData = data.rapports;
+                
+                // Extraction robuste des rapports
+                let rapportsData = data.rapportsDefinitifs || data.rapports || [];
+                let listeRapports = Array.isArray(rapportsData) ? rapportsData : (rapportsData.lesRapports || rapportsData.rapports || []);
 
                 let arrivalBlock = document.getElementById('arrivalBlock');
                 let arrivalList = document.getElementById('arrivalList');
@@ -493,21 +512,33 @@
                 let reportsGrid = document.getElementById('reportsGrid');
                 reportsGrid.innerHTML = '';
                 let hasReports = false;
-                let listeRapports = Array.isArray(rapportsData) ? rapportsData : (rapportsData?.lesRapports || rapportsData?.rapports || []);
 
                 listeRapports.forEach(repGroup => {
                     let typeJeu = repGroup.typePari || repGroup.libellePari || 'Pari';
                     let details = repGroup.rapports || repGroup.dividendes || [];
+                    
                     details.forEach(r => {
-                        let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
-                        if (montant) {
+                        let val = 0;
+                        if (r.dividendePourUnEuro !== undefined) val = parseFloat(r.dividendePourUnEuro);
+                        else if (r.rapportPourUnEuro !== undefined) val = parseFloat(r.rapportPourUnEuro);
+                        else {
+                            let m = r.dividende || r.rapport || r.montant || r.gainEuro;
+                            if (m !== undefined) {
+                                val = parseFloat(m);
+                                if (val >= 100 && Number.isInteger(val)) val = val / 100;
+                            }
+                        }
+                        
+                        if (val > 0) {
                             hasReports = true;
-                            let val = parseFloat(montant);
-                            if (val > 100) val = val / 100;
                             let combo = r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
+                            let lib = (r.libelleRapport || r.libelle || "").toUpperCase();
+                            let libDisplay = lib.includes('PLAC') ? 'Placé' : (lib.includes('GAGN') ? 'Gagnant' : lib);
+                            let finalTitle = libDisplay ? `${typeJeu} ${libDisplay}` : typeJeu;
+                            
                             let div = document.createElement('div');
                             div.className = "bg-zinc-800 p-2 rounded border border-zinc-700 flex justify-between";
-                            div.innerHTML = `<span class="text-zinc-400">${r.libelleRapport || typeJeu}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
+                            div.innerHTML = `<span class="text-zinc-400">${finalTitle}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
                             reportsGrid.appendChild(div);
                         }
                     });
@@ -600,9 +631,9 @@
             return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // NOUVEAU SYSTÈME DE SAUVEGARDE (Clé V3 pour forcer le recalcul 100% Placé)
+        // CLÉ V4 : Force la remise à zéro pour un calcul Placé Propre
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v3_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v4_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netBase: 0, netPepite: 0 };
@@ -733,26 +764,40 @@
                     if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
-                        let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+                        
+                        let rapportsData = data.rapportsDefinitifs || data.rapports || [];
+                        let rapportsList = Array.isArray(rapportsData) ? rapportsData : (rapportsData.lesRapports || rapportsData.rapports || []);
 
                         if (algoResult.baseHorse) {
                             let g = getRapportPari(rapportsList, algoResult.baseHorse.num, 'G');
                             let p = getRapportPari(rapportsList, algoResult.baseHorse.num, 'P');
-                            if (g > 0 || algoResult.baseHorse.ordreArrivee === 1) baseWin++;
-                            if (p > 0 || (algoResult.baseHorse.ordreArrivee >= 1 && algoResult.baseHorse.ordreArrivee <= 3)) basePlc++;
                             
-                            // On ajoute UNIQUEMENT le rapport placé aux gains
-                            totalGainBase += p;
+                            if (g > 0 || algoResult.baseHorse.ordreArrivee === 1) baseWin++;
+                            
+                            if (p > 0) {
+                                basePlc++;
+                                totalGainBase += p; // Ajout du gain placé validé
+                            } else if (algoResult.baseHorse.ordreArrivee >= 1 && algoResult.baseHorse.ordreArrivee <= 3) {
+                                if (algoResult.baseHorse.ordreArrivee === 1 || algoResult.baseHorse.ordreArrivee === 2 || (algoResult.baseHorse.ordreArrivee === 3 && partants.length >= 8)) {
+                                    basePlc++; // S'il vient d'arriver mais que l'API PMU n'a pas encore le prix
+                                }
+                            }
                         }
 
                         if (algoResult.nuggetHorse) {
                             let g = getRapportPari(rapportsList, algoResult.nuggetHorse.num, 'G');
                             let p = getRapportPari(rapportsList, algoResult.nuggetHorse.num, 'P');
-                            if (g > 0 || algoResult.nuggetHorse.ordreArrivee === 1) pepiteWin++;
-                            if (p > 0 || (algoResult.nuggetHorse.ordreArrivee >= 1 && algoResult.nuggetHorse.ordreArrivee <= 3)) pepitePlc++;
                             
-                            // On ajoute UNIQUEMENT le rapport placé aux gains
-                            totalGainPepite += p;
+                            if (g > 0 || algoResult.nuggetHorse.ordreArrivee === 1) pepiteWin++;
+                            
+                            if (p > 0) {
+                                pepitePlc++;
+                                totalGainPepite += p; // Ajout du gain placé validé
+                            } else if (algoResult.nuggetHorse.ordreArrivee >= 1 && algoResult.nuggetHorse.ordreArrivee <= 3) {
+                                if (algoResult.nuggetHorse.ordreArrivee === 1 || algoResult.nuggetHorse.ordreArrivee === 2 || (algoResult.nuggetHorse.ordreArrivee === 3 && partants.length >= 8)) {
+                                    pepitePlc++;
+                                }
+                            }
                         }
 
                         // Coût : 1€ Placé par cheval par course
@@ -771,15 +816,15 @@
                         let miseAbsolue = coursesValidees * 2; // 1€ base + 1€ pépite
                         statGlobal.textContent = `Bilan sur ${coursesValidees} courses validées (Mise absolue : ${miseAbsolue} €)`;
 
-                        // SAUVEGARDE EN V3
-                        localStorage.setItem(`pmu_stats_v3_${ddmmyyyy}`, JSON.stringify({
+                        // SAUVEGARDE EN V4
+                        localStorage.setItem(`pmu_stats_v4_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
                             netPepite: netPepite
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété et mis à jour !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complété avec succès !</span>`;
         }
 
         window.onload = loadLivePmu;
