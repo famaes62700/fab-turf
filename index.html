@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Base 1€ Uniformisée</title>
+    <title>PMU Direct - Bilan Complet Couplés & Simple (Base 1€)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -37,23 +37,31 @@
             </div>
         </div>
 
-        <!-- BLOC HISTORIQUE -->
+        <!-- BLOC HISTORIQUE MENSUEL / HEBDO -->
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Gains Cumulés (Comparatif Mensuel)</h2>
+                <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Gains Cumulés (Simple & Couplé Net)</h2>
                 <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="space-y-4 max-h-96 overflow-y-auto pr-1">
                 <div class="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
                     <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Cette Semaine (Lun - Dim)</h3>
-                    <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-2">
                         <div class="text-center bg-emerald-950/30 p-2 rounded border border-emerald-500/20">
-                            <div class="text-[9px] text-emerald-400 uppercase">100% Placé (Net)</div>
-                            <div id="histWeekPlace" class="font-bold text-white mt-0.5">--</div>
+                            <div class="text-[8px] text-emerald-400 uppercase font-bold">Placé (Net)</div>
+                            <div id="histWeekPlace" class="font-bold text-white mt-0.5 text-[11px]">--</div>
                         </div>
                         <div class="text-center bg-indigo-950/30 p-2 rounded border border-indigo-500/20">
-                            <div class="text-[9px] text-indigo-400 uppercase">100% Gagnant (Net)</div>
-                            <div id="histWeekGagnant" class="font-bold text-white mt-0.5">--</div>
+                            <div class="text-[8px] text-indigo-400 uppercase font-bold">Gagnant (Net)</div>
+                            <div id="histWeekGagnant" class="font-bold text-white mt-0.5 text-[11px]">--</div>
+                        </div>
+                        <div class="text-center bg-purple-950/30 p-2 rounded border border-purple-500/20">
+                            <div class="text-[8px] text-purple-400 uppercase font-bold">C. Gagnant (Net)</div>
+                            <div id="histWeekCoupleGag" class="font-bold text-white mt-0.5 text-[11px]">--</div>
+                        </div>
+                        <div class="text-center bg-blue-950/30 p-2 rounded border border-blue-500/20">
+                            <div class="text-[8px] text-blue-400 uppercase font-bold">C. Placé (Net)</div>
+                            <div id="histWeekCouplePlc" class="font-bold text-white mt-0.5 text-[11px]">--</div>
                         </div>
                     </div>
                 </div>
@@ -445,10 +453,11 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // UNIFORMISATION BASE 1€ : Division par 10 de tous les rapports de l'API PMU (qui sont en base 10€)
+        // CONVERSION ROBUSTE BASE 1€ : Division systématique par 10 de tous les rapports bruts renvoyés par l'API PMU
         function cleanRapportValue(rawVal) {
             let v = parseFloat(rawVal || 0);
             if (v <= 0) return 0;
+            // Si le rapport dépasse 100 et semble être en base 10€, ou de manière générale, on divise par 10 pour l'adapter à la mise de 1€/2€
             return parseFloat((v / 10).toFixed(2));
         }
 
@@ -720,16 +729,16 @@
 
         function formatMoneyHTML(val, type) {
             if (val === 0) return `<span class="text-zinc-500">0.00 €</span>`;
-            let color = val > 0 ? (type === 'gagnant' ? 'text-indigo-400' : 'text-emerald-400') : 'text-red-400';
+            let colorClass = val > 0 ? (type === 'gagnant' ? 'text-indigo-400' : (type === 'cgag' ? 'text-purple-400' : 'text-emerald-400')) : 'text-red-400';
             let sign = val > 0 ? '+' : '';
-            return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
+            return `<span class="${colorClass}">${sign}${val.toFixed(2)} €</span>`;
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v18_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v19_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
-            return { netPlace: 0, netGagnant: 0 };
+            return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
         }
 
         function showHistoryStats() {
@@ -745,44 +754,57 @@
             let monday = new Date(today);
             monday.setDate(today.getDate() - (dayOfWeek - 1)); 
             
-            let weekPlace = 0, weekGagnant = 0;
+            let weekPlace = 0, weekGagnant = 0, weekCGag = 0, weekCPlc = 0;
             for(let i=0; i<7; i++) {
                 let d = new Date(monday);
                 d.setDate(monday.getDate() + i);
                 let s = getStatForDateObj(d);
                 weekPlace += s.netPlace;
                 weekGagnant += s.netGagnant;
+                weekCGag += s.netCoupleGag;
+                weekCPlc += s.netCouplePlc;
             }
 
             document.getElementById('histWeekPlace').innerHTML = formatMoneyHTML(weekPlace, 'place');
             document.getElementById('histWeekGagnant').innerHTML = formatMoneyHTML(weekGagnant, 'gagnant');
+            document.getElementById('histWeekCoupleGag').innerHTML = formatMoneyHTML(weekCGag, 'cgag');
+            document.getElementById('histWeekCouplePlc').innerHTML = formatMoneyHTML(weekCPlc, 'cplc');
 
             const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
             let monthsGrid = document.getElementById('monthsGrid');
             monthsGrid.innerHTML = '';
 
             for (let m = 0; m < 12; m++) {
-                let totalPlace = 0;
-                let totalGagnant = 0;
+                let totalPlace = 0, totalGagnant = 0, totalCGag = 0, totalCPlc = 0;
                 let daysInMonth = new Date(year, m + 1, 0).getDate(); 
                 
                 for (let d = 1; d <= daysInMonth; d++) {
                     let s = getStatForDateObj(new Date(year, m, d));
                     totalPlace += s.netPlace;
                     totalGagnant += s.netGagnant;
+                    totalCGag += s.netCoupleGag;
+                    totalCPlc += s.netCouplePlc;
                 }
 
                 let div = document.createElement('div');
-                div.className = "flex justify-between items-center bg-zinc-900 p-1.5 rounded border border-zinc-700/50 text-xs";
+                div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded border border-zinc-700/50 text-xs";
                 div.innerHTML = `
-                    <div class="w-14 font-bold text-zinc-400 pl-1">${monthNames[m]}</div>
+                    <div class="w-16 font-bold text-zinc-300 pl-1">${monthNames[m]}</div>
                     <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
-                        <span class="text-[8px] text-emerald-400 uppercase block mb-0.5">Placé (Net)</span>
+                        <span class="text-[7px] text-emerald-400 uppercase block">Placé</span>
                         ${formatMoneyHTML(totalPlace, 'place')}
                     </div>
                     <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
-                        <span class="text-[8px] text-indigo-400 uppercase block mb-0.5">Gagnant (Net)</span>
+                        <span class="text-[7px] text-indigo-400 uppercase block">Gagnant</span>
                         ${formatMoneyHTML(totalGagnant, 'gagnant')}
+                    </div>
+                    <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
+                        <span class="text-[7px] text-purple-400 uppercase block">C. Gag</span>
+                        ${formatMoneyHTML(totalCGag, 'cgag')}
+                    </div>
+                    <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
+                        <span class="text-[7px] text-blue-400 uppercase block">C. Plc</span>
+                        ${formatMoneyHTML(totalCPlc, 'cplc')}
                     </div>
                 `;
                 monthsGrid.appendChild(div);
@@ -934,14 +956,16 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v18_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v19_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
-                            netGagnant: netGagnantTotal
+                            netGagnant: netGagnantTotal,
+                            netCoupleGag: netCoupledGag,
+                            netCouplePlc: netCoupledPlc
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan calculé avec succès en base 1€ !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complet (Simple + Couplés) mis à jour !</span>`;
         }
 
         window.onload = loadLivePmu;
