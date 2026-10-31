@@ -542,14 +542,16 @@
                     badge.classList.add('hidden');
                 }
 
-                // GESTION DE LA METEO
+                // GESTION DE LA METEO (Version améliorée)
                 let meteoBadge = document.getElementById('meteoBadge');
-                let condition = race.nebulositeCodeDesc || (race.meteo && race.meteo.nebulositeCodeDesc) || "";
-                let temp = race.temperature || (race.meteo && race.meteo.temperature) || "";
+                
+                // Recherche dans plusieurs endroits du JSON renvoyé par l'API
+                let condition = race.nebulositeCodeDesc || data.nebulositeCodeDesc || (data.meteo && data.meteo.nebulositeCodeDesc) || "";
+                let temp = race.temperature || data.temperature || (data.meteo && data.meteo.temperature) || "";
                 let meteoText = "";
                 
                 if (condition) meteoText += condition;
-                if (temp) meteoText += (meteoText ? " | " : "") + temp + "°C";
+                if (temp || temp === 0) meteoText += (meteoText ? " | " : "") + temp + "°C";
 
                 if (meteoText !== "") {
                     meteoBadge.innerHTML = '<i class="fa-solid fa-cloud-sun mr-1"></i> ' + meteoText;
