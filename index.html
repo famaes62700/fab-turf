@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algo Placé Précis</title>
+    <title>PMU Direct - Algo Placé Strict 1€</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -411,16 +411,23 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // ==========================================
-        // CORRECTIF ANTI-MULTIPLICATION (1€ STRICT)
-        // ==========================================
-        function cleanRapportValue(rawVal) {
+        // =======================================================
+        // CORRECTIF STRICT : CALIBRAGE UNITAIRE 1€ ABSOLU
+        // =======================================================
+        function cleanRapportValue(rawVal, chevalCote) {
             let v = parseFloat(rawVal || 0);
             if (v <= 0) return 0;
-            // Si le rapport dépasse 50 (ex: 125 au lieu de 12.50), c'est qu'il est en centimes ou multiplié par 10/100
-            if (v > 50) v = v / 10;
-            if (v > 50) v = v / 10; // Double sécurité si x100
-            return v;
+            
+            // Si la valeur lue est anormalement haute (ex: 120 au lieu de 12.00, ou 10x trop haute)
+            // On divise par 10 ou 100 jusqu'à ce qu'elle devienne cohérente avec la cote
+            while (v > 50 && v > chevalCote * 2) {
+                v = v / 10;
+            }
+            // Sécurité additionnelle : un rapport placé unitaire dépasse rarement 30€ aux courses
+            if (v > 40) {
+                v = v / 10;
+            }
+            return parseFloat(v.toFixed(2));
         }
 
         function getAllRapportsForDisplay(data) {
@@ -436,7 +443,7 @@
                             let combo = o.combinaison || o.cheval || o.numPmu;
                             if (!String(combo).includes('-')) {
                                 let rawV = o.dividendePourUnEuro || o.rapportPourUnEuro || o.dividende || o.rapport || o.montant || o.gainEuro || 0;
-                                let v = cleanRapportValue(rawV);
+                                let v = cleanRapportValue(rawV, 20); // Valeur de sécurité par défaut
                                 if (v > 0) {
                                     let lib = (o.libelleRapport || o.libelle || "Rapport").toUpperCase();
                                     let libDisplay = lib.includes('PLAC') ? 'Placé' : (lib.includes('GAGN') ? 'Gagnant' : lib);
@@ -458,7 +465,7 @@
             return results;
         }
 
-        function extractRapport(data, horseNum, typeRapport) {
+        function extractRapport(data, horseNum, typeRapport, chevalCote) {
             let maxGain = 0;
             function search(o, parentType) {
                 if (!o || typeof o !== 'object') return;
@@ -482,7 +489,7 @@
 
                             if ((typeRapport === 'G' && isG) || (typeRapport === 'P' && isP)) {
                                 let rawV = o.dividendePourUnEuro || o.rapportPourUnEuro || o.dividende || o.rapport || o.montant || o.gainEuro || 0;
-                                let v = cleanRapportValue(rawV);
+                                let v = cleanRapportValue(rawV, chevalCote);
                                 if (v > maxGain) maxGain = v;
                             }
                         }
@@ -650,9 +657,9 @@
             return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // CLÉ V6 : Force le recalcul avec le correctif anti-multiplication
+        // CLÉ V7 : Force le nouveau calcul strictement calibré pour 1€
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v6_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v7_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netBase: 0, netPepite: 0 };
@@ -787,8 +794,8 @@
                         // --- VERIFICATION BASE ---
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
-                            let g = extractRapport(data, algoResult.baseHorse.num, 'G');
-                            let p = extractRapport(data, algoResult.baseHorse.num, 'P');
+                            let g = extractRapport(data, algoResult.baseHorse.num, 'G', algoResult.baseHorse.cote);
+                            let p = extractRapport(data, algoResult.baseHorse.num, 'P', algoResult.baseHorse.cote);
                             
                             let estGagnant = (arrivee === 1);
                             let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
@@ -808,8 +815,8 @@
                         // --- VERIFICATION PÉPITE ---
                         if (algoResult.nuggetHorse) {
                             let arrivee = algoResult.nuggetHorse.ordreArrivee;
-                            let g = extractRapport(data, algoResult.nuggetHorse.num, 'G');
-                            let p = extractRapport(data, algoResult.nuggetHorse.num, 'P');
+                            let g = extractRapport(data, algoResult.nuggetHorse.num, 'G', algoResult.nuggetHorse.cote);
+                            let p = extractRapport(data, algoResult.nuggetHorse.num, 'P', algoResult.nuggetHorse.cote);
                             
                             let estGagnant = (arrivee === 1);
                             let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
@@ -842,15 +849,15 @@
                         let miseAbsolue = coursesValidees * 2; // 1€ base + 1€ pépite
                         statGlobal.textContent = `Bilan sur ${coursesValidees} courses validées (Mise absolue : ${miseAbsolue} €)`;
 
-                        // SAUVEGARDE EN V6
-                        localStorage.setItem(`pmu_stats_v6_${ddmmyyyy}`, JSON.stringify({
+                        // SAUVEGARDE EN V7
+                        localStorage.setItem(`pmu_stats_v7_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
                             netPepite: netPepite
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan corrigé et mis à jour !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan calibré à 1€ et mis à jour !</span>`;
         }
 
         window.onload = loadLivePmu;
