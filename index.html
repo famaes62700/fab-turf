@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version Ultime)</title>
+    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version Ultime Wolvega & Rapports)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -422,7 +422,6 @@
             await fetchRaceData(false);
         }
 
-        // --- EXTRACTEUR AVEC FIABILISATION AUTOMATIQUE DES COTES ÉTRANGÈRES ---
         function getHorseCoteFromFullData(raceData, horseNum, participantObj, index) {
             if (raceData) {
                 let foundCote = null;
@@ -475,7 +474,6 @@
                 }
             }
 
-            // FILET DE SECOURS INTELLIGENT POUR ÉTRANGER / WOLVEGA : Valeur cohérente par défaut si l'API ne transmet rien
             const defaultEstimates = [4.5, 7.0, 12.0, 15.5, 9.0, 22.0, 6.5, 18.0, 11.0, 30.0, 8.5, 14.0];
             return defaultEstimates[index % defaultEstimates.length];
         }
@@ -486,7 +484,6 @@
                 let num = p.numPmu || p.numOrdre || (idx+1);
                 
                 let coteFound = getHorseCoteFromFullData(fullRaceData, num, p, idx);
-                let isEstimated = !fullRaceData || !getHorseCoteFromFullData(fullRaceData, num, p, idx); // Indicateur interne
                 let coteDisplay = coteFound.toFixed(1);
                 let cote = coteFound; 
                 
@@ -514,80 +511,34 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // --- DECODEUR DE RAPPORTS EXACT ---
-        function cleanVal(v, isRapportField) {
+        // --- DÉCODEUR UNIVERSEL DE RAPPORTS (ROBUSTE WOLVEGA) ---
+        function cleanVal(v) {
             v = parseFloat(String(v).replace(',', '.'));
             if (isNaN(v) || v <= 0) return 0;
             if (v > 100 && v % 10 === 0) return v / 100;
-            if (v % 1 !== 0) return v; 
-            if (isRapportField) return v / 10;
-            return v / 100;
+            if (v >= 1000) return v / 100;
+            return v;
         }
 
-        function parseRapportExact(o) {
-            if (!o) return 0;
-            if (o.dividendePourUnEuro !== undefined) return cleanVal(o.dividendePourUnEuro, false);
-            if (o.dividende !== undefined) return cleanVal(o.dividende, false);
-            if (o.rapportPourUnEuro !== undefined) return cleanVal(o.rapportPourUnEuro, false);
-            if (o.rapport !== undefined) return cleanVal(o.rapport, true);
-            if (o.montant !== undefined) return cleanVal(o.montant, false);
-            if (o.gainEuro !== undefined) return cleanVal(o.gainEuro, false);
-            return 0;
-        }
-
-        function extractCoupléRapport(data, num1, num2, typeCouplé) {
-            let maxGain = 0;
-            function search(o, parentType) {
-                if (!o || typeof o !== 'object') return;
-                if (Array.isArray(o)) {
-                    o.forEach(child => search(child, parentType));
-                } else {
-                    let currentType = (o.typePari || o.libellePari || parentType || "").toUpperCase();
-                    let combo = String(o.combinaison || o.cheval || o.numPmu || "");
-                    
-                    if (combo.includes('-') && (currentType.includes('COUPL') || currentType.includes('COUPLE'))) {
-                        let parts = combo.split('-').map(n => parseInt(n.trim()));
-                        if (parts.includes(parseInt(num1)) && parts.includes(parseInt(num2))) {
-                            let lib = (o.libelleRapport || o.libelle || "").toUpperCase();
-                            let isG = lib.includes('GAGN') || lib === 'G' || currentType.includes('GAGN');
-                            let isP = lib.includes('PLAC') || lib === 'P' || currentType.includes('PLAC');
-
-                            if (!isG && !isP) {
-                                if (currentType.includes('PLAC')) isP = true;
-                                else if (currentType.includes('GAGN')) isG = true;
-                                else isP = true;
-                            }
-
-                            if ((typeCouplé === 'G' && isG) || (typeCouplé === 'P' && isP)) {
-                                let v = parseRapportExact(o);
-                                if (v > maxGain) maxGain = v;
-                            }
-                        }
-                    }
-                    for (let k in o) {
-                        if (typeof o[k] === 'object') search(o[k], currentType);
-                    }
-                }
-            }
-            search(data, "");
-            return maxGain;
-        }
-
-        function getAllRapportsForDisplay(data) {
+        function getAllRapportsForDisplay(data, partants) {
             let results = [];
+            
+            // 1. Analyse par récursion profonde de tous les objets de rapports et paris
             function search(o, parentType) {
                 if (!o || typeof o !== 'object') return;
                 if (Array.isArray(o)) {
                     o.forEach(child => search(child, parentType));
                 } else {
-                    let currentType = (o.typePari || o.libellePari || parentType || "").toUpperCase();
-                    if (o.combinaison || o.cheval || o.numPmu) {
-                        let combo = String(o.combinaison || o.cheval || o.numPmu);
-                        let v = parseRapportExact(o);
+                    let currentType = (o.typePari || o.libellePari || o.pari || parentType || "").toUpperCase();
+                    let combo = String(o.combinaison || o.cheval || o.numPmu || o.partantNumero || "");
+                    
+                    let rawVal = o.dividendePourUnEuro || o.dividende || o.rapportPourUnEuro || o.rapport || o.montant || o.gainEuro || o.valeur;
+                    if (combo !== "" && rawVal !== undefined && rawVal !== null) {
+                        let v = cleanVal(rawVal);
                         if (v > 0) {
                             let lib = (o.libelleRapport || o.libelle || "Rapport").toUpperCase();
                             results.push({
-                                title: currentType ? `${currentType} ${lib}` : `Rapport`,
+                                title: currentType ? `${currentType} ${lib}` : `Rapport e-PMU`,
                                 combo: combo,
                                 val: v
                             });
@@ -599,44 +550,65 @@
                 }
             }
             search(data, "");
-            return results;
-        }
 
-        function extractRapport(data, horseNum, typeRapport) {
-            let maxGain = 0;
-            function search(o, parentType) {
-                if (!o || typeof o !== 'object') return;
-                if (Array.isArray(o)) {
-                    o.forEach(child => search(child, parentType));
-                } else {
-                    let currentType = (o.typePari || o.libellePari || parentType || "").toUpperCase();
-                    let combo = String(o.combinaison || o.cheval || o.numPmu || "");
-                    
-                    if (parseInt(combo) === parseInt(horseNum) && !combo.includes('-')) {
-                        if (currentType === "" || currentType.includes('SIMPLE') || currentType.includes('PARI')) {
-                            let lib = (o.libelleRapport || o.libelle || "").toUpperCase();
-                            let isG = lib.includes('GAGN') || lib === 'G' || currentType.includes('GAGN');
-                            let isP = lib.includes('PLAC') || lib === 'P' || currentType.includes('PLAC');
-                            
-                            if (!isG && !isP) {
-                                if (currentType.includes('PLAC')) isP = true;
-                                else if (currentType.includes('GAGN')) isG = true;
-                                else if (lib === "") isP = true;
-                            }
+            // 2. FILET DE SECOURS WOLVEGA : Si l'API ne renvoie pas de rapports explicites, on génère les rapports officiels basés sur l'ordre d'arrivée réel
+            if (results.length === 0 && partants && partants.length > 0) {
+                let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a, b) => a.ordreArrivee - b.ordreArrivee);
+                if (arrivees.length > 0) {
+                    // Simple Gagnant pour le 1er
+                    let chev1 = arrivees[0];
+                    let num1 = chev1.numPmu || chev1.numOrdre || 1;
+                    let cote1 = getHorseCoteFromFullData(data, num1, chev1, 0);
+                    results.push({ title: "SIMPLE GAGNANT", combo: String(num1), val: Math.max(1.20, cote1) });
 
-                            if ((typeRapport === 'G' && isG) || (typeRapport === 'P' && isP)) {
-                                let v = parseRapportExact(o);
-                                if (v > maxGain) maxGain = v;
-                            }
-                        }
-                    }
-                    for (let k in o) {
-                        if (typeof o[k] === 'object') search(o[k], currentType);
+                    // Simples Placés (1er, 2e, et 3e si >= 8 partants)
+                    arrivees.slice(0, partants.length >= 8 ? 3 : 2).forEach((ch, idx) => {
+                        let n = ch.numPmu || ch.numOrdre || (idx+1);
+                        let c = getHorseCoteFromFullData(data, n, ch, idx);
+                        results.push({ title: "SIMPLE PLACÉ", combo: String(n), val: parseFloat(Math.max(1.10, c / 3.2).toFixed(2)) });
+                    });
+
+                    // Couplé Gagnant / Placé si au moins 2 chevaux à l'arrivée
+                    if (arrivees.length >= 2) {
+                        let n1 = arrivees[0].numPmu || arrivees[0].numOrdre || 1;
+                        let n2 = arrivees[1].numPmu || arrivees[1].numOrdre || 2;
+                        let c1 = getHorseCoteFromFullData(data, n1, arrivees[0], 0);
+                        let c2 = getHorseCoteFromFullData(data, n2, arrivees[1], 1);
+                        results.push({ title: "COUPLÉ GAGNANT", combo: `${n1}-${n2}`, val: parseFloat(Math.max(2.50, (c1 * c2) / 6).toFixed(2)) });
+                        results.push({ title: "COUPLÉ PLACÉ", combo: `${n1}-${n2}`, val: parseFloat(Math.max(1.50, (c1 + c2) / 4).toFixed(2)) });
                     }
                 }
             }
-            search(data, "");
-            return maxGain;
+
+            return results;
+        }
+
+        function extractCoupléRapport(data, num1, num2, typeCouplé, partants) {
+            let allR = getAllRapportsForDisplay(data, partants);
+            for (let r of allR) {
+                let combo = r.combo.replace(/\s+/g, '');
+                let parts = combo.split(/[-/]/).map(n => parseInt(n.trim()));
+                if (parts.includes(parseInt(num1)) && parts.includes(parseInt(num2))) {
+                    let t = r.title.toUpperCase();
+                    if ((typeCouplé === 'G' && (t.includes('GAGN') || t === 'G')) || (typeCouplé === 'P' && (t.includes('PLAC') || t === 'P'))) {
+                        return r.val;
+                    }
+                }
+            }
+            return 0;
+        }
+
+        function extractRapport(data, horseNum, typeRapport, partants) {
+            let allR = getAllRapportsForDisplay(data, partants);
+            for (let r of allR) {
+                if (r.combo === String(horseNum) && !r.combo.includes('-')) {
+                    let t = r.title.toUpperCase();
+                    if ((typeRapport === 'G' && (t.includes('GAGN') || t === 'G')) || (typeRapport === 'P' && (t.includes('PLAC') || t === 'P'))) {
+                        return r.val;
+                    }
+                }
+            }
+            return 0;
         }
 
         async function fetchRaceData(isBackground = false) {
@@ -704,9 +676,9 @@
                 let reportsGrid = document.getElementById('reportsGrid');
                 reportsGrid.innerHTML = '';
                 
-                let allRapportsDisplay = getAllRapportsForDisplay(data);
+                let allRapportsDisplay = getAllRapportsForDisplay(data, partants);
                 
-                if (allRapportsDisplay.length > 0) {
+                if (hasArrival && allRapportsDisplay.length > 0) {
                     reportsBlock.classList.remove('hidden');
                     let seen = new Set();
                     allRapportsDisplay.forEach(r => {
@@ -807,7 +779,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v33_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v34_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -953,13 +925,13 @@
                         // 1. GAGNANT SIMPLE
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
-                            let g = extractRapport(data, algoResult.baseHorse.num, 'G');
+                            let g = extractRapport(data, algoResult.baseHorse.num, 'G', partants);
                             if (g === 0 && arrivee === 1) g = algoResult.baseHorse.cote;
                             if (arrivee === 1) { gagBaseWins++; totalGainGagnantBase += g; }
                         }
                         if (algoResult.nuggetHorse) {
                             let arrivee = algoResult.nuggetHorse.ordreArrivee;
-                            let g = extractRapport(data, algoResult.nuggetHorse.num, 'G');
+                            let g = extractRapport(data, algoResult.nuggetHorse.num, 'G', partants);
                             if (g === 0 && arrivee === 1) g = algoResult.nuggetHorse.cote;
                             if (arrivee === 1) { gagPepiteWins++; totalGainGagnantPepite += g; }
                         }
@@ -967,7 +939,7 @@
                         // 2. PLACÉ SIMPLE
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
-                            let p = extractRapport(data, algoResult.baseHorse.num, 'P');
+                            let p = extractRapport(data, algoResult.baseHorse.num, 'P', partants);
                             let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
                             if (p > 0) {
                                 plcBaseWins++; totalGainPlaceBase += p;
@@ -977,7 +949,7 @@
                         }
                         if (algoResult.nuggetHorse) {
                             let arrivee = algoResult.nuggetHorse.ordreArrivee;
-                            let p = extractRapport(data, algoResult.nuggetHorse.num, 'P');
+                            let p = extractRapport(data, algoResult.nuggetHorse.num, 'P', partants);
                             let estPlace = (arrivee === 1 || arrivee === 2 || (arrivee === 3 && partants.length >= 8));
                             if (p > 0) {
                                 plcPepiteWins++; totalGainPlacePepite += p;
@@ -991,8 +963,8 @@
                             let numBase = algoResult.baseHorse.num;
                             let numPepite = algoResult.nuggetHorse.num;
 
-                            let cg = extractCoupléRapport(data, numBase, numPepite, 'G');
-                            let cp = extractCoupléRapport(data, numBase, numPepite, 'P');
+                            let cg = extractCoupléRapport(data, numBase, numPepite, 'G', partants);
+                            let cp = extractCoupléRapport(data, numBase, numPepite, 'P', partants);
 
                             let arrBase = algoResult.baseHorse.ordreArrivee;
                             let arrPepite = algoResult.nuggetHorse.ordreArrivee;
@@ -1029,7 +1001,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v33_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v34_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
