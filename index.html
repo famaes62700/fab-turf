@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Comparatif & Compteurs</title>
+    <title>PMU Direct - Stable 20s & Arrivées</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -64,7 +64,7 @@
             </div>
         </div>
 
-        <!-- BLOC STATISTIQUES DU JOUR (AVEC COMPTEURS DE RÉUSSITE) -->
+        <!-- BLOC STATISTIQUES DU JOUR -->
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2 space-y-3">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Comparatif du Jour (Placé vs Gagnant)</h2>
@@ -73,7 +73,6 @@
             
             <div id="statsProgress" class="text-[11px] font-mono text-zinc-400">Recherche des courses...</div>
 
-            <!-- OPTION 100% GAGNANT -->
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-indigo-500/40">
                 <div class="text-[10px] uppercase font-bold text-indigo-300 mb-2 flex justify-between items-center">
                     <span><i class="fa-solid fa-star mr-1"></i> Option 100% Gagnant (2€/crse)</span>
@@ -85,7 +84,6 @@
                 </div>
             </div>
 
-            <!-- OPTION 100% PLACÉ -->
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-emerald-500/40">
                 <div class="text-[10px] uppercase font-bold text-emerald-300 mb-2 flex justify-between items-center">
                     <span><i class="fa-solid fa-shield-halved mr-1"></i> Option 100% Placé (2€/crse)</span>
@@ -183,14 +181,19 @@
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
         let autoTransitionDone = false;
+        let refreshTimer = null;
 
-        setInterval(() => {
-            let mIdx = document.getElementById('meetingSelect').value;
-            let cIdx = document.getElementById('raceSelect').value;
-            if (mIdx !== "" && cIdx !== "") {
-                fetchRaceData(); 
-            }
-        }, 20000);
+        // Rafraîchissement automatique toutes les 20 secondes sur la course en cours
+        function startAutoRefresh() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(() => {
+                let mIdx = document.getElementById('meetingSelect').value;
+                let cIdx = document.getElementById('raceSelect').value;
+                if (mIdx !== "" && cIdx !== "") {
+                    fetchRaceData(true); // true = mode silencieux / rafraîchissement fond
+                }
+            }, 20000);
+        }
 
         function formatTime(timeValue) {
             if (!timeValue) return '';
@@ -246,6 +249,7 @@
                     } else {
                         select.value = currentVal;
                     }
+                    startAutoRefresh();
                 } else {
                     throw new Error("Aucune réunion");
                 }
@@ -291,7 +295,7 @@
                 onMeetingChange();
                 document.getElementById('raceSelect').value = bestCIdx;
                 autoTransitionDone = false;
-                fetchRaceData();
+                fetchRaceData(false);
             }
         }
 
@@ -328,7 +332,7 @@
                     onMeetingChange();
                     document.getElementById('raceSelect').value = targetRace.cIdx;
                     autoTransitionDone = false;
-                    fetchRaceData();
+                    fetchRaceData(false);
                 } else {
                     let alertMsg = direction === 1 ? "Vous êtes sur la toute dernière course de la journée !" : "Vous êtes sur la toute première course de la journée !";
                     alert(alertMsg);
@@ -366,7 +370,7 @@
 
         function onRaceChange() {
             autoTransitionDone = false;
-            fetchRaceData();
+            fetchRaceData(false);
         }
 
         async function refreshCurrentRace() {
@@ -380,7 +384,7 @@
             document.getElementById('meetingSelect').value = mIdx;
             onMeetingChange();
             document.getElementById('raceSelect').value = rIdx;
-            await fetchRaceData();
+            await fetchRaceData(false);
         }
 
         function computeAlgorithm(partants) {
@@ -497,7 +501,7 @@
             return maxGain;
         }
 
-        async function fetchRaceData() {
+        async function fetchRaceData(isBackground = false) {
             let mIdx = document.getElementById('meetingSelect').value;
             let rIdx = document.getElementById('raceSelect').value;
             if (mIdx === "" || rIdx === "") return;
@@ -534,11 +538,12 @@
                         arrivalList.appendChild(div);
                     });
 
-                    if (!autoTransitionDone) {
+                    // Transition douce vers la course suivante après 15 secondes d'affichage de l'arrivée (uniquement si ce n'est pas un rafraîchissement manuel ou de fond brut)
+                    if (!autoTransitionDone && !isBackground) {
                         autoTransitionDone = true;
                         setTimeout(() => {
                             goToNextRace();
-                        }, 120000);
+                        }, 15000);
                     }
                 } else {
                     arrivalBlock.classList.add('hidden');
@@ -650,9 +655,8 @@
             return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // CLÉ V10 : Sauvegarde séparée avec compteurs
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v10_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v11_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0 };
@@ -772,7 +776,6 @@
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
 
-                        // --- CALCUL GAGNANT ---
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
                             let g = extractRapport(data, algoResult.baseHorse.num, 'G', algoResult.baseHorse.cote);
@@ -792,7 +795,6 @@
                             }
                         }
 
-                        // --- CALCUL PLACÉ ---
                         if (algoResult.baseHorse) {
                             let arrivee = algoResult.baseHorse.ordreArrivee;
                             let p = extractRapport(data, algoResult.baseHorse.num, 'P', algoResult.baseHorse.cote);
@@ -820,7 +822,6 @@
                             }
                         }
 
-                        // Mises & Bénéfices
                         let miseTotaleGagnant = coursesValidees * 2; 
                         let miseTotalePlace = coursesValidees * 2;   
                         
@@ -832,12 +833,10 @@
                         let netPlacePepite = totalGainPlacePepite - coursesValidees;
                         let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - miseTotalePlace;
 
-                        // Affichage Gagnant avec compteur (ex: 2/15)
                         statGagnantGlobalScore.innerHTML = `Bénéfice Net : <span class="${netGagnantTotal >= 0 ? 'text-indigo-400' : 'text-red-400'} font-black">${netGagnantTotal > 0 ? '+' : ''}${netGagnantTotal.toFixed(2)} €</span>`;
                         gainGagnantBase.innerHTML = `Base (G) [${gagBaseWins}/${coursesValidees}] : Retours ${totalGainGagnantBase.toFixed(2)}€ | <span class="${netGagnantBase >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${netGagnantBase > 0 ? '+' : ''}${netGagnantBase.toFixed(2)}€</span>`;
                         gainGagnantPepite.innerHTML = `Pépite (G) [${gagPepiteWins}/${coursesValidees}] : Retours ${totalGainGagnantPepite.toFixed(2)}€ | <span class="${netGagnantPepite >= 0 ? 'text-indigo-300' : 'text-red-400'} font-bold">Net : ${netGagnantPepite > 0 ? '+' : ''}${netGagnantPepite.toFixed(2)}€</span>`;
 
-                        // Affichage Placé avec compteur (ex: 8/15)
                         statPlaceGlobalScore.innerHTML = `Bénéfice Net : <span class="${netPlaceTotal >= 0 ? 'text-emerald-400' : 'text-red-400'} font-black">${netPlaceTotal > 0 ? '+' : ''}${netPlaceTotal.toFixed(2)} €</span>`;
                         gainPlaceBase.innerHTML = `Base (P) [${plcBaseWins}/${coursesValidees}] : Retours ${totalGainPlaceBase.toFixed(2)}€ | <span class="${netPlaceBase >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${netPlaceBase > 0 ? '+' : ''}${netPlaceBase.toFixed(2)}€</span>`;
                         gainPlacePepite.innerHTML = `Pépite (P) [${plcPepiteWins}/${coursesValidees}] : Retours ${totalGainPlacePepite.toFixed(2)}€ | <span class="${netPlacePepite >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${netPlacePepite > 0 ? '+' : ''}${netPlacePepite.toFixed(2)}€</span>`;
@@ -845,8 +844,7 @@
                         let miseAbsolue = coursesValidees * 4; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        // SAUVEGARDE EN V10
-                        localStorage.setItem(`pmu_stats_v10_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v11_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal
                         }));
