@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme & Base 1€ Exacte (Wolvega Fix)</title>
+    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version Ultime Wolvega)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -219,7 +219,6 @@
         let transitionTimerInterval = null;
         let globalRefreshTimer = null;
         let currentFullRaceData = null;
-        let foreignCaches = {}; // Cache local pour les cotes e-PMU si séparées
 
         function startGlobalRefreshLoop() {
             if (globalRefreshTimer) clearInterval(globalRefreshTimer);
@@ -427,51 +426,62 @@
             await fetchRaceData(false);
         }
 
-        // --- EXTRACTEUR DE COTE FIABLE ET CIBLÉ E-PMU / ETRANGER (WOLVEGA) ---
-        function getHorseCoteFromFullData(raceData, horseNum) {
+        // --- EXTRACTEUR ULTRA-ROBUSTE DE COTES (INTÈGRE L'ANALYSE TEXTUELLE ET LES ÉPARIS) ---
+        function getHorseCoteFromFullData(raceData, horseNum, participantObj) {
             if (!raceData) return null;
             let foundCote = null;
 
-            // 1. Analyse spécifique des blocs e-simples / e-paris / cotes directes web pmu.fr
-            let sourcePariList = raceData.paris || raceData.e_paris || raceData.cotesDirectes || [];
-            if (Array.isArray(sourcePariList)) {
-                sourcePariList.forEach(pari => {
-                    let cotesArr = pari.cotes || pari.lesCotes || pari.participants || pari.azarards || [];
-                    if (Array.isArray(cotesArr)) {
-                        cotesArr.forEach(item => {
-                            let num = item.numPmu || item.cheval || item.combinaison || item.numero || item.partantNumero;
-                            if (num !== undefined && parseInt(num) === parseInt(horseNum)) {
-                                let valCote = item.rapport || item.cote || item.valeur || item.rapportPourUnEuro || item.dernierRapport;
-                                if (valCote !== undefined && valCote !== null) {
-                                    let v = parseFloat(String(valCote).replace(',', '.'));
-                                    if (!isNaN(v) && v > 0) {
-                                        if (v >= 10 && !String(valCote).includes('.') && !String(valCote).includes(',')) v = v / 10;
-                                        foundCote = v;
-                                    }
-                                }
-                            }
-                        });
-                    }
-                });
-            }
-            if (foundCote !== null) return foundCote;
-
-            // 2. Recherche dans les objets participants standards
-            if (raceData.participants) {
-                let p = raceData.participants.find(x => parseInt(x.numPmu || x.numOrdre) === parseInt(horseNum));
-                if (p) {
-                    let directCote = p.dernierRapportDirect?.rapport || p.dernierRapportReference?.rapport || p.cotes?.[0]?.rapport || p.rapportsReference?.[0]?.rapport || p.probabiliteEvolution || p.cote || p.e_cote;
-                    if (directCote !== undefined && directCote !== null && directCote !== "") {
-                        let v = parseFloat(String(directCote).replace(',', '.'));
-                        if (!isNaN(v) && v > 0) {
-                            if (v >= 10 && !String(directCote).includes('.') && !String(directCote).includes(',')) v = v / 10;
-                            return v;
-                        }
+            // 1. Analyse directe du participant s'il possède déjà un attribut de cote
+            if (participantObj) {
+                let directCote = participantObj.dernierRapportDirect?.rapport || 
+                                 participantObj.dernierRapportReference?.rapport || 
+                                 participantObj.cotes?.[0]?.rapport || 
+                                 participantObj.rapportsReference?.[0]?.rapport || 
+                                 participantObj.probabiliteEvolution || 
+                                 participantObj.cote || 
+                                 participantObj.e_cote || 
+                                 participantObj.rapport;
+                if (directCote !== undefined && directCote !== null && directCote !== "") {
+                    let v = parseFloat(String(directCote).replace(',', '.'));
+                    if (!isNaN(v) && v > 0) {
+                        if (v >= 10 && !String(directCote).includes('.') && !String(directCote).includes(',')) v = v / 10;
+                        return v;
                     }
                 }
             }
 
-            // 3. Balayage profond récursif universel sur l'ensemble des clés du JSON
+            // 2. Recherche ciblée dans les listes de paris (e-simples, paris internationaux, cotes directes)
+            let collections = [
+                raceData.paris, raceData.e_paris, raceData.cotesDirectes, 
+                raceData.e_simples, raceData.cotesReference, raceData.participants
+            ];
+            
+            collections.forEach(col => {
+                if (Array.isArray(col)) {
+                    col.forEach(el => {
+                        if (!el) return;
+                        let subList = el.cotes || el.lesCotes || el.participants || el.azarards || [el];
+                        if (Array.isArray(subList)) {
+                            subList.forEach(item => {
+                                let num = item.numPmu || item.cheval || item.combinaison || item.numero || item.partantNumero;
+                                if (num !== undefined && parseInt(num) === parseInt(horseNum)) {
+                                    let valCote = item.rapport || item.cote || item.valeur || item.rapportPourUnEuro || item.dernierRapport;
+                                    if (valCote !== undefined && valCote !== null) {
+                                        let v = parseFloat(String(valCote).replace(',', '.'));
+                                        if (!isNaN(v) && v > 0) {
+                                            if (v >= 10 && !String(valCote).includes('.') && !String(valCote).includes(',')) v = v / 10;
+                                            foundCote = v;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            if (foundCote !== null) return foundCote;
+
+            // 3. Filet de secours ultime : Analyse globale récursive
             function deepRecursiveSearch(obj) {
                 if (!obj || typeof obj !== 'object' || foundCote !== null) return;
                 if (Array.isArray(obj)) {
@@ -503,9 +513,9 @@
                 let musique = p.musique || p.form || "0p";
                 let num = p.numPmu || p.numOrdre || (idx+1);
                 
-                let coteFound = getHorseCoteFromFullData(fullRaceData, num);
-                let coteDisplay = coteFound ? coteFound.toFixed(1) : "N/D";
-                let cote = coteFound || 15.0; 
+                let coteFound = getHorseCoteFromFullData(fullRaceData, num, p);
+                let coteDisplay = coteFound ? coteFound.toFixed(1) : "12.5"; // Valeur par défaut réaliste pour l'affichage si indisponible
+                let cote = coteFound || 12.5; 
                 
                 let coteScore = cote <= 3 ? 90 : (cote <= 6 ? 75 : (cote <= 12 ? 60 : (cote <= 25 ? 35 : 15)));
                 let musiqueScore = evaluateMusique(musique);
@@ -517,7 +527,7 @@
                     num: num,
                     nom: p.nom || "Cheval",
                     musique: musique,
-                    coteDisplay: coteDisplay,
+                    coteDisplay: coteFound ? coteDisplay : `${coteDisplay} (Est.)`,
                     cote: cote,
                     baseScore: Math.max(5, Math.min(99, baseScore)),
                     nuggetScore: Math.max(5, Math.min(99, nuggetRaw)),
@@ -823,7 +833,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v29_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v30_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -1051,7 +1061,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v29_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v30_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
