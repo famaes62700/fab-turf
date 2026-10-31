@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version Ultime Wolvega & Rapports)</title>
+    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version 35 Fixe Rapports 10€)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -511,19 +511,22 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // --- DÉCODEUR UNIVERSEL DE RAPPORTS (ROBUSTE WOLVEGA) ---
+        // --- NORMALISEUR ANTI-BASE 10€ (Garantit 1€ net) ---
         function cleanVal(v) {
             v = parseFloat(String(v).replace(',', '.'));
             if (isNaN(v) || v <= 0) return 0;
+            
+            // Si le rapport brut est fourni sur une base de 10€ (ex: 45.00 au lieu de 4.50), on le ramène à 1€
+            // On détecte si le nombre semble être un dividende 10€ (ex: > 15 pour un simple ou multiple élevé sans décimale stricte, ou s'il y a un ratio x10)
             if (v > 100 && v % 10 === 0) return v / 100;
-            if (v >= 1000) return v / 100;
+            if (v >= 50 && v % 5 === 0 && !String(v).includes('.')) return v / 10; 
+            
             return v;
         }
 
         function getAllRapportsForDisplay(data, partants) {
             let results = [];
             
-            // 1. Analyse par récursion profonde de tous les objets de rapports et paris
             function search(o, parentType) {
                 if (!o || typeof o !== 'object') return;
                 if (Array.isArray(o)) {
@@ -535,6 +538,9 @@
                     let rawVal = o.dividendePourUnEuro || o.dividende || o.rapportPourUnEuro || o.rapport || o.montant || o.gainEuro || o.valeur;
                     if (combo !== "" && rawVal !== undefined && rawVal !== null) {
                         let v = cleanVal(rawVal);
+                        // Sécurité additionnelle : si un rapport simple dépasse 100 sans raison, c'est qu'il était sur une base 10€
+                        if (currentType.includes('SIMPLE') && v > 90) v = v / 10;
+
                         if (v > 0) {
                             let lib = (o.libelleRapport || o.libelle || "Rapport").toUpperCase();
                             results.push({
@@ -551,24 +557,20 @@
             }
             search(data, "");
 
-            // 2. FILET DE SECOURS WOLVEGA : Si l'API ne renvoie pas de rapports explicites, on génère les rapports officiels basés sur l'ordre d'arrivée réel
             if (results.length === 0 && partants && partants.length > 0) {
                 let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a, b) => a.ordreArrivee - b.ordreArrivee);
                 if (arrivees.length > 0) {
-                    // Simple Gagnant pour le 1er
                     let chev1 = arrivees[0];
                     let num1 = chev1.numPmu || chev1.numOrdre || 1;
                     let cote1 = getHorseCoteFromFullData(data, num1, chev1, 0);
                     results.push({ title: "SIMPLE GAGNANT", combo: String(num1), val: Math.max(1.20, cote1) });
 
-                    // Simples Placés (1er, 2e, et 3e si >= 8 partants)
                     arrivees.slice(0, partants.length >= 8 ? 3 : 2).forEach((ch, idx) => {
                         let n = ch.numPmu || ch.numOrdre || (idx+1);
                         let c = getHorseCoteFromFullData(data, n, ch, idx);
                         results.push({ title: "SIMPLE PLACÉ", combo: String(n), val: parseFloat(Math.max(1.10, c / 3.2).toFixed(2)) });
                     });
 
-                    // Couplé Gagnant / Placé si au moins 2 chevaux à l'arrivée
                     if (arrivees.length >= 2) {
                         let n1 = arrivees[0].numPmu || arrivees[0].numOrdre || 1;
                         let n2 = arrivees[1].numPmu || arrivees[1].numOrdre || 2;
@@ -779,7 +781,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v34_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v35_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -1001,7 +1003,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v34_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v35_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
