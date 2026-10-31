@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algo Placé Strict 1€</title>
+    <title>PMU Direct - Algo Placé 1€ Forcé</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -412,19 +412,15 @@
         }
 
         // =======================================================
-        // CORRECTIF STRICT : CALIBRAGE UNITAIRE 1€ ABSOLU
+        // CORRECTIF ULTIME 1€ (ANTI-MULTIPLICATION STRICT)
         // =======================================================
         function cleanRapportValue(rawVal, chevalCote) {
             let v = parseFloat(rawVal || 0);
             if (v <= 0) return 0;
             
-            // Si la valeur lue est anormalement haute (ex: 120 au lieu de 12.00, ou 10x trop haute)
-            // On divise par 10 ou 100 jusqu'à ce qu'elle devienne cohérente avec la cote
-            while (v > 50 && v > chevalCote * 2) {
-                v = v / 10;
-            }
-            // Sécurité additionnelle : un rapport placé unitaire dépasse rarement 30€ aux courses
-            if (v > 40) {
+            // Si la valeur est supérieure à la cote, ou dépasse de manière anormale 20, 
+            // c'est qu'elle est codée en dixièmes ou centièmes (ex: 250 au lieu de 2.50)
+            while (v > chevalCote || v > 30) {
                 v = v / 10;
             }
             return parseFloat(v.toFixed(2));
@@ -443,7 +439,7 @@
                             let combo = o.combinaison || o.cheval || o.numPmu;
                             if (!String(combo).includes('-')) {
                                 let rawV = o.dividendePourUnEuro || o.rapportPourUnEuro || o.dividende || o.rapport || o.montant || o.gainEuro || 0;
-                                let v = cleanRapportValue(rawV, 20); // Valeur de sécurité par défaut
+                                let v = cleanRapportValue(rawV, 20);
                                 if (v > 0) {
                                     let lib = (o.libelleRapport || o.libelle || "Rapport").toUpperCase();
                                     let libDisplay = lib.includes('PLAC') ? 'Placé' : (lib.includes('GAGN') ? 'Gagnant' : lib);
@@ -657,9 +653,9 @@
             return `<span class="${color}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // CLÉ V7 : Force le nouveau calcul strictement calibré pour 1€
+        // CLÉ V8 : Force le recalcul avec la calibration stricte 1€
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v7_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v8_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netBase: 0, netPepite: 0 };
@@ -849,15 +845,15 @@
                         let miseAbsolue = coursesValidees * 2; // 1€ base + 1€ pépite
                         statGlobal.textContent = `Bilan sur ${coursesValidees} courses validées (Mise absolue : ${miseAbsolue} €)`;
 
-                        // SAUVEGARDE EN V7
-                        localStorage.setItem(`pmu_stats_v7_${ddmmyyyy}`, JSON.stringify({
+                        // SAUVEGARDE EN V8
+                        localStorage.setItem(`pmu_stats_v8_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
                             netPepite: netPepite
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan calibré à 1€ et mis à jour !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan strict 1€ mis à jour avec succès !</span>`;
         }
 
         window.onload = loadLivePmu;
