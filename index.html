@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Couplés Net Cumulé</title>
+    <title>PMU Direct - Rapports Base 10€ corrigés</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -97,7 +97,7 @@
                 </div>
             </div>
 
-            <!-- OPTIONS COUPLÉS (Bénéfice Net en haut, détails en bas) -->
+            <!-- OPTIONS COUPLÉS -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div class="bg-zinc-800/90 p-3 rounded-lg border border-purple-500/40 space-y-2">
                     <div class="text-[10px] uppercase font-bold text-purple-300 flex justify-between items-center">
@@ -445,12 +445,12 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
+        // CORRECTION BASE 10€ DE L'API PMU : Division par 10 pour obtenir le rapport pour 1€
         function cleanRapportValue(rawVal, chevalCote) {
             let v = parseFloat(rawVal || 0);
             if (v <= 0) return 0;
-            while (v > chevalCote || v > 100) {
-                v = v / 10;
-            }
+            // L'API PMU renvoie les rapports pour 10€. On convertit pour 1€.
+            v = v / 10;
             return parseFloat(v.toFixed(2));
         }
 
@@ -728,7 +728,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v16_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v17_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0 };
@@ -926,7 +926,7 @@
                         gainPlaceBase.innerHTML = `Base (P) [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€ | <span class="${(totalGainPlaceBase - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlaceBase - coursesValidees) > 0 ? '+' : '')}${(totalGainPlaceBase - coursesValidees).toFixed(2)}€</span>`;
                         gainPlacePepite.innerHTML = `Pépite (P) [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€ | <span class="${(totalGainPlacePepite - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlacePepite - coursesValidees) > 0 ? '+' : '')}${(totalGainPlacePepite - coursesValidees).toFixed(2)}€</span>`;
 
-                        // Affichage Couplés (Bénéfice Net en gros en haut, Réussite + Retours en bas)
+                        // Affichage Couplés
                         statCoupleGagnantScore.innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
                         gainCoupleGagnant.innerHTML = `Réussite : [${coupleGagnantWins}/${coursesValidees}] | Retours : ${totalGainCoupleGagnant.toFixed(2)} €`;
 
@@ -936,14 +936,14 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v16_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v17_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal
                         }));
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complet mis à jour avec le bénéfice net en haut des couplés !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan calculé avec les rapports convertis pour 1€ !</span>`;
         }
 
         window.onload = loadLivePmu;
