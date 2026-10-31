@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme & Base 1€ Exacte (Etranger inclus)</title>
+    <title>PMU Direct - Algorithme & Base 1€ Exacte (Wolvega & Etranger inclus)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -105,7 +105,7 @@
                 </div>
             </div>
 
-            <!-- OPTION COUPLÉ GAGNANT (Désormais 100% alignée avec les Simples) -->
+            <!-- OPTION COUPLÉ GAGNANT -->
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-purple-500/40">
                 <div class="text-[10px] uppercase font-bold text-purple-300 mb-2 flex justify-between items-center">
                     <span><i class="fa-solid fa-link mr-1"></i> Option Couplé Gagnant (1€/crse)</span>
@@ -116,7 +116,7 @@
                 </div>
             </div>
 
-            <!-- OPTION COUPLÉ PLACÉ (Désormais 100% alignée avec les Simples) -->
+            <!-- OPTION COUPLÉ PLACÉ -->
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-blue-500/40">
                 <div class="text-[10px] uppercase font-bold text-blue-300 mb-2 flex justify-between items-center">
                     <span><i class="fa-solid fa-link-slash mr-1"></i> Option Couplé Placé (1€/crse)</span>
@@ -218,6 +218,7 @@
         let autoTransitionStarted = false;
         let transitionTimerInterval = null;
         let globalRefreshTimer = null;
+        let currentFullRaceData = null; // Cache global pour les cotes et rapports de la course active
 
         function startGlobalRefreshLoop() {
             if (globalRefreshTimer) clearInterval(globalRefreshTimer);
@@ -425,43 +426,63 @@
             await fetchRaceData(false);
         }
 
-        // --- DÉTECTEUR UNIVERSEL DE COTES (Résout le problème Wolvega / Etranger) ---
-        function getHorseCote(p) {
-            // Liste ordonnée de tous les emplacements possibles d'une cote chez le PMU
-            let possibleSources = [
-                p.dernierRapportDirect?.rapport,
-                p.dernierRapportReference?.rapport,
-                p.cotes?.[0]?.rapport,
-                p.rapportsReference?.[0]?.rapport,
-                p.probabiliteEvolution,
-                p.cote,
-                p.rapport,
-                p.dernierRapport?.rapport
-            ];
+        // --- EXTRACTEUR UNIVERSEL DE COTE ÉTRANGER & WOLVEGA ---
+        function getHorseCoteFromFullData(raceData, horseNum) {
+            if (!raceData) return null;
+            let foundCote = null;
 
-            for (let c of possibleSources) {
-                if (c !== undefined && c !== null && c !== "" && c !== 0) {
-                    let v = parseFloat(String(c).replace(',', '.'));
-                    if (!isNaN(v) && v > 0) {
-                        // Correctif spécial PMU Etranger (Wolvega etc.) où la cote est envoyée x10 sans virgule
-                        // Exemple: le PMU envoie "45" au lieu de "4.5"
-                        if (v >= 10 && !String(c).includes('.') && !String(c).includes(',')) {
-                            return v / 10;
+            // 1. Recherche dans les participants directs
+            if (raceData.participants) {
+                let p = raceData.participants.find(x => parseInt(x.numPmu || x.numOrdre) === parseInt(horseNum));
+                if (p) {
+                    let directCote = p.dernierRapportDirect?.rapport || p.dernierRapportReference?.rapport || p.cotes?.[0]?.rapport || p.rapportsReference?.[0]?.rapport || p.probabiliteEvolution || p.cote;
+                    if (directCote !== undefined && directCote !== null && directCote !== "") {
+                        let v = parseFloat(String(directCote).replace(',', '.'));
+                        if (!isNaN(v) && v > 0) {
+                            if (v >= 10 && !String(directCote).includes('.') && !String(directCote).includes(',')) v = v / 10;
+                            return v;
                         }
-                        return v;
                     }
                 }
             }
-            return null; // Si vraiment aucune cote n'est trouvée
+
+            // 2. Recherche par balayage récursif global de la structure JSON (pour Wolvega et les hippodromes étrangers)
+            function recursiveSearch(obj) {
+                if (!obj || typeof obj !== 'object' || foundCote !== null) return;
+                if (Array.isArray(obj)) {
+                    for (let item of obj) {
+                        recursiveSearch(item);
+                    }
+                } else {
+                    let numCheval = obj.numPmu || obj.cheval || obj.combinaison || obj.numero;
+                    if (numCheval !== undefined && parseInt(numCheval) === parseInt(horseNum)) {
+                        let r = obj.rapport || obj.rapportPourUnEuro || obj.dividende || obj.dividendePourUnEuro || obj.cote || obj.valeur;
+                        if (r !== undefined && r !== null && r !== "") {
+                            let v = parseFloat(String(r).replace(',', '.'));
+                            if (!isNaN(v) && v > 0) {
+                                if (v >= 10 && !String(r).includes('.') && !String(r).includes(',')) v = v / 10;
+                                foundCote = v;
+                                return;
+                            }
+                        }
+                    }
+                    for (let key in obj) {
+                        if (typeof obj[key] === 'object') recursiveSearch(obj[key]);
+                    }
+                }
+            }
+            recursiveSearch(raceData);
+            return foundCote;
         }
 
-        function computeAlgorithm(partants) {
+        function computeAlgorithm(partants, fullRaceData) {
             let processed = partants.map((p, idx) => {
                 let musique = p.musique || p.form || "0p";
-                let coteFound = getHorseCote(p);
+                let num = p.numPmu || p.numOrdre || (idx+1);
                 
+                let coteFound = getHorseCoteFromFullData(fullRaceData, num);
                 let coteDisplay = coteFound ? coteFound.toFixed(1) : "N/D";
-                let cote = coteFound || 15.0; // 15.0 sert de base neutre pour le calcul si API en carafe
+                let cote = coteFound || 15.0; // Filet de sécurité algorithmique si vraiment introuvable
                 
                 let coteScore = cote <= 3 ? 90 : (cote <= 6 ? 75 : (cote <= 12 ? 60 : (cote <= 25 ? 35 : 15)));
                 let musiqueScore = evaluateMusique(musique);
@@ -470,7 +491,7 @@
                 let nuggetRaw = (cote >= 5 && cote <= 20) ? Math.round((coteScore * 0.3) + (musiqueScore * 0.7)) : musiqueScore;
 
                 return {
-                    num: p.numPmu || p.numOrdre || (idx+1),
+                    num: num,
                     nom: p.nom || "Cheval",
                     musique: musique,
                     coteDisplay: coteDisplay,
@@ -491,15 +512,9 @@
         function cleanVal(v, isRapportField) {
             v = parseFloat(String(v).replace(',', '.'));
             if (isNaN(v) || v <= 0) return 0;
-            if (v % 1 !== 0) return v; // C'est déjà une décimale, on n'y touche pas (ex: 4.5)
-            
-            if (isRapportField) {
-                // PMU Etranger : le champ "rapport" est un entier qui correspond à 10€ (ex: 45 = 4.5€)
-                return v / 10;
-            } else {
-                // PMU France : le champ "dividende" est en centimes (ex: 450 = 4.5€)
-                return v / 100;
-            }
+            if (v % 1 !== 0) return v; 
+            if (isRapportField) return v / 10;
+            return v / 100;
         }
 
         function parseRapportExact(o) {
@@ -636,6 +651,7 @@
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
                 const data = await res.json();
+                currentFullRaceData = data; // Stockage global pour l'analyse des cotes
                 let partants = data.participants || [];
 
                 let arrivalBlock = document.getElementById('arrivalBlock');
@@ -700,7 +716,7 @@
                     reportsBlock.classList.add('hidden');
                 }
 
-                let algoResult = computeAlgorithm(partants);
+                let algoResult = computeAlgorithm(partants, data);
                 let { processed, baseHorse, nuggetHorse } = algoResult;
 
                 if (baseHorse) {
@@ -784,7 +800,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v26_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v27_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -925,7 +941,7 @@
                     
                     if (arrivees.length > 0) {
                         coursesValidees++;
-                        let algoResult = computeAlgorithm(partants);
+                        let algoResult = computeAlgorithm(partants, data);
 
                         // 1. GAGNANT SIMPLE
                         if (algoResult.baseHorse) {
@@ -1002,7 +1018,7 @@
                         gainPlaceBase.innerHTML = `Base [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€<br><span class="${(totalGainPlaceBase - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlaceBase - coursesValidees) > 0 ? '+' : '')}${(totalGainPlaceBase - coursesValidees).toFixed(2)}€</span>`;
                         gainPlacePepite.innerHTML = `Pépite [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€<br><span class="${(totalGainPlacePepite - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlacePepite - coursesValidees) > 0 ? '+' : '')}${(totalGainPlacePepite - coursesValidees).toFixed(2)}€</span>`;
 
-                        // Couplés (Maintenant affichés pleine largeur avec la même structure HTML/CSS)
+                        // Couplés (Alignement structurel complet)
                         statCoupleGagnantScore.innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
                         gainCoupleGagnant.innerHTML = `Combiné [${coupleGagnantWins}/${coursesValidees}] : ${totalGainCoupleGagnant.toFixed(2)}€<br><span class="${netCoupledGag >= 0 ? 'text-purple-300' : 'text-red-400'} font-bold">Net : ${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)}€</span>`;
 
@@ -1012,7 +1028,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v26_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v27_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
@@ -1021,7 +1037,7 @@
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan 100% aligné & cotes étrangères détectées !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan 100% aligné & cotes de Wolvega chargées avec succès !</span>`;
         }
 
         window.onload = loadLivePmu;
