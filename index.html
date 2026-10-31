@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version 41 Fixe Exhaustif 52 Courses)</title>
+    <title>PMU Direct - Algorithme & Base 1€ Exacte (Version 42 Fixe Fusion 52 Courses)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -251,7 +251,32 @@
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
                 const data = await res.json();
-                let reunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
+                
+                // Fusion universelle de TOUTES les listes de réunions possibles dans l'objet JSON (standard, international, e-pmu)
+                let reunions = [];
+                if (Array.isArray(data)) {
+                    reunions = data;
+                } else {
+                    let r1 = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
+                    let r2 = data.programmeInternational?.reunions || data.reunions Internationales || [];
+                    let r3 = data.programmeSecondaire?.reunions || [];
+                    reunions = [...r1, ...r2, ...r3];
+                    if (reunions.length === 0 && typeof data === 'object') {
+                        // Recherche récursive si la structure est totalement imbriquée autrement
+                        function extractReunions(obj) {
+                            if (!obj || typeof obj !== 'object') return;
+                            if (Array.isArray(obj)) {
+                                obj.forEach(item => {
+                                    if (item.courses || item.races || item.lesCourses || item.numOfficiel) reunions.push(item);
+                                    else extractReunions(item);
+                                });
+                            } else {
+                                for (let k in obj) extractReunions(obj[k]);
+                            }
+                        }
+                        extractReunions(data);
+                    }
+                }
                 
                 if (reunions.length > 0) {
                     liveMeetingsData = reunions;
@@ -782,7 +807,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v41_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v42_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -879,13 +904,12 @@
             let statGlobal = document.getElementById('statGlobal');
 
             statsBlock.classList.remove('hidden');
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Extraction de TOUTES les courses du jour...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Fusion et comptage de TOUTES les courses...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
-            // --- COLLECTE EXHAUSTIVE SANS AUCUNE RESTRICTION ---
             let finishedRaces = [];
             liveMeetingsData.forEach((m, mIdx) => {
                 let rNum = m.numOfficiel || (mIdx + 1);
@@ -999,7 +1023,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v41_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v42_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
@@ -1008,7 +1032,7 @@
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complet calculé sur les ${coursesValidees} courses du jour !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan complet calculé sur les ${coursesValidees} courses !</span>`;
         }
 
         window.onload = loadLivePmu;
