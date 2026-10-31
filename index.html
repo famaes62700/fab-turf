@@ -72,7 +72,7 @@
             </div>
         </div>
 
-        <!-- BLOC STATISTIQUES DU JOUR -->
+        <!-- BLOC STATISTIQUES DU JOUR (100% ALIGNÉ) -->
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2 space-y-3">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan Complet du Jour (Simple & Couplé)</h2>
@@ -105,20 +105,24 @@
                 </div>
             </div>
 
-            <!-- OPTIONS COUPLÉS -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div class="bg-zinc-800/90 p-3 rounded-lg border border-purple-500/40 space-y-2">
-                    <div class="text-[10px] uppercase font-bold text-purple-300 flex justify-between items-center">
-                        <span><i class="fa-solid fa-link mr-1"></i> Couplé Gagnant (1€/crse)</span>
-                        <span id="statCoupleGagnantScore" class="text-white font-mono">--</span>
-                    </div>
+            <!-- OPTION COUPLÉ GAGNANT (Désormais 100% alignée avec les Simples) -->
+            <div class="bg-zinc-800/90 p-3 rounded-lg border border-purple-500/40">
+                <div class="text-[10px] uppercase font-bold text-purple-300 mb-2 flex justify-between items-center">
+                    <span><i class="fa-solid fa-link mr-1"></i> Option Couplé Gagnant (1€/crse)</span>
+                    <span id="statCoupleGagnantScore" class="text-white font-mono">--</span>
+                </div>
+                <div class="grid grid-cols-1 gap-2 text-xs">
                     <div id="gainCoupleGagnant" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">--</div>
                 </div>
-                <div class="bg-zinc-800/90 p-3 rounded-lg border border-blue-500/40 space-y-2">
-                    <div class="text-[10px] uppercase font-bold text-blue-300 flex justify-between items-center">
-                        <span><i class="fa-solid fa-link-slash mr-1"></i> Couplé Placé (1€/crse)</span>
-                        <span id="statCouplePlaceScore" class="text-white font-mono">--</span>
-                    </div>
+            </div>
+
+            <!-- OPTION COUPLÉ PLACÉ (Désormais 100% alignée avec les Simples) -->
+            <div class="bg-zinc-800/90 p-3 rounded-lg border border-blue-500/40">
+                <div class="text-[10px] uppercase font-bold text-blue-300 mb-2 flex justify-between items-center">
+                    <span><i class="fa-solid fa-link-slash mr-1"></i> Option Couplé Placé (1€/crse)</span>
+                    <span id="statCouplePlaceScore" class="text-white font-mono">--</span>
+                </div>
+                <div class="grid grid-cols-1 gap-2 text-xs">
                     <div id="gainCouplePlace" class="bg-zinc-900 p-2 rounded border border-zinc-700 text-center">--</div>
                 </div>
             </div>
@@ -421,38 +425,34 @@
             await fetchRaceData(false);
         }
 
-        // --- DECODEUR DE COTE (Répare les cotes de Wolvega et de l'étranger) ---
+        // --- DÉTECTEUR UNIVERSEL DE COTES (Résout le problème Wolvega / Etranger) ---
         function getHorseCote(p) {
-            let c = null;
-            let isDecime = false;
-            
-            // On cherche la cote partout où le PMU peut la cacher
-            if (p.dernierRapportDirect && p.dernierRapportDirect.rapport) { 
-                c = p.dernierRapportDirect.rapport; 
-            } else if (p.dernierRapportReference && p.dernierRapportReference.rapport) { 
-                c = p.dernierRapportReference.rapport; 
-                isDecime = true; // Souvent gonflé par 10 à l'étranger
-            } else if (p.rapportsReference && p.rapportsReference.length > 0) { 
-                c = p.rapportsReference[0].rapport; 
-                isDecime = true;
-            } else if (p.cotes && p.cotes.length > 0) { 
-                c = p.cotes[0].rapport; 
-            } else if (p.probabiliteEvolution) { 
-                c = p.probabiliteEvolution; 
-                isDecime = true;
-            }
+            // Liste ordonnée de tous les emplacements possibles d'une cote chez le PMU
+            let possibleSources = [
+                p.dernierRapportDirect?.rapport,
+                p.dernierRapportReference?.rapport,
+                p.cotes?.[0]?.rapport,
+                p.rapportsReference?.[0]?.rapport,
+                p.probabiliteEvolution,
+                p.cote,
+                p.rapport,
+                p.dernierRapport?.rapport
+            ];
 
-            if (c !== null && c !== undefined) {
-                let v = parseFloat(String(c).replace(',', '.'));
-                if (!isNaN(v) && v > 0) {
-                    // Si l'API envoie un entier absurde style 45 pour une cote de 4.5
-                    if (v % 1 === 0 && v >= 10 && isDecime) {
-                        v = v / 10;
+            for (let c of possibleSources) {
+                if (c !== undefined && c !== null && c !== "" && c !== 0) {
+                    let v = parseFloat(String(c).replace(',', '.'));
+                    if (!isNaN(v) && v > 0) {
+                        // Correctif spécial PMU Etranger (Wolvega etc.) où la cote est envoyée x10 sans virgule
+                        // Exemple: le PMU envoie "45" au lieu de "4.5"
+                        if (v >= 10 && !String(c).includes('.') && !String(c).includes(',')) {
+                            return v / 10;
+                        }
+                        return v;
                     }
-                    return v;
                 }
             }
-            return null; // Pas de cote trouvée
+            return null; // Si vraiment aucune cote n'est trouvée
         }
 
         function computeAlgorithm(partants) {
@@ -461,7 +461,7 @@
                 let coteFound = getHorseCote(p);
                 
                 let coteDisplay = coteFound ? coteFound.toFixed(1) : "N/D";
-                let cote = coteFound || 15.0; // 15.0 est juste un filet de sécurité pour l'algo
+                let cote = coteFound || 15.0; // 15.0 sert de base neutre pour le calcul si API en carafe
                 
                 let coteScore = cote <= 3 ? 90 : (cote <= 6 ? 75 : (cote <= 12 ? 60 : (cote <= 25 ? 35 : 15)));
                 let musiqueScore = evaluateMusique(musique);
@@ -487,17 +487,17 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: partants.length };
         }
 
-        // --- DECODEUR DE RAPPORTS EXACT (Force mathématiquement le 1€) ---
+        // --- DECODEUR DE RAPPORTS EXACT (Force mathématiquement le 1€ partout) ---
         function cleanVal(v, isRapportField) {
             v = parseFloat(String(v).replace(',', '.'));
             if (isNaN(v) || v <= 0) return 0;
-            if (v % 1 !== 0) return v; // C'est déjà une décimale, on touche pas (ex: 4.5)
+            if (v % 1 !== 0) return v; // C'est déjà une décimale, on n'y touche pas (ex: 4.5)
             
             if (isRapportField) {
-                // Le PMU met les champs nommés "rapport" en base 10 (ex: 45 = 4.5€)
+                // PMU Etranger : le champ "rapport" est un entier qui correspond à 10€ (ex: 45 = 4.5€)
                 return v / 10;
             } else {
-                // Le PMU met les champs nommés "dividende" en centimes (ex: 450 = 4.5€)
+                // PMU France : le champ "dividende" est en centimes (ex: 450 = 4.5€)
                 return v / 100;
             }
         }
@@ -784,7 +784,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v25_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v26_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -865,7 +865,6 @@
             let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
             
-            // Éléments du DOM
             let statGagnantGlobalScore = document.getElementById('statGagnantGlobalScore');
             let statPlaceGlobalScore = document.getElementById('statPlaceGlobalScore');
             let statCoupleGagnantScore = document.getElementById('statCoupleGagnantScore');
@@ -1003,7 +1002,7 @@
                         gainPlaceBase.innerHTML = `Base [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€<br><span class="${(totalGainPlaceBase - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlaceBase - coursesValidees) > 0 ? '+' : '')}${(totalGainPlaceBase - coursesValidees).toFixed(2)}€</span>`;
                         gainPlacePepite.innerHTML = `Pépite [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€<br><span class="${(totalGainPlacePepite - coursesValidees) >= 0 ? 'text-emerald-300' : 'text-red-400'} font-bold">Net : ${((totalGainPlacePepite - coursesValidees) > 0 ? '+' : '')}${(totalGainPlacePepite - coursesValidees).toFixed(2)}€</span>`;
 
-                        // Couplés
+                        // Couplés (Maintenant affichés pleine largeur avec la même structure HTML/CSS)
                         statCoupleGagnantScore.innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
                         gainCoupleGagnant.innerHTML = `Combiné [${coupleGagnantWins}/${coursesValidees}] : ${totalGainCoupleGagnant.toFixed(2)}€<br><span class="${netCoupledGag >= 0 ? 'text-purple-300' : 'text-red-400'} font-bold">Net : ${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)}€</span>`;
 
@@ -1013,7 +1012,7 @@
                         let miseAbsolue = coursesValidees * 6; 
                         statGlobal.textContent = `Analysé sur ${coursesValidees} courses (Mise totale combinée : ${miseAbsolue} €)`;
 
-                        localStorage.setItem(`pmu_stats_v25_${ddmmyyyy}`, JSON.stringify({
+                        localStorage.setItem(`pmu_stats_v26_${ddmmyyyy}`, JSON.stringify({
                             netPlace: netPlaceTotal,
                             netGagnant: netGagnantTotal,
                             netCoupleGag: netCoupledGag,
@@ -1022,7 +1021,7 @@
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan 100% aligné & cotes étrangères validées !</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan 100% aligné & cotes étrangères détectées !</span>`;
         }
 
         window.onload = loadLivePmu;
