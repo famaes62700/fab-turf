@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (Version 53 - Multi-Proxys)</title>
+    <title>PMU Direct - Algorithme Exact (Version 54 - Directe sans Proxy)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -26,7 +26,7 @@
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
         <div class="flex justify-between items-center">
-            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion sécurisée en cours...</div>
+            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion directe au PMU...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
                     <i class="fa-solid fa-calendar-days mr-1"></i> Bilan Mensuel
@@ -209,17 +209,6 @@
     </main>
 
     <script>
-        (function purgeOldData() {
-            let keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                let key = localStorage.key(i);
-                if (key && key.startsWith('pmu_stats_') && !key.includes('_v50_') && !key.includes('_v51_') && !key.includes('_v52_') && !key.includes('_v53_')) {
-                    keysToRemove.push(key);
-                }
-            }
-            keysToRemove.forEach(k => localStorage.removeItem(k));
-        })();
-
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
         let autoTransitionStarted = false;
@@ -249,41 +238,25 @@
         }
 
         // ===============================================
-        // MOTEUR D'ACCÈS V53 : CASCADE DE PROXYS ANTI-BLOCAGE
+        // MOTEUR D'ACCÈS V54 : DIRECT SANS PROXY
         // ===============================================
         async function fetchPmuDirect(url) {
-            const timestamp = new Date().getTime();
-            const pmuUrl = encodeURIComponent(`${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`);
-            
-            // Liste de 3 serveurs relais différents
-            const proxies = [
-                `https://corsproxy.io/?${pmuUrl}`, 
-                `https://api.codetabs.com/v1/proxy?quest=${pmuUrl}`,
-                `https://api.allorigins.win/raw?url=${pmuUrl}`
-            ];
-
-            let lastError = null;
-
-            // Boucle : essaye le 1er, s'il est bloqué passe au 2ème, etc.
-            for (let i = 0; i < proxies.length; i++) {
-                try {
-                    const response = await fetch(proxies[i]);
-                    if (response.ok) {
-                        return await response.json();
-                    }
-                } catch (e) {
-                    console.warn(`Relais ${i+1} bloqué, tentative avec le suivant...`);
-                    lastError = e;
-                }
+            try {
+                const timestamp = new Date().getTime();
+                const directUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
+                
+                const response = await fetch(directUrl);
+                if (!response.ok) throw new Error("Erreur PMU");
+                return await response.json();
+            } catch (error) {
+                throw new Error("BLOCKED");
             }
-            
-            throw new Error("Tous les relais gratuits sont temporairement bloqués par la sécurité du PMU.");
         }
 
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion aux serveurs PMU (Tentative de contournement)...';
+            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion directe au PMU...';
             document.getElementById('statsBlock').classList.add('hidden');
             document.getElementById('historyBlock').classList.add('hidden');
 
@@ -351,7 +324,11 @@
                     throw new Error("Aucune réunion");
                 }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès bloqué par le PMU. Essayez de recharger la page.</span>`;
+                if (e.message === "BLOCKED") {
+                    statusText.innerHTML = `<span class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded border border-red-500/50"><i class="fa-solid fa-lock mr-1"></i> Blocage navigateur. Activez l'extension "Allow CORS" (icône orange) en haut à droite, puis rechargez la page.</span>`;
+                } else {
+                    statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès bloqué.</span>`;
+                }
             }
         }
 
@@ -721,8 +698,8 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v53_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
-            let saved = localStorage.getItem(key) || localStorage.getItem(`pmu_stats_v52_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`);
+            let key = `pmu_stats_v54_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let saved = localStorage.getItem(key) || localStorage.getItem(`pmu_stats_v53_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
         }
@@ -889,7 +866,7 @@
             let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
             let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
-            localStorage.setItem(`pmu_stats_v53_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v54_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
