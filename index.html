@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (Version 49 Mathématiques Pures)</title>
+    <title>PMU Direct - Algorithme Exact (Version 50 - Reset Nov)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -209,6 +209,18 @@
     </main>
 
     <script>
+        // Nettoyage complet des anciennes versions au chargement
+        (function purgeOldData() {
+            let keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i);
+                if (key && key.startsWith('pmu_stats_') && !key.startsWith('pmu_stats_v50_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        })();
+
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
         let autoTransitionStarted = false;
@@ -404,8 +416,7 @@
         }
 
         // ==========================================
-        // MOTEUR D'EXTRACTION DE RAPPORTS 100% PUR ET FIABLE
-        // Plus de devinettes. On tape directement dans raceData.rapports.
+        // EXTRACTION DES RAPPORTS ET COTES - V50
         // ==========================================
         function extractRealPayout(raceData, type, combosArr) {
             if (!raceData) return 0;
@@ -460,13 +471,21 @@
 
         function getHorseCote(p) {
             if (!p) return null;
-            let c = p.dernierRapportDirect?.rapport || p.dernierRapportDirect?.cote || p.cote;
-            if (c === undefined && p.cotes && p.cotes.length > 0) {
-                c = p.cotes[0].cote || p.cotes[0].rapport;
-            }
-            if (c !== undefined && c !== null) {
-                let val = parseFloat(String(c).replace(',', '.'));
-                if (!isNaN(val) && val > 0) return val;
+            // Ordre de priorité strict pour obtenir la vraie cote "en direct" (ou la plus récente possible)
+            let possibleCotes = [
+                p.dernierRapportDirect?.rapport,
+                p.dernierRapportDirect?.cote,
+                p.dernierRapportReference?.rapport,
+                p.dernierRapportReference?.cote,
+                (p.cotes && p.cotes.length > 0) ? (p.cotes[0].cote || p.cotes[0].rapport) : null,
+                p.cote
+            ];
+
+            for (let c of possibleCotes) {
+                if (c !== undefined && c !== null) {
+                    let val = parseFloat(String(c).replace(',', '.'));
+                    if (!isNaN(val) && val > 0) return val;
+                }
             }
             return null;
         }
@@ -492,7 +511,7 @@
             return Math.max(5, Math.min(99, Math.round(score)));
         }
 
-        function computeAlgorithm(partants, fullRaceData) {
+        function computeAlgorithm(partants) {
             let partantsActifs = partants.filter(p => p.statut !== 'NON_PARTANT');
 
             let processed = partantsActifs.map((p, idx) => {
@@ -500,11 +519,10 @@
                 let num = p.numPmu || p.numOrdre || (idx+1);
                 
                 let realCote = getHorseCote(p);
-                // Si la cote est manquante côté PMU, on assigne une cote artificielle POUR QUE l'algorithme de classement ne plante pas
                 let fallback = 8 + (idx * 2.5); 
                 let cote = realCote || fallback; 
                 
-                // (N/D) = Non Disponible. Remplace le (Est.) pour plus de clarté
+                // (N/D) pour Non Disponible, indique que le PMU ne fournit plus la cote exacte
                 let coteDisplay = realCote ? realCote.toFixed(1) : `${fallback.toFixed(1)} (N/D)`;
                 
                 let musiqueScore = evaluateMusique(musique);
@@ -611,7 +629,7 @@
                     reportsBlock.classList.add('hidden');
                 }
 
-                let algoResult = computeAlgorithm(partants, data);
+                let algoResult = computeAlgorithm(partants);
                 let { processed, baseHorse, nuggetHorse } = algoResult;
 
                 if (baseHorse) {
@@ -670,9 +688,9 @@
             return `<span class="${colorClass}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // V49 - PURGE DU CACHE POUR VIRER LES FAUSSES PERTES DE LA V48
+        // V50 - CLÉ UNIQUE POUR LE MOIS DE NOVEMBRE ET SUIVANTS
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v49_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v50_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -731,7 +749,7 @@
             let statsProgress = document.getElementById('statsProgress');
             
             statsBlock.classList.remove('hidden');
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Début du décompte garanti...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul exact en cours...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -764,7 +782,7 @@
 
             for (let i = 0; i < finishedRaces.length; i++) {
                 let r = finishedRaces[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Scan mathématique exact : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Traitement de la course : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
 
                 try {
                     const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
@@ -774,11 +792,10 @@
                     
                     if (partants.filter(p => p.ordreArrivee > 0).length > 0) {
                         coursesValidees++;
-                        let algoResult = computeAlgorithm(partants, data);
+                        let algoResult = computeAlgorithm(partants);
                         
                         let baseJouee = false, pepiteJouee = false;
 
-                        // Traitement BASE
                         if (algoResult.baseHorse) {
                             baseJouee = true;
                             misesGagnant++; misesPlace++;
@@ -790,7 +807,6 @@
                             if (p > 0) { plcBaseWins++; totalGainPlaceBase += p; }
                         }
                         
-                        // Traitement PEPITE
                         if (algoResult.nuggetHorse && algoResult.nuggetHorse.nuggetScore > 0) {
                             pepiteJouee = true;
                             misesGagnant++; misesPlace++;
@@ -802,7 +818,6 @@
                             if (p > 0) { plcPepiteWins++; totalGainPlacePepite += p; }
                         }
 
-                        // Traitement COUPLÉS
                         if (baseJouee && pepiteJouee) {
                             misesCoupleGag++; misesCouplePlc++;
                             
@@ -813,7 +828,6 @@
                             if (cp > 0) { couplePlaceWins++; totalGainCouplePlace += cp; }
                         }
 
-                        // Affichage en direct du Bilan
                         let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - misesGagnant;
                         let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - misesPlace;
                         let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
@@ -846,11 +860,11 @@
             let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
             let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
-            localStorage.setItem(`pmu_stats_v49_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v50_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan 100% exact validé sur ${coursesValidees} courses.</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan exact et définitif généré.</span>`;
         }
 
         window.onload = loadLivePmu;
