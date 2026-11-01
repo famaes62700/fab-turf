@@ -467,7 +467,7 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
-        // ANALYSEUR STRICT DES RAPPORTS ET CÔTES (France & Étranger/International)
+        // ANALYSEUR UNIVERSEL DES RAPPORTS (France & International)
         function getRapportForHorse(listeRapports, horseNum, targetType) {
             let exactGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports) || listeRapports.length === 0) return 0;
@@ -795,7 +795,6 @@
                             
                             if (bArrival === 1) baseGagnantes++;
                             
-                            // Ne comptabilise les gains que si le cheval est dans les 3 premiers (ou vainqueur)
                             if (bArrival <= 3) {
                                 let gGag = (bArrival === 1) ? getRapportForHorse(rapportsList, bNum, 'GAGNANT') : 0;
                                 let gPla = getRapportForHorse(rapportsList, bNum, 'PLACE');
