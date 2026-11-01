@@ -191,7 +191,6 @@
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
             <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center">
                 <span>Partants & Cotes</span>
-                <!-- L'icône de discipline sera insérée ici via JS -->
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -416,7 +415,7 @@
                 courses.forEach((c, cIdx) => {
                     let opt = document.createElement('option');
                     opt.value = cIdx;
-                    // Heure à gauche, suivie de C*, nom et discipline
+                    
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
                     let discName = c.discipline ? `(${c.discipline})` : '(Plat)';
@@ -482,7 +481,7 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
-        // EXTRACTEUR DE RAPPORTS RÉELS ET OFFICIELS UNIQUEMENT
+        // EXTRACTEUR SÉCURISÉ DES GAINS 1€ (France & International)
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -492,7 +491,6 @@
                 let famille = (group.famillePari || "").toUpperCase();
                 let details = group.rapports || group.dividendes || group.lesRapports || [];
 
-                // On cherche dans les paris simples (ou apparentés à l'international)
                 if (pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || pType.includes('INTER') || famille.includes('SIMPLE') || pType === 'PARI') {
                     if (Array.isArray(details)) {
                         details.forEach(item => {
@@ -503,8 +501,10 @@
                                 let isMatch = false;
 
                                 if (targetType === 'GAGNANT') {
+                                    // Correction MAJEURE : ne rejette 'P' que si c'est vraiment "PLACE", 
+                                    // ce qui empêche de bloquer "SIMPLe GAGNANT"
                                     if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || lib === 'DIRECT') {
-                                        if (!lib.includes('PLACE') && !lib.includes('P') && !lib.includes('SHOW')) isMatch = true;
+                                        if (!lib.includes('PLACE') && !lib.includes('SHOW')) isMatch = true;
                                     } else if (pType.includes('GAGNANT') || pType === 'SG') {
                                         isMatch = true;
                                     } else if (lib === '' && !pType.includes('PLACE')) { 
@@ -521,20 +521,24 @@
                                 }
 
                                 if (isMatch) {
-                                    // Utilisation prioritaire de "dividendePourUnEuro" (le format le plus fiable du PMU)
-                                    let m = item.dividendePourUnEuro !== undefined ? item.dividendePourUnEuro :
-                                            (item.dividendeEuro !== undefined ? item.dividendeEuro :
-                                            (item.gainEuro !== undefined ? item.gainEuro :
-                                            (item.rapport !== undefined ? item.rapport :
-                                            (item.dividende !== undefined ? item.dividende : item.montant))));
-
-                                    if (m !== undefined && m !== null) {
-                                        let val = parseFloat(String(m).replace(',', '.'));
-                                        if (!isNaN(val) && val > 0) {
-                                            // Correction des centimes (si l'API omet le point décimal)
-                                            if (item.dividendePourUnEuro === undefined && val > 100) val = val / 100;
-                                            if (val > foundGain) foundGain = val;
+                                    let val = 0;
+                                    // Toujours 1€ : PMU stocke parfois en centimes (dividendePourUnEuro), on divise par 100
+                                    if (item.dividendePourUnEuro !== undefined) {
+                                        val = item.dividendePourUnEuro / 100;
+                                    } else if (item.dividendeEuro !== undefined) {
+                                        val = item.dividendeEuro;
+                                    } else if (item.gainEuro !== undefined) {
+                                        val = item.gainEuro;
+                                    } else {
+                                        let rawM = item.rapport || item.dividende || item.montant;
+                                        if (rawM !== undefined && rawM !== null) {
+                                            val = parseFloat(String(rawM).replace(',', '.'));
+                                            if (val > 100) val = val / 100; // Sécurité pour les vieux formats centimes
                                         }
+                                    }
+
+                                    if (val > 0 && val > foundGain) {
+                                        foundGain = val;
                                     }
                                 }
                             }
@@ -585,7 +589,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition automatique 30 SECONDES après l'arrivée officielle
+                        // Transition automatique 30 secondes après l'arrivée officielle
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -605,12 +609,20 @@
                     if (typePari.includes('SIMPLE') || typePari.includes('SG') || typePari.includes('SP') || famille.includes('SIMPLE') || typePari.includes('INTER')) {
                         let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
                         details.forEach(r => {
-                            let m = r.dividendePourUnEuro || r.dividendeEuro || r.gainEuro || r.rapport || r.dividende || r.montant;
-                            if (m !== undefined && m !== null) {
+                            let val = 0;
+                            if (r.dividendePourUnEuro !== undefined) val = r.dividendePourUnEuro / 100;
+                            else if (r.dividendeEuro !== undefined) val = r.dividendeEuro;
+                            else if (r.gainEuro !== undefined) val = r.gainEuro;
+                            else {
+                                let m = r.rapport || r.dividende || r.montant;
+                                if (m !== undefined && m !== null) {
+                                    val = parseFloat(String(m).replace(',', '.'));
+                                    if (val > 100) val = val / 100;
+                                }
+                            }
+
+                            if (val > 0) {
                                 hasReports = true;
-                                let val = parseFloat(String(m).replace(',', '.'));
-                                if (r.dividendePourUnEuro === undefined && val > 100) val = val / 100;
-                                
                                 let combo = r.combinaison || r.cheval || r.numeroCheval ? ` (N°${r.combinaison || r.cheval || r.numeroCheval})` : '';
                                 let lib = r.libelleRapport || r.libelle || typePari;
                                 
@@ -656,8 +668,8 @@
                 let discIcon = getDisciplineIcon(race.discipline);
                 
                 document.getElementById('raceInfoDetails').innerHTML = `
-                    <span>${timeInfo}Partants & Cotes — ${discName} ${race.distance ? race.distance + 'm' : ''}</span>
-                    <span class="flex items-center text-lg">${discIcon}</span>
+                    <span>Partants & Cotes</span>
+                    <span class="flex items-center text-sm font-normal text-zinc-400">${timeInfo} ${discName} ${discIcon}</span>
                 `;
             } catch (e) {}
         }
@@ -829,8 +841,7 @@
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                    // Uniquement si la course a une arrivée et des rapports officiels
-                    if (arrivees.length > 0 && rapportsList.length > 0) {
+                    if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
                         let baseH = algoResult.baseHorse;
@@ -843,13 +854,11 @@
                         if (baseH) {
                             if (baseArr === 1) {
                                 baseGagCount++;
-                                let g = extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
-                                totalGainBaseGag += g;
+                                totalGainBaseGag += extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
                             }
                             if (baseArr <= 3) {
                                 basePlaCount++;
-                                let p = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
-                                totalGainBasePla += p;
+                                totalGainBasePla += extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
                             }
                         }
 
@@ -857,13 +866,11 @@
                         if (nuggetH) {
                             if (nuggetArr === 1) {
                                 pepiteGagCount++;
-                                let g = extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
-                                totalGainPepiteGag += g;
+                                totalGainPepiteGag += extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
                             }
                             if (nuggetArr <= 3) {
                                 pepitePlaCount++;
-                                let p = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
-                                totalGainPepitePla += p;
+                                totalGainPepitePla += extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
                             }
                         }
 
