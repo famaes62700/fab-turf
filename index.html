@@ -86,11 +86,11 @@
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-2xl p-4 shadow-xl mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-trophy mr-1.5"></i> Bilan du Jour (Pour 1€ parié)
+                    <i class="fa-solid fa-trophy mr-1.5"></i> Bilan du Jour
                 </h2>
                 <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg px-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Recherche des courses...</div>
+            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Prêt.</div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <!-- BASE -->
                 <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-emerald-500/30 flex flex-col justify-between space-y-2 relative">
@@ -236,12 +236,24 @@
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
         let autoTransitionDone = false;
+        
+        // Cache mémoire local pour accélérer massivement le chargement et le bilan
+        let validatedRacesCache = {}; 
+        let autoStatsCounter = 0;
 
+        // Auto-Rafraîchissement principal (20s) et Bilan arrière-plan (60s)
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
             if (mIdx !== "" && cIdx !== "") {
                 fetchRaceData(true); 
+            }
+
+            // Actualisation automatique du bilan sans faire clignoter l'écran (toutes les minutes)
+            autoStatsCounter++;
+            if (autoStatsCounter >= 3) { 
+                calculateDailyStats(true);
+                autoStatsCounter = 0;
             }
         }, 20000);
 
@@ -678,6 +690,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
+                        // Transition 30s après l'arrivée
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -884,8 +897,7 @@
             }
         }
 
-        async function calculateDailyStats() {
-            document.getElementById('historyBlock').classList.add('hidden');
+        async function calculateDailyStats(isAuto = false) {
             let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
             
@@ -901,19 +913,23 @@
             let gainCouplePla = document.getElementById('gainCouplePla');
             let statGlobal = document.getElementById('statGlobal');
 
-            statsBlock.classList.remove('hidden');
-            statBase.textContent = `G: 0 | P: 0 / 0`;
-            statPepite.textContent = `G: 0 | P: 0 / 0`;
-            statCouple.textContent = `G: 0 | P: 0 / 0`;
-            gainBaseGag.textContent = `--`;
-            gainBasePla.textContent = `--`;
-            gainPepiteGag.textContent = `--`;
-            gainPepitePla.textContent = `--`;
-            gainCoupleGag.textContent = `--`;
-            gainCouplePla.textContent = `--`;
-            
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse des courses...";
-            statGlobal.innerHTML = "";
+            if (!isAuto) {
+                document.getElementById('historyBlock').classList.add('hidden');
+                statsBlock.classList.remove('hidden');
+                
+                statBase.textContent = `G: 0 | P: 0 / 0`;
+                statPepite.textContent = `G: 0 | P: 0 / 0`;
+                statCouple.textContent = `G: 0 | P: 0 / 0`;
+                gainBaseGag.textContent = `--`;
+                gainBasePla.textContent = `--`;
+                gainPepiteGag.textContent = `--`;
+                gainPepitePla.textContent = `--`;
+                gainCoupleGag.textContent = `--`;
+                gainCouplePla.textContent = `--`;
+                statGlobal.innerHTML = "";
+                
+                statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse des courses en cours...";
+            }
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -935,11 +951,13 @@
                 });
             });
 
-            // TRI CHRONOLOGIQUE ABSOLU (Essentiel pour la Martingale)
+            // TRI CHRONOLOGIQUE ABSOLU - Essentiel pour la Martingale
             pastRacesToday.sort((a, b) => a.time - b.time);
 
             if (pastRacesToday.length === 0) {
-                statsProgress.textContent = "Aucune course passée aujourd'hui.";
+                if (!isAuto || !statsBlock.classList.contains('hidden')) {
+                    statsProgress.textContent = "Aucune course passée aujourd'hui.";
+                }
                 return;
             }
 
@@ -951,9 +969,9 @@
             let totalGainPepiteGag = 0, totalGainPepitePla = 0;
             let totalGainCoupleGag = 0, totalGainCouplePla = 0;
 
-            // VARIABLES DE MARTINGALE
+            // VARIABLES DE MISES & MARTINGALE
             let costBaseGag = 0;
-            let costBasePla = 0, mBasePla = 1; // Uniquement Base Placé
+            let costBasePla = 0, mBasePla = 1; // Uniquement Base Placé (Martingale)
             let costPepGag = 0;
             let costPepPla = 0;
             let costCplGag = 0;
@@ -964,101 +982,147 @@
 
             for (let i = 0; i < pastRacesToday.length; i++) {
                 let r = pastRacesToday[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Vérification (${i+1}/${pastRacesToday.length}) : ${r.name}`;
+                let cacheKey = `${ddmmyyyy}_${r.rNum}_${r.cNum}`;
 
-                try {
-                    const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
-                    if (!res.ok) continue;
-                    const data = await res.json();
-                    let partants = data.participants || [];
-                    let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
-                    let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+                if (!isAuto && !statsBlock.classList.contains('hidden')) {
+                    statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Vérification (${i+1}/${pastRacesToday.length}) : ${r.name}`;
+                }
 
-                    if (arrivees.length > 0 || rapportsList.length > 0) {
-                        coursesValidees++;
-                        let algoResult = computeAlgorithm(partants);
-                        let baseH = algoResult.baseHorse;
-                        let nuggetH = algoResult.nuggetHorse;
+                let raceData = null;
+                if (validatedRacesCache[cacheKey]) {
+                    raceData = validatedRacesCache[cacheKey];
+                } else {
+                    try {
+                        const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
+                        if (!res.ok) continue;
+                        const data = await res.json();
+                        let partants = data.participants || [];
+                        let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
+                        let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                        let baseArr = baseH ? (partants.find(p => (p.numPmu || p.numOrdre) === baseH.num)?.ordreArrivee || 99) : 99;
-                        let nuggetArr = nuggetH ? (partants.find(p => (p.numPmu || p.numOrdre) === nuggetH.num)?.ordreArrivee || 99) : 99;
+                        raceData = { partants, arrivees, rapportsList, isComplete: rapportsList.length > 0 };
+                        if (raceData.isComplete) validatedRacesCache[cacheKey] = raceData;
+                    } catch (e) { continue; }
+                }
 
-                        // BASE
-                        if (baseH) {
-                            let gGag = extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
-                            if (gGag === 0 && baseArr === 1) gGag = baseH.cote; 
-                            
-                            costBaseGag += 1;
-                            if (gGag > 0) {
-                                baseGagCount++;
-                                totalGainBaseGag += gGag;
-                            }
+                if (raceData && (raceData.arrivees.length > 0 || raceData.rapportsList.length > 0)) {
+                    coursesValidees++;
+                    let algoResult = computeAlgorithm(raceData.partants);
+                    let baseH = algoResult.baseHorse;
+                    let nuggetH = algoResult.nuggetHorse;
 
-                            let gPla = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
-                            if (gPla === 0 && baseArr >= 1 && baseArr <= 3) gPla = Math.max(1.1, baseH.cote / 3); 
-                            
-                            costBasePla += mBasePla;
-                            if (gPla > 0) {
-                                basePlaCount++;
-                                totalGainBasePla += gPla * mBasePla;
-                                mBasePla = 1; // Reset Martingale Base Placé
-                            } else {
-                                mBasePla *= 2; // Doublement Martingale Base Placé
-                            }
+                    let baseArr = baseH ? (raceData.partants.find(p => (p.numPmu || p.numOrdre) === baseH.num)?.ordreArrivee || 99) : 99;
+                    let nuggetArr = nuggetH ? (raceData.partants.find(p => (p.numPmu || p.numOrdre) === nuggetH.num)?.ordreArrivee || 99) : 99;
+
+                    // === BASE ===
+                    if (baseH) {
+                        let gGag = extractGainFromRapports(raceData.rapportsList, baseH.num, 'GAGNANT');
+                        if (gGag === 0 && baseArr === 1) gGag = baseH.cote; 
+                        
+                        costBaseGag += 1; 
+                        if (gGag > 0) {
+                            baseGagCount++;
+                            totalGainBaseGag += gGag;
                         }
 
-                        // PÉPITE
-                        if (nuggetH) {
-                            let gGag = extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
-                            if (gGag === 0 && nuggetArr === 1) gGag = nuggetH.cote; 
-                            
-                            costPepGag += 1;
-                            if (gGag > 0) {
-                                pepiteGagCount++;
-                                totalGainPepiteGag += gGag;
-                            }
+                        let gPla = extractGainFromRapports(raceData.rapportsList, baseH.num, 'PLACE');
+                        if (gPla === 0 && baseArr >= 1 && baseArr <= 3) gPla = Math.max(1.1, baseH.cote / 3); 
+                        
+                        costBasePla += mBasePla; 
+                        if (gPla > 0) {
+                            basePlaCount++;
+                            totalGainBasePla += gPla * mBasePla;
+                            mBasePla = 1; 
+                        } else {
+                            mBasePla *= 2; 
+                        }
+                    }
 
-                            let gPla = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
-                            if (gPla === 0 && nuggetArr >= 1 && nuggetArr <= 3) gPla = Math.max(1.1, nuggetH.cote / 3); 
-                            
-                            costPepPla += 1;
-                            if (gPla > 0) {
-                                pepitePlaCount++;
-                                totalGainPepitePla += gPla;
-                            }
+                    // === PÉPITE ===
+                    if (nuggetH) {
+                        let gGag = extractGainFromRapports(raceData.rapportsList, nuggetH.num, 'GAGNANT');
+                        if (gGag === 0 && nuggetArr === 1) gGag = nuggetH.cote; 
+                        
+                        costPepGag += 1;
+                        if (gGag > 0) {
+                            pepiteGagCount++;
+                            totalGainPepiteGag += gGag;
                         }
 
-                        // COUPLÉ
-                        if (baseH && nuggetH) {
-                            let cg = extractCoupleGain(rapportsList, baseH.num, nuggetH.num, 'CG');
-                            let isCG = ((baseArr === 1 && nuggetArr === 2) || (baseArr === 2 && nuggetArr === 1));
-                            if (cg === 0 && isCG) cg = baseH.cote + nuggetH.cote; 
+                        let gPla = extractGainFromRapports(raceData.rapportsList, nuggetH.num, 'PLACE');
+                        if (gPla === 0 && nuggetArr >= 1 && nuggetArr <= 3) gPla = Math.max(1.1, nuggetH.cote / 3); 
+                        
+                        costPepPla += 1;
+                        if (gPla > 0) {
+                            pepitePlaCount++;
+                            totalGainPepitePla += gPla;
+                        }
+                    }
 
-                            costCplGag += 1;
-                            if (cg > 0) {
-                                coupleGagCount++;
-                                totalGainCoupleGag += cg;
-                            }
+                    // === COUPLÉ ===
+                    if (baseH && nuggetH) {
+                        let cg = extractCoupleGain(raceData.rapportsList, baseH.num, nuggetH.num, 'CG');
+                        let isCG = ((baseArr === 1 && nuggetArr === 2) || (baseArr === 2 && nuggetArr === 1));
+                        if (cg === 0 && isCG) cg = baseH.cote + nuggetH.cote; 
+
+                        costCplGag += 1;
+                        if (cg > 0) {
+                            coupleGagCount++;
+                            totalGainCoupleGag += cg;
+                        }
+                        
+                        if (raceData.partants.length >= 8) {
+                            coursesValideesCP++;
+                            let cp = extractCoupleGain(raceData.rapportsList, baseH.num, nuggetH.num, 'CP');
+                            let isCP = (baseArr <= 3 && nuggetArr <= 3 && baseArr !== nuggetArr);
+                            if (cp === 0 && isCP) cp = Math.max(2.0, (baseH.cote + nuggetH.cote) / 3); 
                             
-                            if (partants.length >= 8) {
-                                coursesValideesCP++;
-                                let cp = extractCoupleGain(rapportsList, baseH.num, nuggetH.num, 'CP');
-                                let isCP = (baseArr <= 3 && nuggetArr <= 3 && baseArr !== nuggetArr);
-                                if (cp === 0 && isCP) cp = Math.max(2.0, (baseH.cote + nuggetH.cote) / 3); 
-                                
-                                costCplPla += 1;
-                                if (cp > 0) {
-                                    couplePlaCount++;
-                                    totalGainCouplePla += cp;
-                                }
+                            costCplPla += 1;
+                            if (cp > 0) {
+                                couplePlaCount++;
+                                totalGainCouplePla += cp;
                             }
                         }
                     }
-                } catch (e) {}
+
+                    // DÉFILEMENT VISUEL EN DIRECT (si clique manuel)
+                    if (!isAuto && !statsBlock.classList.contains('hidden')) {
+                        let nBG = totalGainBaseGag - costBaseGag;
+                        let nBP = totalGainBasePla - costBasePla;
+                        let nPG = totalGainPepiteGag - costPepGag;
+                        let nPP = totalGainPepitePla - costPepPla;
+                        let nCG = totalGainCoupleGag - costCplGag;
+                        let nCP = totalGainCouplePla - costCplPla; 
+
+                        statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
+                        statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
+                        statCouple.textContent = `G: ${coupleGagCount} / ${coursesValidees} | P: ${couplePlaCount} / ${coursesValideesCP}`;
+                        
+                        gainBaseGag.innerHTML = `${totalGainBaseGag.toFixed(2)} €<br><span class="${nBG >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${nBG >= 0 ? '+' : ''}${nBG.toFixed(2)}€</span>`;
+                        gainBasePla.innerHTML = `${totalGainBasePla.toFixed(2)} €<br><span class="${nBP >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${nBP >= 0 ? '+' : ''}${nBP.toFixed(2)}€</span>`;
+                        
+                        gainPepiteGag.innerHTML = `${totalGainPepiteGag.toFixed(2)} €<br><span class="${nPG >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${nPG >= 0 ? '+' : ''}${nPG.toFixed(2)}€</span>`;
+                        gainPepitePla.innerHTML = `${totalGainPepitePla.toFixed(2)} €<br><span class="${nPP >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${nPP >= 0 ? '+' : ''}${nPP.toFixed(2)}€</span>`;
+                        
+                        gainCoupleGag.innerHTML = `${totalGainCoupleGag.toFixed(2)} €<br><span class="${nCG >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${nCG >= 0 ? '+' : ''}${nCG.toFixed(2)}€</span>`;
+                        gainCouplePla.innerHTML = `${totalGainCouplePla.toFixed(2)} €<br><span class="${nCP >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${nCP >= 0 ? '+' : ''}${nCP.toFixed(2)}€</span>`;
+
+                        let totalInvesti = costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla;
+                        statGlobal.innerHTML = `
+                            <div class="mb-1">Investissement en cours : <b>${totalInvesti} €</b>...</div>
+                            <div class="text-emerald-400">Dont investissement Martingale (Base Placé) : <b>${costBasePla} €</b></div>
+                        `;
+
+                        // Petite pause pour forcer l'affichage visuel (le "défilement")
+                        await new Promise(resolve => setTimeout(resolve, 25));
+                    }
+                }
             }
 
             if (coursesValidees === 0) {
-                statsProgress.innerHTML = `<span class="text-amber-400">Aucune course terminée officiellement.</span>`;
+                if (!isAuto || !statsBlock.classList.contains('hidden')) {
+                    statsProgress.innerHTML = `<span class="text-amber-400">Aucune course terminée officiellement.</span>`;
+                }
             } else {
                 let netBaseGag = totalGainBaseGag - costBaseGag;
                 let netBasePla = totalGainBasePla - costBasePla;
@@ -1069,6 +1133,7 @@
                 let netCoupleGag = totalGainCoupleGag - costCplGag;
                 let netCouplePla = totalGainCouplePla - costCplPla; 
 
+                // Mise à jour finale si invisible ou arrière-plan
                 statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
                 statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
                 statCouple.textContent = `G: ${coupleGagCount} / ${coursesValidees} | P: ${couplePlaCount} / ${coursesValideesCP}`;
@@ -1082,12 +1147,14 @@
                 gainCoupleGag.innerHTML = `${totalGainCoupleGag.toFixed(2)} €<br><span class="${netCoupleGag >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCoupleGag >= 0 ? '+' : ''}${netCoupleGag.toFixed(2)}€</span>`;
                 gainCouplePla.innerHTML = `${totalGainCouplePla.toFixed(2)} €<br><span class="${netCouplePla >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCouplePla >= 0 ? '+' : ''}${netCouplePla.toFixed(2)}€</span>`;
                 
-                statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan actualisé avec succès (${coursesValidees} courses prêtes)</span>`;
+                if (!isAuto || !statsBlock.classList.contains('hidden')) {
+                    statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan actualisé avec succès (${coursesValidees} courses)</span>`;
+                }
 
                 let totalInvesti = costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla;
                 statGlobal.innerHTML = `
-                    <div class="mb-1">Investissement total du jour : <b>${totalInvesti} €</b></div>
-                    <div class="text-emerald-400">Dont investissement spécifique Martingale (Base Placé) : <b>${costBasePla} €</b></div>
+                    <div class="mb-1 text-zinc-300">Investissement total du jour : <b>${totalInvesti} €</b></div>
+                    <div class="text-emerald-400">Dont investissement de la Martingale (Base Placé) : <b>${costBasePla} €</b> (Prochaine mise : ${mBasePla}€)</div>
                 `;
 
                 localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
