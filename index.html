@@ -91,7 +91,7 @@
                 <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-emerald-500/30 flex flex-col justify-between space-y-2">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] uppercase font-bold text-emerald-400">Base Solide</span>
-                        <span id="statBase" class="text-xs font-bold text-white">Gag: 0 | Pla: 0 / 0</span>
+                        <span id="statBase" class="text-[11px] font-bold text-white">Gag: 0 | Pla: 0 / 0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-[11px]">
                         <div class="bg-zinc-900/60 p-2 rounded border border-zinc-700/50 text-center">
@@ -108,7 +108,7 @@
                 <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-amber-500/30 flex flex-col justify-between space-y-2">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] uppercase font-bold text-amber-400">Pépite / Coup de Cœur</span>
-                        <span id="statPepite" class="text-xs font-bold text-white">Gag: 0 | Pla: 0 / 0</span>
+                        <span id="statPepite" class="text-[11px] font-bold text-white">Gag: 0 | Pla: 0 / 0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-[11px]">
                         <div class="bg-zinc-900/60 p-2 rounded border border-zinc-700/50 text-center">
@@ -189,7 +189,10 @@
         </div>
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
-            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300">Partants & Cotes</div>
+            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center">
+                <span>Partants & Cotes</span>
+                <!-- L'icône de discipline sera insérée ici via JS -->
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
@@ -213,7 +216,7 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
-        // Auto-Rafraîchissement toutes les 20 secondes des cotes et arrivées
+        // Auto-Rafraîchissement toutes les 20 secondes
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -249,6 +252,18 @@
                 return `${h}h${m}`;
             }
             return String(timeValue);
+        }
+
+        function getDisciplineIcon(discipline) {
+            if (!discipline) return '<i class="fa-solid fa-horse text-emerald-400 ml-2" title="Plat"></i>';
+            let d = String(discipline).toUpperCase();
+            if (d.includes('TROT') || d.includes('ATTETE') || d.includes('MONTE')) {
+                return '<i class="fa-solid fa-cart-flatbed text-amber-400 ml-2" title="Trot"></i>';
+            }
+            if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE') || d.includes('CROSS')) {
+                return '<i class="fa-solid fa-shield-halved text-blue-400 ml-2" title="Obstacle / Haies"></i>';
+            }
+            return '<i class="fa-solid fa-horse text-emerald-400 ml-2" title="Plat"></i>';
         }
 
         async function loadLivePmu() {
@@ -401,11 +416,12 @@
                 courses.forEach((c, cIdx) => {
                     let opt = document.createElement('option');
                     opt.value = cIdx;
+                    // Heure à gauche, suivie de C*, nom et discipline
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
                     let discName = c.discipline ? `(${c.discipline})` : '(Plat)';
                     
-                    opt.textContent = `${courseTime} C${c.numOrdre || (cIdx+1)} : ${libelleCourse} ${discName}`;
+                    opt.textContent = `${courseTime}C${c.numOrdre || (cIdx+1)} - ${libelleCourse} ${discName}`;
                     raceSelect.appendChild(opt);
                 });
             } else {
@@ -466,43 +482,64 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
+        // EXTRACTEUR DE RAPPORTS RÉELS ET OFFICIELS UNIQUEMENT
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
 
             listeRapports.forEach(group => {
                 let pType = (group.typePari || group.libellePari || group.codePari || "").toUpperCase();
+                let famille = (group.famillePari || "").toUpperCase();
                 let details = group.rapports || group.dividendes || group.lesRapports || [];
 
-                if (Array.isArray(details)) {
-                    details.forEach(item => {
-                        let combo = String(item.combinaison || item.cheval || item.numeroCheval || item.partant || "").trim();
-                        let lib = (item.libelleRapport || item.libelle || item.typeRapport || "").toUpperCase();
+                // On cherche dans les paris simples (ou apparentés à l'international)
+                if (pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || pType.includes('INTER') || famille.includes('SIMPLE') || pType === 'PARI') {
+                    if (Array.isArray(details)) {
+                        details.forEach(item => {
+                            let combo = String(item.combinaison || item.cheval || item.numeroCheval || item.partant || "").trim();
+                            let lib = (item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport || "").toUpperCase();
 
-                        if (combo === String(horseNum).trim()) {
-                            let isMatch = false;
-                            if (targetType === 'GAGNANT') {
-                                if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || pType.includes('GAGNANT') || (lib === '' && !pType.includes('PLACE'))) {
-                                    if (!lib.includes('PLACE') && !lib.includes('P') && !lib.includes('SHOW')) isMatch = true;
-                                }
-                            } else if (targetType === 'PLACE') {
-                                if (lib.includes('PLACE') || lib.includes('P') || lib.includes('SP') || lib.includes('2EM') || lib.includes('3EM') || lib.includes('SHOW') || pType.includes('PLACE')) {
-                                    isMatch = true;
-                                }
-                            }
+                            if (combo === String(horseNum).trim()) {
+                                let isMatch = false;
 
-                            if (isMatch || pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || pType.includes('INTER') || pType === 'PARI') {
-                                let m = item.gainEuro || item.dividende || item.rapport || item.montant || item.dividendeEuro;
-                                if (m !== undefined && m !== null) {
-                                    let val = parseFloat(String(m).replace(',', '.'));
-                                    if (!isNaN(val) && val > 0) {
-                                        if (val > 100) val = val / 100;
-                                        if (val > foundGain) foundGain = val;
+                                if (targetType === 'GAGNANT') {
+                                    if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || lib === 'DIRECT') {
+                                        if (!lib.includes('PLACE') && !lib.includes('P') && !lib.includes('SHOW')) isMatch = true;
+                                    } else if (pType.includes('GAGNANT') || pType === 'SG') {
+                                        isMatch = true;
+                                    } else if (lib === '' && !pType.includes('PLACE')) { 
+                                        isMatch = true;
+                                    }
+                                } else if (targetType === 'PLACE') {
+                                    if (lib.includes('PLACE') || lib === 'P' || lib.includes('SP') || lib.includes('2EM') || lib.includes('3EM') || lib.includes('SHOW')) {
+                                        isMatch = true;
+                                    } else if (pType.includes('PLACE') || pType === 'SP') {
+                                        isMatch = true;
+                                    } else if (lib === '' && pType.includes('PLACE')) {
+                                        isMatch = true;
+                                    }
+                                }
+
+                                if (isMatch) {
+                                    // Utilisation prioritaire de "dividendePourUnEuro" (le format le plus fiable du PMU)
+                                    let m = item.dividendePourUnEuro !== undefined ? item.dividendePourUnEuro :
+                                            (item.dividendeEuro !== undefined ? item.dividendeEuro :
+                                            (item.gainEuro !== undefined ? item.gainEuro :
+                                            (item.rapport !== undefined ? item.rapport :
+                                            (item.dividende !== undefined ? item.dividende : item.montant))));
+
+                                    if (m !== undefined && m !== null) {
+                                        let val = parseFloat(String(m).replace(',', '.'));
+                                        if (!isNaN(val) && val > 0) {
+                                            // Correction des centimes (si l'API omet le point décimal)
+                                            if (item.dividendePourUnEuro === undefined && val > 100) val = val / 100;
+                                            if (val > foundGain) foundGain = val;
+                                        }
                                     }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
             });
             return foundGain;
@@ -548,7 +585,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition automatique 30 secondes après l'arrivée officielle
+                        // Transition automatique 30 SECONDES après l'arrivée officielle
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -562,21 +599,28 @@
                 let listeRapports = Array.isArray(rapportsData) ? rapportsData : (rapportsData?.lesRapports || rapportsData?.rapports || []);
 
                 listeRapports.forEach(repGroup => {
-                    let typeJeu = repGroup.typePari || repGroup.libellePari || 'Pari';
-                    let details = repGroup.rapports || repGroup.dividendes || [];
-                    details.forEach(r => {
-                        let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
-                        if (montant) {
-                            hasReports = true;
-                            let val = parseFloat(montant);
-                            if (val > 100) val = val / 100;
-                            let combo = r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
-                            let div = document.createElement('div');
-                            div.className = "bg-zinc-800/80 p-2.5 rounded-xl border border-zinc-700 flex justify-between items-center";
-                            div.innerHTML = `<span class="text-zinc-400 font-medium">${r.libelleRapport || typeJeu}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
-                            reportsGrid.appendChild(div);
-                        }
-                    });
+                    let typePari = (repGroup.typePari || repGroup.libellePari || repGroup.codePari || "").toUpperCase();
+                    let famille = (repGroup.famillePari || "").toUpperCase();
+                    
+                    if (typePari.includes('SIMPLE') || typePari.includes('SG') || typePari.includes('SP') || famille.includes('SIMPLE') || typePari.includes('INTER')) {
+                        let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
+                        details.forEach(r => {
+                            let m = r.dividendePourUnEuro || r.dividendeEuro || r.gainEuro || r.rapport || r.dividende || r.montant;
+                            if (m !== undefined && m !== null) {
+                                hasReports = true;
+                                let val = parseFloat(String(m).replace(',', '.'));
+                                if (r.dividendePourUnEuro === undefined && val > 100) val = val / 100;
+                                
+                                let combo = r.combinaison || r.cheval || r.numeroCheval ? ` (N°${r.combinaison || r.cheval || r.numeroCheval})` : '';
+                                let lib = r.libelleRapport || r.libelle || typePari;
+                                
+                                let div = document.createElement('div');
+                                div.className = "bg-zinc-800/80 p-2.5 rounded-xl border border-zinc-700 flex justify-between items-center";
+                                div.innerHTML = `<span class="text-zinc-400 font-medium">${lib}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
+                                reportsGrid.appendChild(div);
+                            }
+                        });
+                    }
                 });
 
                 if (hasReports) reportsBlock.classList.remove('hidden');
@@ -607,9 +651,14 @@
                     tbody.appendChild(tr);
                 });
                 
-                let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
+                let timeInfo = race.heureDepart ? `[${formatTime(race.heureDepart)}] ` : '';
                 let discName = race.discipline ? `(${race.discipline})` : '(Plat)';
-                document.getElementById('raceInfoDetails').textContent = `${timeInfo}Partants & Cotes — ${discName} (${race.distance ? race.distance + 'm' : ''})`;
+                let discIcon = getDisciplineIcon(race.discipline);
+                
+                document.getElementById('raceInfoDetails').innerHTML = `
+                    <span>${timeInfo}Partants & Cotes — ${discName} ${race.distance ? race.distance + 'm' : ''}</span>
+                    <span class="flex items-center text-lg">${discIcon}</span>
+                `;
             } catch (e) {}
         }
 
@@ -780,7 +829,8 @@
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                    if (arrivees.length > 0) {
+                    // Uniquement si la course a une arrivée et des rapports officiels
+                    if (arrivees.length > 0 && rapportsList.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
                         let baseH = algoResult.baseHorse;
@@ -791,30 +841,30 @@
 
                         // Base
                         if (baseH) {
-                            if (baseArr === 1) baseGagCount++;
-                            if (baseArr <= 3) basePlaCount++;
-
-                            let gGag = (baseArr === 1) ? extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT') : 0;
-                            let gPla = (baseArr <= 3) ? extractGainFromRapports(rapportsList, baseH.num, 'PLACE') : 0;
-                            if (baseArr === 1 && gGag === 0) gGag = baseH.cote;
-                            if (baseArr <= 3 && gPla === 0) gPla = Math.max(1.1, baseH.cote / 3);
-
-                            totalGainBaseGag += gGag;
-                            totalGainBasePla += gPla;
+                            if (baseArr === 1) {
+                                baseGagCount++;
+                                let g = extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
+                                totalGainBaseGag += g;
+                            }
+                            if (baseArr <= 3) {
+                                basePlaCount++;
+                                let p = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
+                                totalGainBasePla += p;
+                            }
                         }
 
                         // Pépite
                         if (nuggetH) {
-                            if (nuggetArr === 1) pepiteGagCount++;
-                            if (nuggetArr <= 3) pepitePlaCount++;
-
-                            let gGag = (nuggetArr === 1) ? extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT') : 0;
-                            let gPla = (nuggetArr <= 3) ? extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE') : 0;
-                            if (nuggetArr === 1 && gGag === 0) gGag = nuggetH.cote;
-                            if (nuggetArr <= 3 && gPla === 0) gPla = Math.max(1.1, nuggetH.cote / 3);
-
-                            totalGainPepiteGag += gGag;
-                            totalGainPepitePla += gPla;
+                            if (nuggetArr === 1) {
+                                pepiteGagCount++;
+                                let g = extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
+                                totalGainPepiteGag += g;
+                            }
+                            if (nuggetArr <= 3) {
+                                pepitePlaCount++;
+                                let p = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
+                                totalGainPepitePla += p;
+                            }
                         }
 
                         let miseTotale = coursesValidees * 2;
