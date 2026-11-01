@@ -213,7 +213,6 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
-        // Auto-Rafraîchissement toutes les 20 secondes pour les cotes et l'arrivée
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -233,10 +232,7 @@
             toast.innerHTML = `<span>${message}</span>`;
             container.appendChild(toast);
 
-            setTimeout(() => {
-                toast.classList.remove('opacity-0', 'translate-y-2');
-            }, 10);
-
+            setTimeout(() => { toast.classList.remove('opacity-0', 'translate-y-2'); }, 10);
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
@@ -467,50 +463,49 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
-        // ANALYSEUR UNIVERSEL DES RAPPORTS (France & International)
-        function getRapportForHorse(listeRapports, horseNum, targetType) {
-            let exactGain = 0;
-            if (!listeRapports || !Array.isArray(listeRapports) || listeRapports.length === 0) return 0;
-            
-            listeRapports.forEach(repGroup => {
-                let typePari = (repGroup.typePari || repGroup.libellePari || repGroup.codePari || "").toUpperCase();
-                
-                if (typePari.includes('SIMPLE') || typePari.includes('SG') || typePari.includes('SP') || typePari.includes('SGP') || typePari.includes('INTER') || typePari === 'PARI') {
-                    let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
-                    
-                    if (Array.isArray(details)) {
-                        details.forEach(r => {
-                            let libelle = (r.libelleRapport || r.libelle || r.typeRapport || "").toUpperCase();
-                            let combo = String(r.combinaison || r.cheval || r.numeroCheval || r.partant || "").trim();
-                            
-                            if (combo === String(horseNum).trim()) {
-                                let isTarget = false;
-                                if (targetType === 'GAGNANT') {
-                                    if (libelle.includes('GAGNANT') || libelle === 'G' || libelle.includes('SG') || libelle.includes('1ER') || libelle.includes('WIN') || typePari.includes('GAGNANT') || (libelle === '' && !typePari.includes('PLACE'))) {
-                                        if (!libelle.includes('PLACE') && !libelle.includes('P') && !libelle.includes('SHOW')) isTarget = true;
-                                    }
-                                } else if (targetType === 'PLACE') {
-                                    if (libelle.includes('PLACE') || libelle === 'P' || libelle.includes('SP') || libelle.includes('2EM') || libelle.includes('3EM') || libelle.includes('SHOW') || typePari.includes('PLACE')) {
-                                        isTarget = true;
-                                    }
-                                }
+        // ANALYSEUR UNIVERSEL ROBUSTE (France & Étranger)
+        function extractGainFromRapports(listeRapports, horseNum, targetType) {
+            let foundGain = 0;
+            if (!listeRapports || !Array.isArray(listeRapports)) return 0;
 
-                                if (isTarget || (libelle === '' && typePari.includes('INTER'))) {
-                                    let montant = r.gainEuro || r.dividende || r.rapport || r.montant || r.dividendeEuro;
-                                    if (montant !== undefined && montant !== null) {
-                                        let val = parseFloat(String(montant).replace(',', '.'));
-                                        if (!isNaN(val)) {
-                                            if (val > 100) val = val / 100;
-                                            if (val > exactGain) exactGain = val;
-                                        }
+            listeRapports.forEach(group => {
+                let pType = (group.typePari || group.libellePari || group.codePari || "").toUpperCase();
+                let details = group.rapports || group.dividendes || group.lesRapports || [];
+
+                if (Array.isArray(details)) {
+                    details.forEach(item => {
+                        let combo = String(item.combinaison || item.cheval || item.numeroCheval || item.partant || "").trim();
+                        let lib = (item.libelleRapport || item.libelle || item.typeRapport || "").toUpperCase();
+
+                        if (combo === String(horseNum).trim()) {
+                            let isMatch = false;
+                            if (targetType === 'GAGNANT') {
+                                if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || pType.includes('GAGNANT') || (lib === '' && !pType.includes('PLACE'))) {
+                                    if (!lib.includes('PLACE') && !lib.includes('P') && !lib.includes('SHOW')) isMatch = true;
+                                }
+                            } else if (targetType === 'PLACE') {
+                                if (lib.includes('PLACE') || lib.includes('P') || lib.includes('SP') || lib.includes('2EM') || lib.includes('3EM') || lib.includes('SHOW') || pType.includes('PLACE')) {
+                                    isMatch = true;
+                                }
+                            }
+
+                            // Si le type de pari est simple ou international et que la combinaison correspond
+                            if (isMatch || pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || pType.includes('INTER') || pType === 'PARI') {
+                                let m = item.gainEuro || item.dividende || item.rapport || item.montant || item.dividendeEuro;
+                                if (m !== undefined && m !== null) {
+                                    let val = parseFloat(String(m).replace(',', '.'));
+                                    if (!isNaN(val) && val > 0) {
+                                        if (val > 100) val = val / 100;
+                                        // On retient le montant le plus pertinent (supérieur à 1€)
+                                        if (val > foundGain) foundGain = val;
                                     }
                                 }
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             });
-            return exactGain;
+            return foundGain;
         }
 
         async function fetchRaceData(isBackground = false) {
@@ -553,9 +548,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        setTimeout(() => {
-                            goToNextRace();
-                        }, 60000);
+                        setTimeout(() => { goToNextRace(); }, 60000);
                     }
                 } else {
                     arrivalBlock.classList.add('hidden');
@@ -738,7 +731,7 @@
             gainPepiteGag.textContent = `--`;
             gainPepitePla.textContent = `--`;
             statGlobal.textContent = "Recherche en cours...";
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Sélection des courses passées...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse des courses de la journée...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -773,7 +766,7 @@
 
             for (let i = 0; i < pastRacesToday.length; i++) {
                 let r = pastRacesToday[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Vérification (${i+1}/${pastRacesToday.length}) : ${r.name}`;
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse (${i+1}/${pastRacesToday.length}) : ${r.name}`;
 
                 try {
                     const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
@@ -783,39 +776,36 @@
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                    // S'assure que la course possède une arrivée officielle ET des rapports de dividendes publiés
                     if (arrivees.length > 0 && rapportsList.length > 0) {
-                        coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
+                        let baseH = algoResult.baseHorse;
+                        let nuggetH = algoResult.nuggetHorse;
 
-                        // Vérification rigoureuse Base
-                        if (algoResult.baseHorse) {
-                            let bNum = algoResult.baseHorse.num;
-                            let bArrival = partants.find(p => (p.numPmu || p.numOrdre) === bNum)?.ordreArrivee || 99;
-                            
-                            if (bArrival === 1) baseGagnantes++;
-                            
-                            if (bArrival <= 3) {
-                                let gGag = (bArrival === 1) ? getRapportForHorse(rapportsList, bNum, 'GAGNANT') : 0;
-                                let gPla = getRapportForHorse(rapportsList, bNum, 'PLACE');
-                                totalGainBaseGag += gGag;
-                                totalGainBasePla += gPla;
-                            }
+                        let baseArr = baseH ? (partants.find(p => (p.numPmu || p.numOrdre) === baseH.num)?.ordreArrivee || 99) : 99;
+                        let nuggetArr = nuggetH ? (partants.find(p => (p.numPmu || p.numOrdre) === nuggetH.num)?.ordreArrivee || 99) : 99;
+
+                        // La course n'est comptabilisée dans le bilan que si l'un de nos 2 chevaux est classé dans l'arrivée (ou au moins si les rapports sont prêts)
+                        coursesValidees++;
+
+                        // Calcul Base
+                        if (baseH && baseArr <= 3) {
+                            if (baseArr === 1) baseGagnantes++;
+                            let gGag = (baseArr === 1) ? extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT') : 0;
+                            let gPla = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
+                            // Fallback sur la cote si le rapport API direct est manquant
+                            if (baseArr === 1 && gGag === 0) gGag = baseH.cote;
+                            totalGainBaseGag += gGag;
+                            totalGainBasePla += gPla;
                         }
 
-                        // Vérification rigoureuse Pépite
-                        if (algoResult.nuggetHorse) {
-                            let nNum = algoResult.nuggetHorse.num;
-                            let nArrival = partants.find(p => (p.numPmu || p.numOrdre) === nNum)?.ordreArrivee || 99;
-                            
-                            if (nArrival === 1) pepiteGagnantes++;
-                            
-                            if (nArrival <= 3) {
-                                let gGag = (nArrival === 1) ? getRapportForHorse(rapportsList, nNum, 'GAGNANT') : 0;
-                                let gPla = getRapportForHorse(rapportsList, nNum, 'PLACE');
-                                totalGainPepiteGag += gGag;
-                                totalGainPepitePla += gPla;
-                            }
+                        // Calcul Pépite
+                        if (nuggetH && nuggetArr <= 3) {
+                            if (nuggetArr === 1) pepiteGagnantes++;
+                            let gGag = (nuggetArr === 1) ? extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT') : 0;
+                            let gPla = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
+                            if (nuggetArr === 1 && gGag === 0) gGag = nuggetH.cote;
+                            totalGainPepiteGag += gGag;
+                            totalGainPepitePla += gPla;
                         }
 
                         let miseTotale = coursesValidees * 2;
@@ -832,7 +822,7 @@
                         gainPepiteGag.innerHTML = `${totalGainPepiteGag.toFixed(2)} €<br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepite >= 0 ? '+' : ''}${netPepite.toFixed(2)}€</span>`;
                         gainPepitePla.innerHTML = `${totalGainPepitePla.toFixed(2)} €`;
                         
-                        statGlobal.innerHTML = `Bilan sur ${coursesValidees} courses officielles (Mise : ${miseTotale} €) — <span class="${netGlobal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">Bénéfice Net : ${netGlobal >= 0 ? '+' : ''}${netGlobal.toFixed(2)} €</span>`;
+                        statGlobal.innerHTML = `Bilan sur ${coursesValidees} courses (Mise : ${miseTotale} €) — <span class="${netGlobal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">Bénéfice Net : ${netGlobal >= 0 ? '+' : ''}${netGlobal.toFixed(2)} €</span>`;
 
                         localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
@@ -843,10 +833,10 @@
             }
 
             if (coursesValidees === 0) {
-                statsProgress.innerHTML = `<span class="text-amber-400">Les courses sont passées mais les rapports officiels ne sont pas encore publiés par le PMU. Réessayez dans 2 minutes.</span>`;
-                statGlobal.textContent = "En attente des rapports officiels...";
+                statsProgress.innerHTML = `<span class="text-amber-400">En attente des rapports officiels pour les courses terminées...</span>`;
+                statGlobal.textContent = "Réessayez dans quelques minutes.";
             } else {
-                statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan actualisé avec succès (${coursesValidees} courses prêtes) !</span>`;
+                statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan calculé avec succès (${coursesValidees} courses) !</span>`;
             }
         }
 
