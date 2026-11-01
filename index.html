@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact</title>
+    <title>PMU Direct - Algorithme Exact (Version 50 - Reset Nov)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -26,7 +26,7 @@
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
         <div class="flex justify-between items-center">
-            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement du programme...</div>
+            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au serveur PMU...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
                     <i class="fa-solid fa-calendar-days mr-1"></i> Bilan Mensuel
@@ -209,6 +209,18 @@
     </main>
 
     <script>
+        // Nettoyage complet des anciennes versions au chargement
+        (function purgeOldData() {
+            let keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i);
+                if (key && key.startsWith('pmu_stats_') && !key.startsWith('pmu_stats_v50_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        })();
+
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
         let autoTransitionStarted = false;
@@ -237,16 +249,6 @@
             return String(timeValue);
         }
 
-        async function fetchPmuDirect(url) {
-            const timestamp = new Date().getTime();
-            const pmuUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`;
-            
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error("Connexion PMU échouée");
-            return await response.json();
-        }
-
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
@@ -258,7 +260,9 @@
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             try {
-                const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/toutes-reunions`);
+                const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
+                if (!res.ok) throw new Error("Erreur serveur API");
+                const data = await res.json();
                 
                 let rawReunions = [];
                 if (data.programme && data.programme.reunions) rawReunions.push(...data.programme.reunions);
@@ -290,21 +294,14 @@
                         opt.value = idx;
                         let coursesList = r.courses || r.races || r.lesCourses || [];
                         totalCourses += coursesList.length;
-                        
                         let timeStr = "";
                         if (r.heurereunion || r.heurePremierDepart) {
                             timeStr = ` [${formatTime(r.heurereunion || r.heurePremierDepart)}]`;
                         } else if (coursesList[0] && coursesList[0].heureDepart) {
                             timeStr = ` [${formatTime(coursesList[0].heureDepart)}]`;
                         }
-                        
                         let hipName = r.hippodrome ? (r.hippodrome.libelleLong || r.hippodrome.libelleCourt || r.hippodrome.nom) : 'Hippodrome';
-                        let paysIcon = "";
-                        if (r.pays && r.pays.toUpperCase() !== 'FRA' && r.pays.toUpperCase() !== 'FR') {
-                            paysIcon = ` 🌍 (${r.pays.toUpperCase()})`;
-                        }
-
-                        opt.textContent = `R${r.numOfficiel} - ${hipName}${paysIcon}${timeStr} (${coursesList.length}c)`;
+                        opt.textContent = `R${r.numOfficiel} - ${hipName}${timeStr} (${coursesList.length}c)`;
                         select.appendChild(opt);
                     });
                     
@@ -418,6 +415,9 @@
             if (mIdx !== "" && rIdx !== "") await fetchRaceData(false);
         }
 
+        // ==========================================
+        // EXTRACTION DES RAPPORTS ET COTES - V50
+        // ==========================================
         function extractRealPayout(raceData, type, combosArr) {
             if (!raceData) return 0;
             let rapportsList = raceData.rapports || raceData.rapportsDefinitifs || [];
@@ -471,13 +471,12 @@
 
         function getHorseCote(p) {
             if (!p) return null;
+            // Ordre de priorité strict pour obtenir la vraie cote "en direct" (ou la plus récente possible)
             let possibleCotes = [
                 p.dernierRapportDirect?.rapport,
                 p.dernierRapportDirect?.cote,
                 p.dernierRapportReference?.rapport,
                 p.dernierRapportReference?.cote,
-                p.dernierRapportProbable?.rapport, 
-                p.dernierRapportProbable?.cote,    
                 (p.cotes && p.cotes.length > 0) ? (p.cotes[0].cote || p.cotes[0].rapport) : null,
                 p.cote
             ];
@@ -523,6 +522,7 @@
                 let fallback = 8 + (idx * 2.5); 
                 let cote = realCote || fallback; 
                 
+                // (N/D) pour Non Disponible, indique que le PMU ne fournit plus la cote exacte
                 let coteDisplay = realCote ? realCote.toFixed(1) : `${fallback.toFixed(1)} (N/D)`;
                 
                 let musiqueScore = evaluateMusique(musique);
@@ -569,7 +569,9 @@
             let cNum = race.numOrdre || (parseInt(rIdx) + 1);
 
             try {
-                const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${rNum}/C${cNum}`);
+                const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
+                if (!res.ok) return;
+                const data = await res.json();
                 
                 let partants = data.participants || [];
                 let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a, b) => a.ordreArrivee - b.ordreArrivee);
@@ -577,8 +579,6 @@
                 let arrivalBlock = document.getElementById('arrivalBlock');
                 let arrivalList = document.getElementById('arrivalList');
                 arrivalList.innerHTML = '';
-                
-                let allRapportsDisplay = getAllRapportsForDisplay(data);
                 
                 if (arrivees.length > 0) {
                     arrivalBlock.classList.remove('hidden');
@@ -589,7 +589,7 @@
                         arrivalList.appendChild(div);
                     });
 
-                    if (!autoTransitionStarted && allRapportsDisplay.length > 0) {
+                    if (!autoTransitionStarted) {
                         autoTransitionStarted = true;
                         let secondsLeft = 45; 
                         let timerEl = document.getElementById('transitionTimer');
@@ -610,6 +610,7 @@
                 let reportsBlock = document.getElementById('reportsBlock');
                 let reportsGrid = document.getElementById('reportsGrid');
                 reportsGrid.innerHTML = '';
+                let allRapportsDisplay = getAllRapportsForDisplay(data);
                 
                 if (arrivees.length > 0 && allRapportsDisplay.length > 0) {
                     reportsBlock.classList.remove('hidden');
@@ -687,6 +688,7 @@
             return `<span class="${colorClass}">${sign}${val.toFixed(2)} €</span>`;
         }
 
+        // V50 - CLÉ UNIQUE POUR LE MOIS DE NOVEMBRE ET SUIVANTS
         function getStatForDateObj(d) {
             let key = `pmu_stats_v50_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
@@ -747,7 +749,7 @@
             let statsProgress = document.getElementById('statsProgress');
             
             statsBlock.classList.remove('hidden');
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul exact des gains en cours...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul exact en cours...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -783,7 +785,9 @@
                 statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Traitement de la course : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
 
                 try {
-                    const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${r.rNum}/C${r.cNum}`);
+                    const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
+                    if (!res.ok) continue;
+                    const data = await res.json();
                     let partants = data.participants || [];
                     
                     if (partants.filter(p => p.ordreArrivee > 0).length > 0) {
@@ -831,11 +835,11 @@
 
                         document.getElementById('statGagnantGlobalScore').innerHTML = `Bénéfice Net : <span class="${netGagnantTotal >= 0 ? 'text-indigo-400' : 'text-red-400'} font-black">${netGagnantTotal > 0 ? '+' : ''}${netGagnantTotal.toFixed(2)} €</span>`;
                         document.getElementById('gainGagnantBase').innerHTML = `Base [${gagBaseWins}/${coursesValidees}] : ${totalGainGagnantBase.toFixed(2)}€`;
-                        document.getElementById('gainGagnantPepite').innerHTML = `Pépite [${gagPepiteWins}] : ${totalGainGagnantPepite.toFixed(2)}€`;
+                        document.getElementById('gainGagnantPepite').innerHTML = `Pépite [${gagPepiteWins}/${misesGagnant > coursesValidees ? coursesValidees : 0}] : ${totalGainGagnantPepite.toFixed(2)}€`;
 
                         document.getElementById('statPlaceGlobalScore').innerHTML = `Bénéfice Net : <span class="${netPlaceTotal >= 0 ? 'text-emerald-400' : 'text-red-400'} font-black">${netPlaceTotal > 0 ? '+' : ''}${netPlaceTotal.toFixed(2)} €</span>`;
                         document.getElementById('gainPlaceBase').innerHTML = `Base [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€`;
-                        document.getElementById('gainPlacePepite').innerHTML = `Pépite [${plcPepiteWins}] : ${totalGainPlacePepite.toFixed(2)}€`;
+                        document.getElementById('gainPlacePepite').innerHTML = `Pépite [${plcPepiteWins}/${misesPlace > coursesValidees ? coursesValidees : 0}] : ${totalGainPlacePepite.toFixed(2)}€`;
 
                         document.getElementById('statCoupleGagnantScore').innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
                         document.getElementById('gainCoupleGagnant').innerHTML = `Combiné [${coupleGagnantWins}/${misesCoupleGag}] : ${totalGainCoupleGagnant.toFixed(2)}€`;
@@ -846,7 +850,7 @@
                         let miseAbsolue = misesGagnant + misesPlace + misesCoupleGag + misesCouplePlc; 
                         document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses réelles (Mise totale exacte engagée : ${miseAbsolue} €)`;
 
-                        await new Promise(r => setTimeout(r, 40));
+                        await new Promise(r => setTimeout(r, 60));
                     }
                 } catch (e) {}
             }
