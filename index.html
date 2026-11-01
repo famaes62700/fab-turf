@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (Version 50 - Reset Nov)</title>
+    <title>PMU Direct - Algorithme Exact (Version 51 - Internationale)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -209,12 +209,12 @@
     </main>
 
     <script>
-        // Nettoyage complet des anciennes versions au chargement
+        // Le système V51 garde la mémoire propre depuis le lancement du 1er Novembre (v50/v51)
         (function purgeOldData() {
             let keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 let key = localStorage.key(i);
-                if (key && key.startsWith('pmu_stats_') && !key.startsWith('pmu_stats_v50_')) {
+                if (key && key.startsWith('pmu_stats_') && !key.includes('_v50_') && !key.includes('_v51_')) {
                     keysToRemove.push(key);
                 }
             }
@@ -265,6 +265,7 @@
                 const data = await res.json();
                 
                 let rawReunions = [];
+                // Fusion des réunions Françaises et Étrangères
                 if (data.programme && data.programme.reunions) rawReunions.push(...data.programme.reunions);
                 if (data.programmeInternational && data.programmeInternational.reunions) rawReunions.push(...data.programmeInternational.reunions);
                 if (data.reunions) rawReunions.push(...data.reunions);
@@ -294,14 +295,23 @@
                         opt.value = idx;
                         let coursesList = r.courses || r.races || r.lesCourses || [];
                         totalCourses += coursesList.length;
+                        
                         let timeStr = "";
                         if (r.heurereunion || r.heurePremierDepart) {
                             timeStr = ` [${formatTime(r.heurereunion || r.heurePremierDepart)}]`;
                         } else if (coursesList[0] && coursesList[0].heureDepart) {
                             timeStr = ` [${formatTime(coursesList[0].heureDepart)}]`;
                         }
+                        
                         let hipName = r.hippodrome ? (r.hippodrome.libelleLong || r.hippodrome.libelleCourt || r.hippodrome.nom) : 'Hippodrome';
-                        opt.textContent = `R${r.numOfficiel} - ${hipName}${timeStr} (${coursesList.length}c)`;
+                        
+                        // V51 : Ajout de l'indicateur visuel pour l'international
+                        let paysIcon = "";
+                        if (r.pays && r.pays.toUpperCase() !== 'FRA' && r.pays.toUpperCase() !== 'FR') {
+                            paysIcon = ` 🌍 (${r.pays.toUpperCase()})`;
+                        }
+
+                        opt.textContent = `R${r.numOfficiel} - ${hipName}${paysIcon}${timeStr} (${coursesList.length}c)`;
                         select.appendChild(opt);
                     });
                     
@@ -416,7 +426,7 @@
         }
 
         // ==========================================
-        // EXTRACTION DES RAPPORTS ET COTES - V50
+        // EXTRACTION DES RAPPORTS ET COTES - V51 (International)
         // ==========================================
         function extractRealPayout(raceData, type, combosArr) {
             if (!raceData) return 0;
@@ -471,12 +481,14 @@
 
         function getHorseCote(p) {
             if (!p) return null;
-            // Ordre de priorité strict pour obtenir la vraie cote "en direct" (ou la plus récente possible)
+            // V51 : Ajout de "dernierRapportProbable" très utilisé pour l'Australie/Japon/USA par le PMU
             let possibleCotes = [
                 p.dernierRapportDirect?.rapport,
                 p.dernierRapportDirect?.cote,
                 p.dernierRapportReference?.rapport,
                 p.dernierRapportReference?.cote,
+                p.dernierRapportProbable?.rapport, // Spécial Étranger
+                p.dernierRapportProbable?.cote,    // Spécial Étranger
                 (p.cotes && p.cotes.length > 0) ? (p.cotes[0].cote || p.cotes[0].rapport) : null,
                 p.cote
             ];
@@ -522,7 +534,6 @@
                 let fallback = 8 + (idx * 2.5); 
                 let cote = realCote || fallback; 
                 
-                // (N/D) pour Non Disponible, indique que le PMU ne fournit plus la cote exacte
                 let coteDisplay = realCote ? realCote.toFixed(1) : `${fallback.toFixed(1)} (N/D)`;
                 
                 let musiqueScore = evaluateMusique(musique);
@@ -580,6 +591,8 @@
                 let arrivalList = document.getElementById('arrivalList');
                 arrivalList.innerHTML = '';
                 
+                let allRapportsDisplay = getAllRapportsForDisplay(data);
+                
                 if (arrivees.length > 0) {
                     arrivalBlock.classList.remove('hidden');
                     arrivees.slice(0, 5).forEach((p) => {
@@ -589,7 +602,8 @@
                         arrivalList.appendChild(div);
                     });
 
-                    if (!autoTransitionStarted) {
+                    // Si les rapports ne sont pas encore là (fréquent à l'international), on n'enclenche pas le passage à la course suivante tout de suite.
+                    if (!autoTransitionStarted && allRapportsDisplay.length > 0) {
                         autoTransitionStarted = true;
                         let secondsLeft = 45; 
                         let timerEl = document.getElementById('transitionTimer');
@@ -610,7 +624,6 @@
                 let reportsBlock = document.getElementById('reportsBlock');
                 let reportsGrid = document.getElementById('reportsGrid');
                 reportsGrid.innerHTML = '';
-                let allRapportsDisplay = getAllRapportsForDisplay(data);
                 
                 if (arrivees.length > 0 && allRapportsDisplay.length > 0) {
                     reportsBlock.classList.remove('hidden');
@@ -688,10 +701,10 @@
             return `<span class="${colorClass}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // V50 - CLÉ UNIQUE POUR LE MOIS DE NOVEMBRE ET SUIVANTS
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v50_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
-            let saved = localStorage.getItem(key);
+            let key = `pmu_stats_v51_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            // Récupération sécurisée depuis V50 ou V51
+            let saved = localStorage.getItem(key) || localStorage.getItem(`pmu_stats_v50_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
         }
@@ -860,7 +873,7 @@
             let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
             let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
-            localStorage.setItem(`pmu_stats_v50_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v51_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
