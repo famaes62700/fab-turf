@@ -189,7 +189,7 @@
         </div>
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
-            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center">
+            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex items-center">
                 <span>Partants & Cotes</span>
             </div>
             <div class="overflow-x-auto">
@@ -256,7 +256,7 @@
         function getDisciplineIcon(discipline) {
             if (!discipline) return '<i class="fa-solid fa-horse text-emerald-400 ml-2" title="Plat"></i>';
             let d = String(discipline).toUpperCase();
-            if (d.includes('TROT') || d.includes('ATTETE') || d.includes('MONTE')) {
+            if (d.includes('TROT') || d.includes('ATTEL') || d.includes('MONTE')) {
                 return '<i class="fa-solid fa-cart-flatbed text-amber-400 ml-2" title="Trot"></i>';
             }
             if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE') || d.includes('CROSS')) {
@@ -415,7 +415,6 @@
                 courses.forEach((c, cIdx) => {
                     let opt = document.createElement('option');
                     opt.value = cIdx;
-                    
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
                     let discName = c.discipline ? `(${c.discipline})` : '(Plat)';
@@ -501,8 +500,6 @@
                                 let isMatch = false;
 
                                 if (targetType === 'GAGNANT') {
-                                    // Correction MAJEURE : ne rejette 'P' que si c'est vraiment "PLACE", 
-                                    // ce qui empêche de bloquer "SIMPLe GAGNANT"
                                     if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || lib === 'DIRECT') {
                                         if (!lib.includes('PLACE') && !lib.includes('SHOW')) isMatch = true;
                                     } else if (pType.includes('GAGNANT') || pType === 'SG') {
@@ -522,7 +519,6 @@
 
                                 if (isMatch) {
                                     let val = 0;
-                                    // Toujours 1€ : PMU stocke parfois en centimes (dividendePourUnEuro), on divise par 100
                                     if (item.dividendePourUnEuro !== undefined) {
                                         val = item.dividendePourUnEuro / 100;
                                     } else if (item.dividendeEuro !== undefined) {
@@ -533,7 +529,7 @@
                                         let rawM = item.rapport || item.dividende || item.montant;
                                         if (rawM !== undefined && rawM !== null) {
                                             val = parseFloat(String(rawM).replace(',', '.'));
-                                            if (val > 100) val = val / 100; // Sécurité pour les vieux formats centimes
+                                            if (val > 100) val = val / 100; 
                                         }
                                     }
 
@@ -589,7 +585,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition automatique 30 secondes après l'arrivée officielle
+                        // Transition 30s après l'arrivée
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -838,10 +834,10 @@
                     if (!res.ok) continue;
                     const data = await res.json();
                     let partants = data.participants || [];
-                    let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                    if (arrivees.length > 0) {
+                    // Uniquement si des rapports sont publiés
+                    if (rapportsList.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
                         let baseH = algoResult.baseHorse;
@@ -852,25 +848,31 @@
 
                         // Base
                         if (baseH) {
-                            if (baseArr === 1) {
+                            let gGag = extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
+                            let gPla = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
+                            
+                            if (gGag > 0 || baseArr === 1) {
                                 baseGagCount++;
-                                totalGainBaseGag += extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
+                                totalGainBaseGag += gGag;
                             }
-                            if (baseArr <= 3) {
+                            if (gPla > 0 || (baseArr >= 1 && baseArr <= 3)) {
                                 basePlaCount++;
-                                totalGainBasePla += extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
+                                totalGainBasePla += gPla;
                             }
                         }
 
                         // Pépite
                         if (nuggetH) {
-                            if (nuggetArr === 1) {
+                            let gGag = extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
+                            let gPla = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
+                            
+                            if (gGag > 0 || nuggetArr === 1) {
                                 pepiteGagCount++;
-                                totalGainPepiteGag += extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
+                                totalGainPepiteGag += gGag;
                             }
-                            if (nuggetArr <= 3) {
+                            if (gPla > 0 || (nuggetArr >= 1 && nuggetArr <= 3)) {
                                 pepitePlaCount++;
-                                totalGainPepitePla += extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
+                                totalGainPepitePla += gPla;
                             }
                         }
 
