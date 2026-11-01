@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - V61 (Anti-Blocage & Secours)</title>
+    <title>PMU Direct - V62 (Moteur V50 + Australie + 20s)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,7 +17,7 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-lg font-black uppercase tracking-wider text-emerald-500"><i class="fa-solid fa-horse-head mr-2"></i>PMU Direct</h1>
-                <button onclick="scrollToTop()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] px-2 py-1 rounded border border-zinc-700 transition" title="Remonter tout en haut">
+                <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] px-2 py-1 rounded border border-zinc-700 transition">
                     <i class="fa-solid fa-arrow-up"></i> Haut
                 </button>
             </div>
@@ -27,7 +27,7 @@
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
         <div class="flex justify-between items-center">
-            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion via relais de secours...</div>
+            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion (Moteur V50)...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
                     <i class="fa-solid fa-calendar-days mr-1"></i> Bilan Mensuel
@@ -38,7 +38,6 @@
             </div>
         </div>
 
-        <!-- BLOC HISTORIQUE -->
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Gains Cumulés (Net)</h2>
@@ -73,7 +72,6 @@
             </div>
         </div>
 
-        <!-- BLOC STATISTIQUES DU JOUR -->
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2 space-y-3">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour</h2>
@@ -153,13 +151,14 @@
             <div class="flex flex-wrap justify-between items-center gap-2">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Les 2 Incontournables</h2>
                 <div class="flex items-center space-x-1.5 flex-wrap">
+                    <span id="refreshIndicator" class="text-[10px] text-emerald-500 font-mono mr-2 hidden"><i class="fa-solid fa-rotate fa-spin"></i> 20s</span>
                     <a href="https://www.equidia.fr/direct" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1 rounded font-bold shadow flex items-center">
                         <i class="fa-solid fa-video mr-1.5"></i> Direct
                     </a>
                     <button onclick="goToPrevRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold shadow">
                         <i class="fa-solid fa-backward-step"></i>
                     </button>
-                    <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2 py-1 rounded border border-emerald-500/30 font-semibold">
+                    <button onclick="fetchRaceData(false)" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2 py-1 rounded border border-emerald-500/30 font-semibold">
                         <i class="fa-solid fa-rotate"></i>
                     </button>
                     <button onclick="goToNextRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold shadow">
@@ -206,27 +205,11 @@
         </div>
     </main>
 
-    <!-- BOUTON FLOTTANT DE RETOUR EN HAUT -->
-    <button onclick="scrollToTop()" class="fixed bottom-4 right-4 bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-full shadow-2xl border border-emerald-400/40 transition-all z-50 flex items-center justify-center" title="Remonter tout en haut">
+    <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="fixed bottom-4 right-4 bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-full shadow-2xl border border-emerald-400/40 transition-all z-50 flex items-center justify-center">
         <i class="fa-solid fa-arrow-up text-sm"></i>
     </button>
 
     <script>
-        function scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        (function purgeOldData() {
-            let keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                let key = localStorage.key(i);
-                if (key && key.startsWith('pmu_stats_') && !key.includes('_v61_')) {
-                    keysToRemove.push(key);
-                }
-            }
-            keysToRemove.forEach(k => localStorage.removeItem(k));
-        })();
-
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
         let autoTransitionStarted = false;
@@ -239,30 +222,16 @@
             return `${String(date.getHours()).padStart(2, '0')}h${String(date.getMinutes()).padStart(2, '0')}`;
         }
 
-        // DOUBLE RELAIS AUTOMATIQUE
+        // =========================================================
+        // MOTEUR EXACTEMENT V50 (Uniquement AllOrigins RAW)
+        // =========================================================
         async function fetchPmuDirect(url) {
             const timestamp = new Date().getTime();
             const pmuUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
-            const proxy1 = `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`;
-            const proxy2 = `https://corsproxy.io/?${encodeURIComponent(pmuUrl)}`;
-
-            try {
-                let res1 = await fetch(proxy1);
-                if (res1.ok) {
-                    let text = await res1.text();
-                    if(text.includes('numOfficiel') || text.includes('participants')) return JSON.parse(text);
-                }
-            } catch(e) {}
-
-            try {
-                let res2 = await fetch(proxy2);
-                if (res2.ok) {
-                    let text = await res2.text();
-                    if(text.includes('numOfficiel') || text.includes('participants')) return JSON.parse(text);
-                }
-            } catch(e) {}
-
-            throw new Error("Connexion impossible.");
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error("Connexion échouée");
+            return await response.json();
         }
 
         async function loadLivePmu() {
@@ -309,15 +278,21 @@
                     statusText.innerHTML = `<span class="text-emerald-400">Prêt : ${totalC} courses chargées <i class="fa-solid fa-check ml-1"></i></span>`;
                     autoSelectCurrentRace();
                     
+                    // NOUVEAUTÉ : RAFRAÎCHISSEMENT TOUTES LES 20 SECONDES
                     if(globalRefreshTimer) clearInterval(globalRefreshTimer);
                     globalRefreshTimer = setInterval(() => {
                         let mIdx = document.getElementById('meetingSelect').value;
                         let cIdx = document.getElementById('raceSelect').value;
-                        if (mIdx !== "" && cIdx !== "") fetchRaceData(true);
-                    }, 30000);
+                        if (mIdx !== "" && cIdx !== "") {
+                            document.getElementById('refreshIndicator').classList.remove('hidden');
+                            fetchRaceData(true).then(() => {
+                                setTimeout(() => document.getElementById('refreshIndicator').classList.add('hidden'), 1000);
+                            });
+                        }
+                    }, 20000);
                 }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded border border-red-500/50"><i class="fa-solid fa-ban mr-1"></i> Serveur bloqué. Patientez 1 min.</span>`;
+                statusText.innerHTML = `<span class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded border border-red-500/50"><i class="fa-solid fa-ban mr-1"></i> Erreur de connexion (Patientez 2 min).</span>`;
             }
         }
 
@@ -356,7 +331,6 @@
         function onRaceChange() { clearInterval(transitionTimerInterval); autoTransitionStarted = false; fetchRaceData(false); }
         function goToNextRace() { navigateAdjacentRace(1); }
         function goToPrevRace() { navigateAdjacentRace(-1); }
-        function refreshCurrentRace() { fetchRaceData(false); }
 
         function navigateAdjacentRace(dir) {
             let list = [];
@@ -375,6 +349,9 @@
             }
         }
 
+        // =========================================================
+        // NOUVEAUTÉ : DÉCODEUR RAPPORTS & COTES AUSTRALIE
+        // =========================================================
         function normalizeCombo(c) {
             if (!c) return "";
             let matches = String(c).match(/\d+/g);
@@ -516,15 +493,13 @@
                     return `<tr><td class="p-2.5 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-2.5 text-zinc-300 font-mono text-[10px]">${p.musique}</td><td class="p-2.5 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-2.5">${p.baseScore}%</td></tr>`;
                 }).join('');
                 
-                document.getElementById('raceInfoDetails').textContent = `${r.heureDepart ? '🕒 '+formatTime(r.heureDepart) : ''}${r.distance ? ' — '+r.distance+'m' : ''} — Partants & Cotes`;
-                
                 let bdg = document.getElementById('disciplineBadge');
                 if (r.discipline || data.discipline) {
                     bdg.textContent = (r.discipline || data.discipline).replace(/_/g, ' ');
                     bdg.classList.remove('hidden');
                 } else bdg.classList.add('hidden');
 
-                if (arrivees.length > 0 && !autoTransitionStarted) {
+                if (!isBackground && arrivees.length > 0 && !autoTransitionStarted) {
                     autoTransitionStarted = true;
                     let sec = 45;
                     transitionTimerInterval = setInterval(() => {
@@ -546,7 +521,7 @@
             let sBlock = document.getElementById('statsBlock');
             let prog = document.getElementById('statsProgress');
             sBlock.classList.remove('hidden');
-            prog.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul en cours (vitesse anti-ban)...";
+            prog.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul en cours...";
 
             let ddmmyyyy = document.getElementById('raceDate').value.split('-').reverse().join('');
             let fRaces = [];
@@ -613,10 +588,11 @@
                     }
                 } catch (e) {}
 
-                await new Promise(r => setTimeout(r, 1200));
+                // Délai forcé pour ne pas être banni par le serveur AllOrigins
+                await new Promise(r => setTimeout(r, 1500));
             }
 
-            localStorage.setItem(`pmu_stats_v61_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v62_${ddmmyyyy}`, JSON.stringify({
                 netPlace: (tPB+tPP-mP), netGagnant: (tGB+tGP-mG), netCoupleGag: (tCG-mCG), netCouplePlc: (tCP-mCP)
             }));
             
@@ -624,7 +600,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v61_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v62_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -675,4 +651,4 @@
         window.onload = loadLivePmu;
     </script>
 </body>
-</html>
+</html>>
