@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - V55 (Multi-Relais 100% Autonome)</title>
+    <title>PMU Direct - V56 (Le Passe-Partout)</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -181,6 +181,17 @@
     </main>
 
     <script>
+        (function purgeOldData() {
+            let keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i);
+                if (key && key.startsWith('pmu_stats_') && !key.includes('_v56_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        })();
+
         document.getElementById('raceDate').valueAsDate = new Date();
         let liveMeetingsData = [];
         let autoTransitionStarted = false;
@@ -202,35 +213,48 @@
             return `${String(date.getHours()).padStart(2, '0')}h${String(date.getMinutes()).padStart(2, '0')}`;
         }
 
-        // LE MOTEUR BRISE-GLACE SANS EXTENSION
+        // =========================================================================
+        // MOTEUR V56 : LE WRAPPER JSON (CONTOURNEMENT DES BLOCAGES CORS/DATADOME)
+        // =========================================================================
         async function fetchPmu(endpointUrl) {
-            const timestamp = new Date().getTime();
-            const baseUrl = `https://turfinfo.api.pmu.fr/rest/client/1/programme/${endpointUrl}?_t=${timestamp}`;
+            const baseUrl = `https://turfinfo.api.pmu.fr/rest/client/1/programme/${endpointUrl}`;
             
-            // Liste de proxys publics qui acceptent les requêtes web
-            const proxies = [
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(baseUrl)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(baseUrl)}`,
-                `https://thingproxy.freeboard.io/fetch/${baseUrl}`
-            ];
-
-            for (let i = 0; i < proxies.length; i++) {
-                try {
-                    const response = await fetch(proxies[i]);
-                    if (response.ok) {
-                        return await response.json();
+            // Méthode 1 : Wrapper JSON via AllOrigins. Permet d'éviter les erreurs de Headers CORS du navigateur.
+            try {
+                let res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(baseUrl)}`);
+                if (res.ok) {
+                    let data = await res.json();
+                    if (data.contents && !data.contents.includes("<html") && !data.contents.includes("DataDome")) {
+                        return JSON.parse(data.contents);
                     }
-                } catch (e) {
-                    // Passe au proxy suivant en cas d'erreur
                 }
-            }
-            throw new Error("Tous les canaux sont actuellement protégés par le PMU.");
+            } catch(e) { console.warn("Méthode Wrapper échouée, passage à la méthode 2"); }
+
+            // Méthode 2 : Proxy Codetabs pur
+            try {
+                let res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(baseUrl)}`);
+                if (res.ok) {
+                    let text = await res.text();
+                    if (!text.includes("<html")) return JSON.parse(text);
+                }
+            } catch(e) { console.warn("Méthode Codetabs échouée, passage à la méthode 3"); }
+
+            // Méthode 3 : Corsproxy.io
+            try {
+                let res = await fetch(`https://corsproxy.io/?${encodeURIComponent(baseUrl)}`);
+                if (res.ok) {
+                    let text = await res.text();
+                    if (!text.includes("<html")) return JSON.parse(text);
+                }
+            } catch(e) { console.warn("Méthode Corsproxy échouée."); }
+
+            throw new Error("Sécurité maximum du PMU active. Laissez la page reposer 5 minutes et réessayez.");
         }
 
         async function loadLivePmu() {
             const ddmmyyyy = document.getElementById('raceDate').value.split('-').reverse().join('');
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Tentative de connexion...';
+            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion sécurisée via le Passe-Partout...';
 
             try {
                 const data = await fetchPmu(`${ddmmyyyy}/toutes-reunions`);
@@ -272,9 +296,9 @@
                     statusText.innerHTML = `<span class="text-emerald-400">Prêt : ${totalC} courses chargées <i class="fa-solid fa-check ml-1"></i></span>`;
                     autoSelectCurrentRace();
                     startGlobalRefreshLoop();
-                } else { throw new Error("Aucune course"); }
+                } else { throw new Error("Aucune course publiée pour l'instant."); }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400 font-bold"><i class="fa-solid fa-shield-halved mr-1"></i> PMU inaccessible. Réessayez dans un instant.</span>`;
+                statusText.innerHTML = `<span class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded border border-red-500/50"><i class="fa-solid fa-lock mr-1"></i> ${e.message}</span>`;
             }
         }
 
@@ -503,7 +527,7 @@
                 } catch(e) {}
             }
             
-            localStorage.setItem(`pmu_stats_v55_${ddmmyyyy}`, JSON.stringify({netPlace: (tPB+tPP-mP), netGagnant: (tGB+tGP-mG), netCoupleGag: (tCG-mCG), netCouplePlc: (tCP-mCP)}));
+            localStorage.setItem(`pmu_stats_v56_${ddmmyyyy}`, JSON.stringify({netPlace: (tPB+tPP-mP), netGagnant: (tGB+tGP-mG), netCoupleGag: (tCG-mCG), netCouplePlc: (tCP-mCP)}));
             prog.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan définitif terminé.</span>`;
         }
 
@@ -517,7 +541,7 @@
             let wp=0, wg=0, wcg=0, wcp=0;
             for(let i=0; i<7; i++) {
                 let d = new Date(mon); d.setDate(mon.getDate() + i);
-                let k = `pmu_stats_v55_${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${y}`;
+                let k = `pmu_stats_v56_${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${y}`;
                 let s = JSON.parse(localStorage.getItem(k) || '{"netPlace":0,"netGagnant":0,"netCoupleGag":0,"netCouplePlc":0}');
                 wp+=s.netPlace; wg+=s.netGagnant; wcg+=s.netCoupleGag; wcp+=s.netCouplePlc;
             }
@@ -530,7 +554,7 @@
             ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Aoû","Sep","Oct","Nov","Déc"].forEach((mName, m) => {
                 let tp=0, tg=0, tcg=0, tcp=0, days = new Date(y, m+1, 0).getDate();
                 for(let d=1; d<=days; d++) {
-                    let k = `pmu_stats_v55_${String(d).padStart(2,'0')}${String(m+1).padStart(2,'0')}${y}`;
+                    let k = `pmu_stats_v56_${String(d).padStart(2,'0')}${String(m+1).padStart(2,'0')}${y}`;
                     let s = JSON.parse(localStorage.getItem(k) || '{"netPlace":0,"netGagnant":0,"netCoupleGag":0,"netCouplePlc":0}');
                     tp+=s.netPlace; tg+=s.netGagnant; tcg+=s.netCoupleGag; tcp+=s.netCouplePlc;
                 }
