@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact & 52 Courses (Version 44 Finale)</title>
+    <title>PMU Direct - Algorithme Exact (Version 45 Bilan Corrigé)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -75,7 +75,7 @@
         <!-- BLOC STATISTIQUES DU JOUR -->
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2 space-y-3">
             <div class="flex justify-between items-center">
-                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour (Analysé en continu)</h2>
+                <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour (Mises dynamiques)</h2>
                 <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
@@ -83,7 +83,7 @@
 
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-indigo-500/40">
                 <div class="text-[10px] uppercase font-bold text-indigo-300 mb-2 flex justify-between items-center">
-                    <span><i class="fa-solid fa-star mr-1"></i> Option 100% Gagnant (2€/crse)</span>
+                    <span><i class="fa-solid fa-star mr-1"></i> Option Gagnant (1€ / Cheval)</span>
                     <span id="statGagnantGlobalScore" class="text-white font-mono">--</span>
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-xs">
@@ -94,7 +94,7 @@
 
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-emerald-500/40">
                 <div class="text-[10px] uppercase font-bold text-emerald-300 mb-2 flex justify-between items-center">
-                    <span><i class="fa-solid fa-shield-halved mr-1"></i> Option 100% Placé (2€/crse)</span>
+                    <span><i class="fa-solid fa-shield-halved mr-1"></i> Option Placé (1€ / Cheval)</span>
                     <span id="statPlaceGlobalScore" class="text-white font-mono">--</span>
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-xs">
@@ -105,7 +105,7 @@
 
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-purple-500/40">
                 <div class="text-[10px] uppercase font-bold text-purple-300 mb-2 flex justify-between items-center">
-                    <span><i class="fa-solid fa-link mr-1"></i> Option Couplé Gagnant (1€/crse)</span>
+                    <span><i class="fa-solid fa-link mr-1"></i> Option Couplé Gagnant (1€)</span>
                     <span id="statCoupleGagnantScore" class="text-white font-mono">--</span>
                 </div>
                 <div class="grid grid-cols-1 gap-2 text-xs">
@@ -115,7 +115,7 @@
 
             <div class="bg-zinc-800/90 p-3 rounded-lg border border-blue-500/40">
                 <div class="text-[10px] uppercase font-bold text-blue-300 mb-2 flex justify-between items-center">
-                    <span><i class="fa-solid fa-link-slash mr-1"></i> Option Couplé Placé (1€/crse)</span>
+                    <span><i class="fa-solid fa-link-slash mr-1"></i> Option Couplé Placé (1€)</span>
                     <span id="statCouplePlaceScore" class="text-white font-mono">--</span>
                 </div>
                 <div class="grid grid-cols-1 gap-2 text-xs">
@@ -238,7 +238,6 @@
             return String(timeValue);
         }
 
-        // --- 1. COLLECTE EXHAUSTIVE DES REUNIONS (Anti-Crash & 52 courses) ---
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
@@ -260,7 +259,6 @@
                 if (data.reunions) rawReunions.push(...data.reunions);
                 if (Array.isArray(data)) rawReunions.push(...data);
                 
-                // Dédoublonnage strict par numOfficiel
                 let uniqueReunions = [];
                 let seenIds = new Set();
                 rawReunions.forEach(r => {
@@ -271,7 +269,6 @@
                     }
                 });
 
-                // Tri chronologique R1, R2, R3...
                 uniqueReunions.sort((a, b) => parseInt(a.numOfficiel) - parseInt(b.numOfficiel));
                 
                 if (uniqueReunions.length > 0) {
@@ -310,7 +307,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès aux courses impossible. Vérifiez l'API.</span>`;
+                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès aux courses impossible.</span>`;
             }
         }
 
@@ -412,12 +409,9 @@
 
         function cleanVal(v) {
             v = parseFloat(String(v).replace(',', '.'));
-            if (isNaN(v) || v <= 0) return 0;
-            if (v > 100 && v % 10 === 0) return v / 100;
-            return v;
+            return (isNaN(v) || v <= 0) ? 0 : v;
         }
 
-        // --- 2. EXTRACTION ROBUSTE DES COTES ---
         function getHorseCoteFromFullData(raceData, horseNum, participantObj) {
             if (!raceData) return null;
             let officialGagnant = extractRapport(raceData, horseNum, 'G');
@@ -440,7 +434,6 @@
             return null;
         }
 
-        // --- 3. ALGORITHME EXACT (Critères Respectés) ---
         function evaluateMusique(musique) {
             if (!musique || musique.length === 0) return 15;
             let score = 0;
@@ -465,7 +458,6 @@
         }
 
         function computeAlgorithm(partants, fullRaceData) {
-            // Filtre strict : on retire les non-partants qui faussaient l'algo
             let partantsActifs = partants.filter(p => p.statut !== 'NON_PARTANT');
 
             let processed = partantsActifs.map((p, idx) => {
@@ -479,25 +471,18 @@
                 
                 let musiqueScore = evaluateMusique(musique);
                 
-                // BASE SOLIDE : 60% Cote + 40% Musique (Favorise < 6.0)
                 let coteScoreBase = cote <= 3 ? 95 : (cote <= 6 ? 80 : (cote <= 12 ? 60 : (cote <= 20 ? 30 : 10)));
                 let baseScore = Math.round((coteScoreBase * 0.6) + (musiqueScore * 0.4));
                 
-                // PEPITE : Strictement entre 5 et 25. 70% Musique + 30% Cote
                 let coteScorePepite = 0;
                 if (cote >= 5 && cote <= 25) {
                     coteScorePepite = cote <= 10 ? 80 : (cote <= 15 ? 90 : 70); 
                 }
-                let nuggetRaw = (cote >= 5 && cote <= 25) ? Math.round((coteScorePepite * 0.3) + (musiqueScore * 0.7)) : 0; // 0 si hors cotes
+                let nuggetRaw = (cote >= 5 && cote <= 25) ? Math.round((coteScorePepite * 0.3) + (musiqueScore * 0.7)) : 0; 
 
                 return {
-                    num: num,
-                    nom: p.nom || "Cheval",
-                    musique: musique || "Inédit",
-                    coteDisplay: coteDisplay,
-                    cote: cote,
-                    baseScore: Math.max(5, Math.min(99, baseScore)),
-                    nuggetScore: Math.max(0, Math.min(99, nuggetRaw)),
+                    num: num, nom: p.nom || "Cheval", musique: musique || "Inédit", coteDisplay: coteDisplay, cote: cote,
+                    baseScore: Math.max(5, Math.min(99, baseScore)), nuggetScore: Math.max(0, Math.min(99, nuggetRaw)),
                     ordreArrivee: p.ordreArrivee
                 };
             });
@@ -505,14 +490,13 @@
             let sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
             let baseHorse = sortedByBase[0];
             
-            // La pépite est le 1er du classement Pépite, excluant la Base
             let remaining = processed.filter(p => p.num !== (baseHorse ? baseHorse.num : -1));
             let nuggetHorse = remaining.sort((a, b) => b.nuggetScore - a.nuggetScore)[0];
 
             return { processed, baseHorse, nuggetHorse, partantsCount: processed.length };
         }
 
-        // --- EXTRACTION DES RAPPORTS DEFINITIFS ---
+        // CORRECTIF RAPPORTS PMU : Privilégie la donnée ...PourUnEuro (déjà en €) ou divise les dividendes purs
         function extractRapport(data, horseNum, typeRapport) {
             let result = 0;
             function search(o, parentType) {
@@ -524,10 +508,12 @@
                     let combo = String(o.combinaison || o.cheval || o.numPmu || "");
                     
                     if (combo === String(horseNum) && !combo.includes('-')) {
-                        let rawVal = o.dividendePourUnEuro || o.dividende || o.rapportPourUnEuro || o.rapport;
+                        let rawVal = o.dividendePourUnEuro !== undefined ? o.dividendePourUnEuro : 
+                                     (o.rapportPourUnEuro !== undefined ? o.rapportPourUnEuro : 
+                                     (o.dividende !== undefined ? (o.dividende > 100 ? o.dividende/100 : o.dividende) : o.rapport));
+                        
                         if (rawVal !== undefined) {
                             let v = cleanVal(rawVal);
-                            if (currentType.includes('SIMPLE') && v > 90) v = v / 10;
                             if (v > 0) {
                                 if (typeRapport === 'G' && (currentType.includes('GAGN') || currentType === 'E_SIMPLE_GAGNANT')) result = v;
                                 if (typeRapport === 'P' && (currentType.includes('PLAC') || currentType === 'E_SIMPLE_PLACE')) result = v;
@@ -554,7 +540,10 @@
                     if (combo.includes('-')) {
                         let parts = combo.split('-').map(n => parseInt(n));
                         if (parts.includes(parseInt(num1)) && parts.includes(parseInt(num2))) {
-                            let rawVal = o.dividendePourUnEuro || o.dividende || o.rapportPourUnEuro || o.rapport;
+                            let rawVal = o.dividendePourUnEuro !== undefined ? o.dividendePourUnEuro : 
+                                         (o.rapportPourUnEuro !== undefined ? o.rapportPourUnEuro : 
+                                         (o.dividende !== undefined ? (o.dividende > 100 ? o.dividende/100 : o.dividende) : o.rapport));
+                            
                             if (rawVal !== undefined) {
                                 let v = cleanVal(rawVal);
                                 if (v > 0) {
@@ -580,10 +569,13 @@
                 } else {
                     let currentType = (o.typePari || o.libellePari || o.pari || parentType || "").toUpperCase();
                     let combo = String(o.combinaison || "");
-                    let rawVal = o.dividendePourUnEuro || o.rapportPourUnEuro;
+                    
+                    let rawVal = o.dividendePourUnEuro !== undefined ? o.dividendePourUnEuro : 
+                                 (o.rapportPourUnEuro !== undefined ? o.rapportPourUnEuro : 
+                                 (o.dividende !== undefined ? (o.dividende > 100 ? o.dividende/100 : o.dividende) : o.rapport));
+                                 
                     if (combo !== "" && rawVal !== undefined) {
                         let v = cleanVal(rawVal);
-                        if (currentType.includes('SIMPLE') && v > 90) v = v / 10;
                         if (v > 0 && (currentType.includes('SIMPLE') || currentType.includes('COUPLE'))) {
                             results.push({ title: currentType.replace(/E_/g,''), combo: combo, val: v });
                         }
@@ -635,7 +627,7 @@
 
                     if (!autoTransitionStarted) {
                         autoTransitionStarted = true;
-                        let secondsLeft = 45; // Transition plus rapide
+                        let secondsLeft = 45; 
                         let timerEl = document.getElementById('transitionTimer');
                         timerEl.textContent = `Prochaine course dans ${secondsLeft}s`;
                         if (transitionTimerInterval) clearInterval(transitionTimerInterval);
@@ -722,7 +714,7 @@
                     meteoBadge.classList.remove('hidden');
                 } else meteoBadge.classList.add('hidden');
                 
-            } catch (e) { console.log("Données course non disponibles yet."); }
+            } catch (e) {}
         }
 
         function formatMoneyHTML(val, type) {
@@ -732,8 +724,9 @@
             return `<span class="${colorClass}">${sign}${val.toFixed(2)} €</span>`;
         }
 
+        // CHANGEMENT DE CLÉ CACHE -> v45 FORCE LA RÉINITIALISATION DU BILAN
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v44_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v45_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -786,14 +779,14 @@
             }
         }
 
-        // --- CALCUL COMPLET DU BILAN SUR 52 COURSES ---
+        // --- NOUVEAU SYSTÈME DE DÉCOMPTE DYNAMIQUE DES MISES ---
         async function calculateDailyStats() {
             document.getElementById('historyBlock').classList.add('hidden');
             let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
             
             statsBlock.classList.remove('hidden');
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse complète de TOUTES les courses...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse complète et décompte des mises réelles...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -817,8 +810,12 @@
             let totalGainGagnantBase = 0, totalGainGagnantPepite = 0;
             let totalGainPlaceBase = 0, totalGainPlacePepite = 0;
             let totalGainCoupleGagnant = 0, totalGainCouplePlace = 0;
+            
             let gagBaseWins = 0, gagPepiteWins = 0, plcBaseWins = 0, plcPepiteWins = 0;
             let coupleGagnantWins = 0, couplePlaceWins = 0;
+            
+            // Suivi exact des sommes misées
+            let misesGagnant = 0, misesPlace = 0, misesCoupleGag = 0, misesCouplePlc = 0;
             let coursesValidees = 0;
 
             for (let i = 0; i < finishedRaces.length; i++) {
@@ -834,15 +831,27 @@
                     if (partants.filter(p => p.ordreArrivee > 0).length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants, data);
+                        
+                        let baseJouee = false;
+                        let pepiteJouee = false;
 
                         if (algoResult.baseHorse) {
+                            baseJouee = true;
+                            misesGagnant++; 
+                            misesPlace++;
+                            
                             let g = extractRapport(data, algoResult.baseHorse.num, 'G');
                             if (g > 0) { gagBaseWins++; totalGainGagnantBase += g; }
                             
                             let p = extractRapport(data, algoResult.baseHorse.num, 'P');
                             if (p > 0) { plcBaseWins++; totalGainPlaceBase += p; }
                         }
+                        
                         if (algoResult.nuggetHorse && algoResult.nuggetHorse.nuggetScore > 0) {
+                            pepiteJouee = true;
+                            misesGagnant++; 
+                            misesPlace++;
+                            
                             let g = extractRapport(data, algoResult.nuggetHorse.num, 'G');
                             if (g > 0) { gagPepiteWins++; totalGainGagnantPepite += g; }
                             
@@ -850,7 +859,10 @@
                             if (p > 0) { plcPepiteWins++; totalGainPlacePepite += p; }
                         }
 
-                        if (algoResult.baseHorse && algoResult.nuggetHorse && algoResult.nuggetHorse.nuggetScore > 0) {
+                        if (baseJouee && pepiteJouee) {
+                            misesCoupleGag++;
+                            misesCouplePlc++;
+                            
                             let cg = extractCoupléRapport(data, algoResult.baseHorse.num, algoResult.nuggetHorse.num, 'G');
                             if (cg > 0) { coupleGagnantWins++; totalGainCoupleGagnant += cg; }
                             
@@ -861,34 +873,33 @@
                 } catch (e) {}
             }
 
-            // Mises : 2€ Gag (1 B, 1 P), 2€ Plc (1 B, 1 P), 1€ CG, 1€ CP = 6€ au total par course validée.
-            let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - (coursesValidees * 2);
-            let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - (coursesValidees * 2);
-            let netCoupledGag = totalGainCoupleGagnant - coursesValidees;
-            let netCoupledPlc = totalGainCouplePlace - coursesValidees;
+            let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - misesGagnant;
+            let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - misesPlace;
+            let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
+            let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
             document.getElementById('statGagnantGlobalScore').innerHTML = `Bénéfice Net : <span class="${netGagnantTotal >= 0 ? 'text-indigo-400' : 'text-red-400'} font-black">${netGagnantTotal > 0 ? '+' : ''}${netGagnantTotal.toFixed(2)} €</span>`;
             document.getElementById('gainGagnantBase').innerHTML = `Base [${gagBaseWins}/${coursesValidees}] : ${totalGainGagnantBase.toFixed(2)}€`;
-            document.getElementById('gainGagnantPepite').innerHTML = `Pépite [${gagPepiteWins}/${coursesValidees}] : ${totalGainGagnantPepite.toFixed(2)}€`;
+            document.getElementById('gainGagnantPepite').innerHTML = `Pépite [${gagPepiteWins}/${misesGagnant > coursesValidees ? coursesValidees : 0}] : ${totalGainGagnantPepite.toFixed(2)}€`;
 
             document.getElementById('statPlaceGlobalScore').innerHTML = `Bénéfice Net : <span class="${netPlaceTotal >= 0 ? 'text-emerald-400' : 'text-red-400'} font-black">${netPlaceTotal > 0 ? '+' : ''}${netPlaceTotal.toFixed(2)} €</span>`;
             document.getElementById('gainPlaceBase').innerHTML = `Base [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€`;
-            document.getElementById('gainPlacePepite').innerHTML = `Pépite [${plcPepiteWins}/${coursesValidees}] : ${totalGainPlacePepite.toFixed(2)}€`;
+            document.getElementById('gainPlacePepite').innerHTML = `Pépite [${plcPepiteWins}/${misesPlace > coursesValidees ? coursesValidees : 0}] : ${totalGainPlacePepite.toFixed(2)}€`;
 
             document.getElementById('statCoupleGagnantScore').innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
-            document.getElementById('gainCoupleGagnant').innerHTML = `Combiné [${coupleGagnantWins}/${coursesValidees}] : ${totalGainCoupleGagnant.toFixed(2)}€`;
+            document.getElementById('gainCoupleGagnant').innerHTML = `Combiné [${coupleGagnantWins}/${misesCoupleGag}] : ${totalGainCoupleGagnant.toFixed(2)}€`;
 
             document.getElementById('statCouplePlaceScore').innerHTML = `Bénéfice Net : <span class="${netCoupledPlc >= 0 ? 'text-blue-400' : 'text-red-400'} font-black">${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)} €</span>`;
-            document.getElementById('gainCouplePlace').innerHTML = `Combiné [${couplePlaceWins}/${coursesValidees}] : ${totalGainCouplePlace.toFixed(2)}€`;
+            document.getElementById('gainCouplePlace').innerHTML = `Combiné [${couplePlaceWins}/${misesCouplePlc}] : ${totalGainCouplePlace.toFixed(2)}€`;
 
-            let miseAbsolue = coursesValidees * 6; 
-            document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses réelles (Mise totale engagée : ${miseAbsolue} €)`;
+            let miseAbsolue = misesGagnant + misesPlace + misesCoupleGag + misesCouplePlc; 
+            document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses réelles (Mise totale exacte engagée : ${miseAbsolue} €)`;
 
-            localStorage.setItem(`pmu_stats_v44_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v45_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan 100% exact calculé sur ${coursesValidees} courses.</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> Bilan exact basé sur les vraies mises de ${coursesValidees} courses.</span>`;
         }
 
         window.onload = loadLivePmu;
