@@ -768,4 +768,102 @@
                 return;
             }
 
-            let totalGainGagn
+            let totalGainGagnantBase = 0, totalGainGagnantPepite = 0;
+            let totalGainPlaceBase = 0, totalGainPlacePepite = 0;
+            let totalGainCoupleGagnant = 0, totalGainCouplePlace = 0;
+            
+            let gagBaseWins = 0, gagPepiteWins = 0, plcBaseWins = 0, plcPepiteWins = 0;
+            let coupleGagnantWins = 0, couplePlaceWins = 0;
+            
+            let misesGagnant = 0, misesPlace = 0, misesCoupleGag = 0, misesCouplePlc = 0;
+            let coursesValidees = 0;
+
+            for (let i = 0; i < finishedRaces.length; i++) {
+                let r = finishedRaces[i];
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Traitement de la course : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
+
+                try {
+                    const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${r.rNum}/C${r.cNum}`);
+                    let partants = data.participants || [];
+                    
+                    if (partants.filter(p => p.ordreArrivee > 0).length > 0) {
+                        coursesValidees++;
+                        let algoResult = computeAlgorithm(partants);
+                        
+                        let baseJouee = false, pepiteJouee = false;
+
+                        if (algoResult.baseHorse) {
+                            baseJouee = true;
+                            misesGagnant++; misesPlace++;
+                            
+                            let g = extractRealPayout(data, 'G', [algoResult.baseHorse.num]);
+                            if (g > 0) { gagBaseWins++; totalGainGagnantBase += g; }
+                            
+                            let p = extractRealPayout(data, 'P', [algoResult.baseHorse.num]);
+                            if (p > 0) { plcBaseWins++; totalGainPlaceBase += p; }
+                        }
+                        
+                        if (algoResult.nuggetHorse && algoResult.nuggetHorse.nuggetScore > 0) {
+                            pepiteJouee = true;
+                            misesGagnant++; misesPlace++;
+                            
+                            let g = extractRealPayout(data, 'G', [algoResult.nuggetHorse.num]);
+                            if (g > 0) { gagPepiteWins++; totalGainGagnantPepite += g; }
+                            
+                            let p = extractRealPayout(data, 'P', [algoResult.nuggetHorse.num]);
+                            if (p > 0) { plcPepiteWins++; totalGainPlacePepite += p; }
+                        }
+
+                        if (baseJouee && pepiteJouee) {
+                            misesCoupleGag++; misesCouplePlc++;
+                            
+                            let cg = extractRealPayout(data, 'CG', [algoResult.baseHorse.num, algoResult.nuggetHorse.num]);
+                            if (cg > 0) { coupleGagnantWins++; totalGainCoupleGagnant += cg; }
+                            
+                            let cp = extractRealPayout(data, 'CP', [algoResult.baseHorse.num, algoResult.nuggetHorse.num]);
+                            if (cp > 0) { couplePlaceWins++; totalGainCouplePlace += cp; }
+                        }
+
+                        let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - misesGagnant;
+                        let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - misesPlace;
+                        let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
+                        let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
+
+                        document.getElementById('statGagnantGlobalScore').innerHTML = `Bénéfice Net : <span class="${netGagnantTotal >= 0 ? 'text-indigo-400' : 'text-red-400'} font-black">${netGagnantTotal > 0 ? '+' : ''}${netGagnantTotal.toFixed(2)} €</span>`;
+                        document.getElementById('gainGagnantBase').innerHTML = `Base [${gagBaseWins}/${coursesValidees}] : ${totalGainGagnantBase.toFixed(2)}€`;
+                        document.getElementById('gainGagnantPepite').innerHTML = `Pépite [${gagPepiteWins}] : ${totalGainGagnantPepite.toFixed(2)}€`;
+
+                        document.getElementById('statPlaceGlobalScore').innerHTML = `Bénéfice Net : <span class="${netPlaceTotal >= 0 ? 'text-emerald-400' : 'text-red-400'} font-black">${netPlaceTotal > 0 ? '+' : ''}${netPlaceTotal.toFixed(2)} €</span>`;
+                        document.getElementById('gainPlaceBase').innerHTML = `Base [${plcBaseWins}/${coursesValidees}] : ${totalGainPlaceBase.toFixed(2)}€`;
+                        document.getElementById('gainPlacePepite').innerHTML = `Pépite [${plcPepiteWins}] : ${totalGainPlacePepite.toFixed(2)}€`;
+
+                        document.getElementById('statCoupleGagnantScore').innerHTML = `Bénéfice Net : <span class="${netCoupledGag >= 0 ? 'text-purple-400' : 'text-red-400'} font-black">${netCoupledGag > 0 ? '+' : ''}${netCoupledGag.toFixed(2)} €</span>`;
+                        document.getElementById('gainCoupleGagnant').innerHTML = `Combiné [${coupleGagnantWins}/${misesCoupleGag}] : ${totalGainCoupleGagnant.toFixed(2)}€`;
+
+                        document.getElementById('statCouplePlaceScore').innerHTML = `Bénéfice Net : <span class="${netCoupledPlc >= 0 ? 'text-blue-400' : 'text-red-400'} font-black">${netCoupledPlc > 0 ? '+' : ''}${netCoupledPlc.toFixed(2)} €</span>`;
+                        document.getElementById('gainCouplePlace').innerHTML = `Combiné [${couplePlaceWins}/${misesCouplePlc}] : ${totalGainCouplePlace.toFixed(2)}€`;
+
+                        let miseAbsolue = misesGagnant + misesPlace + misesCoupleGag + misesCouplePlc; 
+                        document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses réelles (Mise totale exacte engagée : ${miseAbsolue} €)`;
+
+                        await new Promise(r => setTimeout(r, 40));
+                    }
+                } catch (e) {}
+            }
+
+            let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - misesPlace;
+            let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - misesGagnant;
+            let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
+            let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
+
+            localStorage.setItem(`pmu_stats_v50_${ddmmyyyy}`, JSON.stringify({
+                netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
+            }));
+            
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan exact et définitif généré.</span>`;
+        }
+
+        window.onload = loadLivePmu;
+    </script>
+</body>
+</html>
