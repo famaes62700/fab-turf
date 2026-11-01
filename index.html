@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (Version 52 - 100% Autonome)</title>
+    <title>PMU Direct - Algorithme Exact (Version 53 - Multi-Proxys)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -26,7 +26,7 @@
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
         <div class="flex justify-between items-center">
-            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion directe au PMU...</div>
+            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion sécurisée en cours...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
                     <i class="fa-solid fa-calendar-days mr-1"></i> Bilan Mensuel
@@ -213,7 +213,7 @@
             let keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 let key = localStorage.key(i);
-                if (key && key.startsWith('pmu_stats_') && !key.includes('_v50_') && !key.includes('_v51_') && !key.includes('_v52_')) {
+                if (key && key.startsWith('pmu_stats_') && !key.includes('_v50_') && !key.includes('_v51_') && !key.includes('_v52_') && !key.includes('_v53_')) {
                     keysToRemove.push(key);
                 }
             }
@@ -249,23 +249,41 @@
         }
 
         // ===============================================
-        // MOTEUR D'ACCÈS 100% AUTONOME (SANS SERVEUR)
+        // MOTEUR D'ACCÈS V53 : CASCADE DE PROXYS ANTI-BLOCAGE
         // ===============================================
         async function fetchPmuDirect(url) {
-            // Utilise un proxy gratuit anti-CORS et ajoute un timestamp pour forcer le rafraîchissement des cotes
             const timestamp = new Date().getTime();
-            const pmuUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`;
+            const pmuUrl = encodeURIComponent(`${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`);
             
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error("Connexion PMU échouée");
-            return await response.json();
+            // Liste de 3 serveurs relais différents
+            const proxies = [
+                `https://corsproxy.io/?${pmuUrl}`, 
+                `https://api.codetabs.com/v1/proxy?quest=${pmuUrl}`,
+                `https://api.allorigins.win/raw?url=${pmuUrl}`
+            ];
+
+            let lastError = null;
+
+            // Boucle : essaye le 1er, s'il est bloqué passe au 2ème, etc.
+            for (let i = 0; i < proxies.length; i++) {
+                try {
+                    const response = await fetch(proxies[i]);
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (e) {
+                    console.warn(`Relais ${i+1} bloqué, tentative avec le suivant...`);
+                    lastError = e;
+                }
+            }
+            
+            throw new Error("Tous les relais gratuits sont temporairement bloqués par la sécurité du PMU.");
         }
 
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement de TOUTES les réunions...';
+            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion aux serveurs PMU (Tentative de contournement)...';
             document.getElementById('statsBlock').classList.add('hidden');
             document.getElementById('historyBlock').classList.add('hidden');
 
@@ -273,7 +291,6 @@
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             try {
-                // V52 : Appel direct autonome
                 const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/toutes-reunions`);
                 
                 let rawReunions = [];
@@ -334,7 +351,7 @@
                     throw new Error("Aucune réunion");
                 }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès aux courses impossible. Vérifiez votre connexion.</span>`;
+                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès bloqué par le PMU. Essayez de recharger la page.</span>`;
             }
         }
 
@@ -434,9 +451,6 @@
             if (mIdx !== "" && rIdx !== "") await fetchRaceData(false);
         }
 
-        // ==========================================
-        // EXTRACTION DES RAPPORTS ET COTES - V52
-        // ==========================================
         function extractRealPayout(raceData, type, combosArr) {
             if (!raceData) return 0;
             let rapportsList = raceData.rapports || raceData.rapportsDefinitifs || [];
@@ -588,7 +602,6 @@
             let cNum = race.numOrdre || (parseInt(rIdx) + 1);
 
             try {
-                // V52 : Appel direct autonome
                 const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${rNum}/C${cNum}`);
                 
                 let partants = data.participants || [];
@@ -708,8 +721,8 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v52_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
-            let saved = localStorage.getItem(key) || localStorage.getItem(`pmu_stats_v51_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`);
+            let key = `pmu_stats_v53_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let saved = localStorage.getItem(key) || localStorage.getItem(`pmu_stats_v52_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
         }
@@ -803,7 +816,6 @@
                 statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Traitement de la course : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
 
                 try {
-                    // V52 : Appel direct autonome
                     const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${r.rNum}/C${r.cNum}`);
                     let partants = data.participants || [];
                     
@@ -877,7 +889,7 @@
             let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
             let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
-            localStorage.setItem(`pmu_stats_v52_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v53_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
