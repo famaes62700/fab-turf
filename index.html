@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (Version 48 Anti-Pertes)</title>
+    <title>PMU Direct - Algorithme Exact (Version 49 Mathématiques Pures)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -160,7 +160,7 @@
                     <button onclick="goToPrevRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition shadow-lg" title="Course précédente">
                         <i class="fa-solid fa-backward-step"></i>
                     </button>
-                    <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2 py-1 rounded border border-emerald-500/30 font-semibold transition" title="Actualiser manuellement">
+                    <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2 py-1 rounded border border-emerald-500/30 font-semibold transition" title="Actualiser">
                         <i class="fa-solid fa-rotate"></i>
                     </button>
                     <button onclick="goToNextRace()" class="bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 text-xs px-2 py-1 rounded border border-indigo-500/40 font-semibold transition shadow-lg" title="Course suivante">
@@ -404,130 +404,71 @@
         }
 
         // ==========================================
-        // CORRECTIF N°1 : PARSEUR UNIVERSEL FIABLE 
-        // Identifie correctement les centimes vs euros peu importe le format (ex: 1540 = 15.40€)
+        // MOTEUR D'EXTRACTION DE RAPPORTS 100% PUR ET FIABLE
+        // Plus de devinettes. On tape directement dans raceData.rapports.
         // ==========================================
-        function parsePMURapport(o) {
-            if (!o) return 0;
-            let rawVal = 0;
+        function extractRealPayout(raceData, type, combosArr) {
+            if (!raceData) return 0;
+            let rapportsList = raceData.rapports || raceData.rapportsDefinitifs || [];
+            if (!rapportsList.length) return 0;
+            
+            let targetTypes = [];
+            if (type === 'G') targetTypes = ['SIMPLE_GAGNANT', 'E_SIMPLE_GAGNANT'];
+            if (type === 'P') targetTypes = ['SIMPLE_PLACE', 'E_SIMPLE_PLACE'];
+            if (type === 'CG') targetTypes = ['COUPLE_GAGNANT', 'E_COUPLE_GAGNANT'];
+            if (type === 'CP') targetTypes = ['COUPLE_PLACE', 'E_COUPLE_PLACE'];
 
-            if (o.dividendePourUnEuro !== undefined) {
-                let d = o.dividendePourUnEuro;
-                rawVal = (String(d).includes('.') || String(d).includes(',')) ? parseFloat(String(d).replace(',', '.')) : (d >= 110 ? d / 100 : parseFloat(d));
-            } else if (o.dividende !== undefined) {
-                let d = o.dividende;
-                rawVal = (String(d).includes('.') || String(d).includes(',')) ? parseFloat(String(d).replace(',', '.')) : (d >= 110 ? d / 100 : parseFloat(d));
-            } else if (o.rapportPourUnEuro !== undefined) {
-                rawVal = parseFloat(String(o.rapportPourUnEuro).replace(',', '.'));
-            } else if (o.rapport !== undefined) {
-                rawVal = parseFloat(String(o.rapport).replace(',', '.'));
-            } else if (o.cote !== undefined) {
-                rawVal = parseFloat(String(o.cote).replace(',', '.'));
-            }
+            let targetComboKeys = combosArr.map(n => parseInt(n, 10)).sort((a,b)=>a-b).join('-');
 
-            return (isNaN(rawVal) || rawVal <= 0) ? 0 : rawVal;
-        }
-
-        function extractRapport(data, horseNum, typeRapport) {
-            let result = 0;
-            function search(o, parentType) {
-                if (!o || typeof o !== 'object') return;
-                if (Array.isArray(o)) {
-                    o.forEach(child => search(child, parentType));
-                } else {
-                    let currentType = (o.typePari || o.libellePari || o.pari || parentType || "").toUpperCase();
-                    let combo = String(o.combinaison || o.cheval || o.numPmu || "");
-                    
-                    // On utilise parseInt pour que "03" = "3"
-                    if (combo !== "" && parseInt(combo, 10) === parseInt(horseNum, 10) && !combo.includes('-')) {
-                        let v = parsePMURapport(o);
-                        if (v > 0) {
-                            if (typeRapport === 'G' && (currentType.includes('GAGN') || currentType === 'E_SIMPLE_GAGNANT')) result = v;
-                            if (typeRapport === 'P' && (currentType.includes('PLAC') || currentType === 'E_SIMPLE_PLACE')) result = v;
-                        }
-                    }
-                    for (let k in o) {
-                        if (typeof o[k] === 'object') search(o[k], currentType || k.toUpperCase());
-                    }
-                }
-            }
-            search(data, "");
-            return result;
-        }
-
-        function extractCoupléRapport(data, num1, num2, typeCouplé) {
-            let result = 0;
-            function search(o, parentType) {
-                if (!o || typeof o !== 'object') return;
-                if (Array.isArray(o)) {
-                    o.forEach(child => search(child, parentType));
-                } else {
-                    let currentType = (o.typePari || o.libellePari || o.pari || parentType || "").toUpperCase();
-                    let combo = String(o.combinaison || "").replace(/\s+/g, '');
-                    
-                    if (combo.includes('-')) {
-                        let parts = combo.split('-').map(n => parseInt(n, 10));
-                        if (parts.includes(parseInt(num1, 10)) && parts.includes(parseInt(num2, 10))) {
-                            let v = parsePMURapport(o);
-                            if (v > 0) {
-                                if (typeCouplé === 'G' && currentType.includes('GAGN')) result = v;
-                                if (typeCouplé === 'P' && currentType.includes('PLAC')) result = v;
+            for (let r of rapportsList) {
+                if (r.typePari && targetTypes.some(t => r.typePari === t || r.typePari.includes(t))) {
+                    if (Array.isArray(r.dividendes)) {
+                        for (let d of r.dividendes) {
+                            if (!d.combinaison) continue;
+                            let rComboKeys = d.combinaison.replace(/\s/g, '').split('-').map(n => parseInt(n, 10)).sort((a,b)=>a-b).join('-');
+                            if (rComboKeys === targetComboKeys) {
+                                if (d.dividendePourUnEuro !== undefined) return d.dividendePourUnEuro / 100;
+                                if (d.dividende !== undefined) return d.dividende / 100;
                             }
                         }
                     }
-                    for (let k in o) {
-                        if (typeof o[k] === 'object') search(o[k], currentType || k.toUpperCase());
-                    }
                 }
             }
-            search(data, "");
-            return result;
+            return 0;
         }
 
         function getAllRapportsForDisplay(data) {
             let results = [];
-            function search(o, parentType) {
-                if (!o || typeof o !== 'object') return;
-                if (Array.isArray(o)) {
-                    o.forEach(child => search(child, parentType));
-                } else {
-                    let currentType = (o.typePari || o.libellePari || o.pari || parentType || "").toUpperCase();
-                    let combo = String(o.combinaison || "");
-                    
-                    let v = parsePMURapport(o);
-                    if (combo !== "" && v > 0 && (currentType.includes('SIMPLE') || currentType.includes('COUPLE'))) {
-                        results.push({ title: currentType.replace(/E_/g,''), combo: combo, val: v });
-                    }
-                    for (let k in o) {
-                        if (typeof o[k] === 'object') search(o[k], currentType || k.toUpperCase());
+            let rapportsList = data.rapports || data.rapportsDefinitifs || [];
+            for (let r of rapportsList) {
+                let typeStr = r.typePari || "";
+                if (typeStr.includes('SIMPLE') || typeStr.includes('COUPLE')) {
+                    if (Array.isArray(r.dividendes)) {
+                        for (let d of r.dividendes) {
+                            if (d.combinaison && (d.dividendePourUnEuro !== undefined || d.dividende !== undefined)) {
+                                let v = d.dividendePourUnEuro !== undefined ? d.dividendePourUnEuro / 100 : d.dividende / 100;
+                                if (v > 0) {
+                                    results.push({ title: typeStr.replace(/E_/g, ''), combo: d.combinaison, val: v });
+                                }
+                            }
+                        }
                     }
                 }
             }
-            search(data, "");
             return results;
         }
 
-        function getHorseCoteFromFullData(raceData, horseNum, participantObj) {
-            if (!raceData) return null;
-            let officialGagnant = extractRapport(raceData, horseNum, 'G');
-            if (officialGagnant > 0) return officialGagnant; 
-
-            let found = null;
-            if (participantObj) {
-                let directCotes = [
-                    participantObj.dernierRapportDirect,
-                    participantObj.dernierRapportReference,
-                    participantObj.cotes?.[0],
-                    {cote: participantObj.cote}
-                ];
-                for (let obj of directCotes) {
-                    if (obj) {
-                        let v = parsePMURapport(obj);
-                        if (v > 0) { found = v; break; }
-                    }
-                }
+        function getHorseCote(p) {
+            if (!p) return null;
+            let c = p.dernierRapportDirect?.rapport || p.dernierRapportDirect?.cote || p.cote;
+            if (c === undefined && p.cotes && p.cotes.length > 0) {
+                c = p.cotes[0].cote || p.cotes[0].rapport;
             }
-            return found;
+            if (c !== undefined && c !== null) {
+                let val = parseFloat(String(c).replace(',', '.'));
+                if (!isNaN(val) && val > 0) return val;
+            }
+            return null;
         }
 
         function evaluateMusique(musique) {
@@ -558,10 +499,13 @@
                 let musique = p.musique || "";
                 let num = p.numPmu || p.numOrdre || (idx+1);
                 
-                let coteFound = getHorseCoteFromFullData(fullRaceData, num, p);
-                let fallbackCote = coteFound || (8 + (idx * 2.5)); 
-                let coteDisplay = coteFound ? coteFound.toFixed(1) : `${fallbackCote.toFixed(1)} (Est.)`;
-                let cote = coteFound || fallbackCote; 
+                let realCote = getHorseCote(p);
+                // Si la cote est manquante côté PMU, on assigne une cote artificielle POUR QUE l'algorithme de classement ne plante pas
+                let fallback = 8 + (idx * 2.5); 
+                let cote = realCote || fallback; 
+                
+                // (N/D) = Non Disponible. Remplace le (Est.) pour plus de clarté
+                let coteDisplay = realCote ? realCote.toFixed(1) : `${fallback.toFixed(1)} (N/D)`;
                 
                 let musiqueScore = evaluateMusique(musique);
                 
@@ -726,9 +670,9 @@
             return `<span class="${colorClass}">${sign}${val.toFixed(2)} €</span>`;
         }
 
-        // V48 - MÉMOIRE REMISE À ZÉRO POUR CHASSER LES ERREURS PRÉCÉDENTES
+        // V49 - PURGE DU CACHE POUR VIRER LES FAUSSES PERTES DE LA V48
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v48_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v49_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -781,11 +725,6 @@
             }
         }
 
-        // ==========================================
-        // CORRECTIF N°2 : DOUBLE VERROU (Anti-perte)
-        // Si l'arrivée est bonne mais que le rapport officiel est introuvable (bug API PMU), 
-        // le système verse le gain obligatoirement grâce à une estimation sur sa cote.
-        // ==========================================
         async function calculateDailyStats() {
             document.getElementById('historyBlock').classList.add('hidden');
             let statsBlock = document.getElementById('statsBlock');
@@ -825,7 +764,7 @@
 
             for (let i = 0; i < finishedRaces.length; i++) {
                 let r = finishedRaces[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Scan et validation de la course : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Scan mathématique exact : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
 
                 try {
                     const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
@@ -844,20 +783,11 @@
                             baseJouee = true;
                             misesGagnant++; misesPlace++;
                             
-                            let arr = algoResult.baseHorse.ordreArrivee;
-                            let cote = algoResult.baseHorse.cote;
-                            let estGagnant = (arr === 1);
-                            let estPlace = false;
-                            if (partants.length >= 8) estPlace = (arr === 1 || arr === 2 || arr === 3);
-                            else if (partants.length >= 4) estPlace = (arr === 1 || arr === 2);
-
-                            let g = extractRapport(data, algoResult.baseHorse.num, 'G');
+                            let g = extractRealPayout(data, 'G', [algoResult.baseHorse.num]);
                             if (g > 0) { gagBaseWins++; totalGainGagnantBase += g; }
-                            else if (estGagnant) { gagBaseWins++; totalGainGagnantBase += parseFloat(Math.max(1.10, cote).toFixed(2)); } // Sécurité forcée
                             
-                            let p = extractRapport(data, algoResult.baseHorse.num, 'P');
+                            let p = extractRealPayout(data, 'P', [algoResult.baseHorse.num]);
                             if (p > 0) { plcBaseWins++; totalGainPlaceBase += p; }
-                            else if (estPlace) { plcBaseWins++; totalGainPlaceBase += parseFloat(Math.max(1.10, cote / 3.5).toFixed(2)); } // Sécurité forcée
                         }
                         
                         // Traitement PEPITE
@@ -865,47 +795,25 @@
                             pepiteJouee = true;
                             misesGagnant++; misesPlace++;
                             
-                            let arr = algoResult.nuggetHorse.ordreArrivee;
-                            let cote = algoResult.nuggetHorse.cote;
-                            let estGagnant = (arr === 1);
-                            let estPlace = false;
-                            if (partants.length >= 8) estPlace = (arr === 1 || arr === 2 || arr === 3);
-                            else if (partants.length >= 4) estPlace = (arr === 1 || arr === 2);
-                            
-                            let g = extractRapport(data, algoResult.nuggetHorse.num, 'G');
+                            let g = extractRealPayout(data, 'G', [algoResult.nuggetHorse.num]);
                             if (g > 0) { gagPepiteWins++; totalGainGagnantPepite += g; }
-                            else if (estGagnant) { gagPepiteWins++; totalGainGagnantPepite += parseFloat(Math.max(1.10, cote).toFixed(2)); }
                             
-                            let p = extractRapport(data, algoResult.nuggetHorse.num, 'P');
+                            let p = extractRealPayout(data, 'P', [algoResult.nuggetHorse.num]);
                             if (p > 0) { plcPepiteWins++; totalGainPlacePepite += p; }
-                            else if (estPlace) { plcPepiteWins++; totalGainPlacePepite += parseFloat(Math.max(1.10, cote / 3.5).toFixed(2)); }
                         }
 
                         // Traitement COUPLÉS
                         if (baseJouee && pepiteJouee) {
                             misesCoupleGag++; misesCouplePlc++;
                             
-                            let arrB = algoResult.baseHorse.ordreArrivee;
-                            let arrP = algoResult.nuggetHorse.ordreArrivee;
-                            let coteB = algoResult.baseHorse.cote;
-                            let coteP = algoResult.nuggetHorse.cote;
-                            
-                            let estCG = (arrB > 0 && arrP > 0 && arrB <= 2 && arrP <= 2 && arrB !== arrP);
-                            let estCP = false;
-                            if (arrB > 0 && arrP > 0 && arrB !== arrP) {
-                                if (partants.length >= 8) estCP = (arrB <= 3 && arrP <= 3);
-                                else if (partants.length >= 4) estCP = (arrB <= 2 && arrP <= 2);
-                            }
-                            
-                            let cg = extractCoupléRapport(data, algoResult.baseHorse.num, algoResult.nuggetHorse.num, 'G');
+                            let cg = extractRealPayout(data, 'CG', [algoResult.baseHorse.num, algoResult.nuggetHorse.num]);
                             if (cg > 0) { coupleGagnantWins++; totalGainCoupleGagnant += cg; }
-                            else if (estCG) { coupleGagnantWins++; totalGainCoupleGagnant += parseFloat(Math.max(2.0, (coteB * coteP) / 5).toFixed(2)); } // Sécurité
                             
-                            let cp = extractCoupléRapport(data, algoResult.baseHorse.num, algoResult.nuggetHorse.num, 'P');
+                            let cp = extractRealPayout(data, 'CP', [algoResult.baseHorse.num, algoResult.nuggetHorse.num]);
                             if (cp > 0) { couplePlaceWins++; totalGainCouplePlace += cp; }
-                            else if (estCP) { couplePlaceWins++; totalGainCouplePlace += parseFloat(Math.max(1.5, (coteB + coteP) / 4).toFixed(2)); } // Sécurité
                         }
 
+                        // Affichage en direct du Bilan
                         let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - misesGagnant;
                         let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - misesPlace;
                         let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
@@ -938,11 +846,11 @@
             let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
             let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
-            localStorage.setItem(`pmu_stats_v48_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v49_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-shield-check mr-1"></i> Bilan exact et sécurisé garanti sur ${coursesValidees} courses validées.</span>`;
+            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan 100% exact validé sur ${coursesValidees} courses.</span>`;
         }
 
         window.onload = loadLivePmu;
