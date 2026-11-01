@@ -25,7 +25,12 @@
             <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center">
                 <i class="fa-solid fa-horse-head mr-2"></i>PMU Direct
             </h1>
-            <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500" onchange="loadLivePmu()">
+            <div class="flex items-center space-x-3">
+                <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500" onchange="loadLivePmu()">
+                <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg border border-zinc-700 font-bold transition flex items-center shadow" title="Historique Mensuel">
+                    <i class="fa-solid fa-calendar-days"></i>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -33,14 +38,6 @@
         <div class="flex justify-between items-center">
             <div id="statusText" class="text-xs text-amber-400 font-mono flex items-center">
                 <i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au PMU...
-            </div>
-            <div class="flex space-x-2">
-                <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded-lg border border-zinc-700 font-bold transition flex items-center shadow">
-                    <i class="fa-solid fa-calendar-days mr-1.5"></i> Bilan Mensuel
-                </button>
-                <button onclick="calculateDailyStats()" class="bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 text-xs px-3 py-1.5 rounded-lg border border-indigo-500/40 font-bold transition flex items-center shadow">
-                    <i class="fa-solid fa-chart-pie mr-1.5"></i> Bilan du Jour
-                </button>
             </div>
         </div>
 
@@ -50,7 +47,7 @@
                 <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider flex items-center">
                     <i class="fa-solid fa-vault mr-1.5 text-emerald-400"></i> Vos Gains Cumulés
                 </h2>
-                <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg px-2"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="toggleHistoryStats()" class="text-zinc-500 hover:text-white text-lg px-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="space-y-4 max-h-96 overflow-y-auto pr-1">
                 
@@ -82,15 +79,17 @@
             </div>
         </div>
 
-        <!-- BLOC STATISTIQUES DU JOUR -->
-        <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-2xl p-4 shadow-xl mb-2">
+        <!-- BLOC STATISTIQUES DU JOUR (Toujours visible) -->
+        <div id="statsBlock" class="bg-zinc-900 border border-indigo-500/30 rounded-2xl p-4 shadow-xl mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider flex items-center">
                     <i class="fa-solid fa-trophy mr-1.5"></i> Bilan du Jour
                 </h2>
-                <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg px-2"><i class="fa-solid fa-xmark"></i></button>
+                <div id="statsProgress" class="text-[10px] font-mono text-zinc-400 flex items-center">
+                    <i class="fa-solid fa-spinner fa-spin mr-1"></i> Calcul en cours...
+                </div>
             </div>
-            <div id="statsProgress" class="text-[11px] font-mono text-zinc-400 mb-3">Prêt.</div>
+            
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <!-- BASE -->
                 <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-emerald-500/30 flex flex-col justify-between space-y-2 relative">
@@ -237,25 +236,28 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
         
-        // Cache mémoire local pour accélérer massivement le chargement et le bilan
+        // Cache pour éviter de re-télécharger les courses déjà terminées
         let validatedRacesCache = {}; 
-        let autoStatsCounter = 0;
 
-        // Auto-Rafraîchissement principal (20s) et Bilan arrière-plan (60s)
+        // Rafraîchissement automatique toutes les 20s
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
             if (mIdx !== "" && cIdx !== "") {
                 fetchRaceData(true); 
             }
-
-            // Actualisation automatique du bilan sans faire clignoter l'écran (toutes les minutes)
-            autoStatsCounter++;
-            if (autoStatsCounter >= 3) { 
-                calculateDailyStats(true);
-                autoStatsCounter = 0;
-            }
+            // Mise à jour silencieuse du bilan à chaque cycle
+            calculateDailyStats(true);
         }, 20000);
+
+        function toggleHistoryStats() {
+            let historyBlock = document.getElementById('historyBlock');
+            if (historyBlock.classList.contains('hidden')) {
+                showHistoryStats();
+            } else {
+                historyBlock.classList.add('hidden');
+            }
+        }
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -301,7 +303,6 @@
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
             statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement...';
-            document.getElementById('statsBlock').classList.add('hidden');
             document.getElementById('historyBlock').classList.add('hidden');
 
             const parts = dateInput.split('-');
@@ -340,6 +341,10 @@
                     } else {
                         select.value = currentVal;
                     }
+                    
+                    // Lancer le calcul du bilan dès le chargement initial de la page
+                    calculateDailyStats(true);
+                    
                 } else {
                     throw new Error("Aucune réunion");
                 }
@@ -690,7 +695,6 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition 30s après l'arrivée
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -813,10 +817,7 @@
         }
 
         function showHistoryStats() {
-            document.getElementById('statsBlock').classList.add('hidden');
-            let historyBlock = document.getElementById('historyBlock');
-            historyBlock.classList.remove('hidden');
-
+            document.getElementById('historyBlock').classList.remove('hidden');
             let today = new Date();
             let year = today.getFullYear();
             document.getElementById('currentYearText').textContent = year;
@@ -914,9 +915,6 @@
             let statGlobal = document.getElementById('statGlobal');
 
             if (!isAuto) {
-                document.getElementById('historyBlock').classList.add('hidden');
-                statsBlock.classList.remove('hidden');
-                
                 statBase.textContent = `G: 0 | P: 0 / 0`;
                 statPepite.textContent = `G: 0 | P: 0 / 0`;
                 statCouple.textContent = `G: 0 | P: 0 / 0`;
@@ -927,8 +925,7 @@
                 gainCoupleGag.textContent = `--`;
                 gainCouplePla.textContent = `--`;
                 statGlobal.innerHTML = "";
-                
-                statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse des courses en cours...";
+                statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse en cours...";
             }
 
             let dateInput = document.getElementById('raceDate').value;
@@ -951,13 +948,11 @@
                 });
             });
 
-            // TRI CHRONOLOGIQUE ABSOLU - Essentiel pour la Martingale
+            // Tri par heure pour que la Martingale soit correcte chronologiquement
             pastRacesToday.sort((a, b) => a.time - b.time);
 
             if (pastRacesToday.length === 0) {
-                if (!isAuto || !statsBlock.classList.contains('hidden')) {
-                    statsProgress.textContent = "Aucune course passée aujourd'hui.";
-                }
+                if (!isAuto) statsProgress.textContent = "Aucune course passée aujourd'hui.";
                 return;
             }
 
@@ -969,13 +964,8 @@
             let totalGainPepiteGag = 0, totalGainPepitePla = 0;
             let totalGainCoupleGag = 0, totalGainCouplePla = 0;
 
-            // VARIABLES DE MISES & MARTINGALE
-            let costBaseGag = 0;
-            let costBasePla = 0, mBasePla = 1; // Uniquement Base Placé (Martingale)
-            let costPepGag = 0;
-            let costPepPla = 0;
-            let costCplGag = 0;
-            let costCplPla = 0;
+            let costBaseGag = 0, costBasePla = 0, costPepGag = 0, costPepPla = 0, costCplGag = 0, costCplPla = 0;
+            let mBasePla = 1; 
             
             let coursesValidees = 0;
             let coursesValideesCP = 0;
@@ -984,7 +974,7 @@
                 let r = pastRacesToday[i];
                 let cacheKey = `${ddmmyyyy}_${r.rNum}_${r.cNum}`;
 
-                if (!isAuto && !statsBlock.classList.contains('hidden')) {
+                if (!isAuto) {
                     statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Vérification (${i+1}/${pastRacesToday.length}) : ${r.name}`;
                 }
 
@@ -994,15 +984,16 @@
                 } else {
                     try {
                         const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
-                        if (!res.ok) continue;
-                        const data = await res.json();
-                        let partants = data.participants || [];
-                        let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
-                        let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
-
-                        raceData = { partants, arrivees, rapportsList, isComplete: rapportsList.length > 0 };
-                        if (raceData.isComplete) validatedRacesCache[cacheKey] = raceData;
-                    } catch (e) { continue; }
+                        if (res.ok) {
+                            const data = await res.json();
+                            let partants = data.participants || [];
+                            let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
+                            let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+                            
+                            raceData = { partants, arrivees, rapportsList, isComplete: rapportsList.length > 0 };
+                            if (raceData.isComplete) validatedRacesCache[cacheKey] = raceData;
+                        }
+                    } catch (e) { }
                 }
 
                 if (raceData && (raceData.arrivees.length > 0 || raceData.rapportsList.length > 0)) {
@@ -1014,7 +1005,6 @@
                     let baseArr = baseH ? (raceData.partants.find(p => (p.numPmu || p.numOrdre) === baseH.num)?.ordreArrivee || 99) : 99;
                     let nuggetArr = nuggetH ? (raceData.partants.find(p => (p.numPmu || p.numOrdre) === nuggetH.num)?.ordreArrivee || 99) : 99;
 
-                    // === BASE ===
                     if (baseH) {
                         let gGag = extractGainFromRapports(raceData.rapportsList, baseH.num, 'GAGNANT');
                         if (gGag === 0 && baseArr === 1) gGag = baseH.cote; 
@@ -1038,7 +1028,6 @@
                         }
                     }
 
-                    // === PÉPITE ===
                     if (nuggetH) {
                         let gGag = extractGainFromRapports(raceData.rapportsList, nuggetH.num, 'GAGNANT');
                         if (gGag === 0 && nuggetArr === 1) gGag = nuggetH.cote; 
@@ -1059,7 +1048,6 @@
                         }
                     }
 
-                    // === COUPLÉ ===
                     if (baseH && nuggetH) {
                         let cg = extractCoupleGain(raceData.rapportsList, baseH.num, nuggetH.num, 'CG');
                         let isCG = ((baseArr === 1 && nuggetArr === 2) || (baseArr === 2 && nuggetArr === 1));
@@ -1085,8 +1073,8 @@
                         }
                     }
 
-                    // DÉFILEMENT VISUEL EN DIRECT (si clique manuel)
-                    if (!isAuto && !statsBlock.classList.contains('hidden')) {
+                    // Défilement visuel des gains en live
+                    if (!isAuto) {
                         let nBG = totalGainBaseGag - costBaseGag;
                         let nBP = totalGainBasePla - costBasePla;
                         let nPG = totalGainPepiteGag - costPepGag;
@@ -1107,53 +1095,41 @@
                         gainCoupleGag.innerHTML = `${totalGainCoupleGag.toFixed(2)} €<br><span class="${nCG >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${nCG >= 0 ? '+' : ''}${nCG.toFixed(2)}€</span>`;
                         gainCouplePla.innerHTML = `${totalGainCouplePla.toFixed(2)} €<br><span class="${nCP >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${nCP >= 0 ? '+' : ''}${nCP.toFixed(2)}€</span>`;
 
-                        let totalInvesti = costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla;
                         statGlobal.innerHTML = `
-                            <div class="mb-1">Investissement en cours : <b>${totalInvesti} €</b>...</div>
-                            <div class="text-emerald-400">Dont investissement Martingale (Base Placé) : <b>${costBasePla} €</b></div>
+                            <div class="mb-1 text-zinc-300">Investissement en cours : <b>${costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla} €</b>...</div>
+                            <div class="text-emerald-400">Dont Martingale Base Placé : <b>${costBasePla} €</b> (Prochaine mise : ${mBasePla}€)</div>
                         `;
 
-                        // Petite pause pour forcer l'affichage visuel (le "défilement")
-                        await new Promise(resolve => setTimeout(resolve, 25));
+                        // Légère pause pour l'animation
+                        await new Promise(r => setTimeout(r, 20));
                     }
                 }
             }
 
-            if (coursesValidees === 0) {
-                if (!isAuto || !statsBlock.classList.contains('hidden')) {
-                    statsProgress.innerHTML = `<span class="text-amber-400">Aucune course terminée officiellement.</span>`;
-                }
-            } else {
+            if (coursesValidees > 0) {
                 let netBaseGag = totalGainBaseGag - costBaseGag;
                 let netBasePla = totalGainBasePla - costBasePla;
-                
                 let netPepiteGag = totalGainPepiteGag - costPepGag;
                 let netPepitePla = totalGainPepitePla - costPepPla;
-                
                 let netCoupleGag = totalGainCoupleGag - costCplGag;
                 let netCouplePla = totalGainCouplePla - costCplPla; 
 
-                // Mise à jour finale si invisible ou arrière-plan
+                // Mise à jour finale globale
                 statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
                 statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
                 statCouple.textContent = `G: ${coupleGagCount} / ${coursesValidees} | P: ${couplePlaCount} / ${coursesValideesCP}`;
                 
                 gainBaseGag.innerHTML = `${totalGainBaseGag.toFixed(2)} €<br><span class="${netBaseGag >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${netBaseGag >= 0 ? '+' : ''}${netBaseGag.toFixed(2)}€</span>`;
                 gainBasePla.innerHTML = `${totalGainBasePla.toFixed(2)} €<br><span class="${netBasePla >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${netBasePla >= 0 ? '+' : ''}${netBasePla.toFixed(2)}€</span>`;
-                
                 gainPepiteGag.innerHTML = `${totalGainPepiteGag.toFixed(2)} €<br><span class="${netPepiteGag >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepiteGag >= 0 ? '+' : ''}${netPepiteGag.toFixed(2)}€</span>`;
                 gainPepitePla.innerHTML = `${totalGainPepitePla.toFixed(2)} €<br><span class="${netPepitePla >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepitePla >= 0 ? '+' : ''}${netPepitePla.toFixed(2)}€</span>`;
-                
                 gainCoupleGag.innerHTML = `${totalGainCoupleGag.toFixed(2)} €<br><span class="${netCoupleGag >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCoupleGag >= 0 ? '+' : ''}${netCoupleGag.toFixed(2)}€</span>`;
                 gainCouplePla.innerHTML = `${totalGainCouplePla.toFixed(2)} €<br><span class="${netCouplePla >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCouplePla >= 0 ? '+' : ''}${netCouplePla.toFixed(2)}€</span>`;
                 
-                if (!isAuto || !statsBlock.classList.contains('hidden')) {
-                    statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan actualisé avec succès (${coursesValidees} courses)</span>`;
-                }
+                statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan en direct (${coursesValidees} courses)</span>`;
 
-                let totalInvesti = costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla;
                 statGlobal.innerHTML = `
-                    <div class="mb-1 text-zinc-300">Investissement total du jour : <b>${totalInvesti} €</b></div>
+                    <div class="mb-1 text-zinc-300">Investissement total du jour : <b>${costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla} €</b></div>
                     <div class="text-emerald-400">Dont investissement de la Martingale (Base Placé) : <b>${costBasePla} €</b> (Prochaine mise : ${mBasePla}€)</div>
                 `;
 
