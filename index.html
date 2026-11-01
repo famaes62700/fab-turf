@@ -53,20 +53,25 @@
                 <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg px-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="space-y-4 max-h-96 overflow-y-auto pr-1">
+                
+                <!-- Bilan Semaine Détaillé -->
                 <div class="bg-zinc-800/80 p-3 rounded-xl border border-zinc-700">
                     <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Cette Semaine (Lun - Dim)</h3>
-                    <div class="grid grid-cols-3 gap-2 text-xs mb-2">
-                        <div class="text-center bg-emerald-950/30 p-2 rounded-lg border border-emerald-500/20">
-                            <div class="text-[9px] text-emerald-400 uppercase font-bold">Base</div>
-                            <div id="histWeekBase" class="font-bold text-white mt-0.5">--</div>
+                    <div class="grid grid-cols-3 gap-2 text-[10px] mb-2">
+                        <div class="bg-zinc-900/80 p-1.5 rounded border border-emerald-500/30 text-center leading-tight">
+                            <span class="text-emerald-400 font-bold block mb-1">BASE</span>
+                            <div class="text-zinc-400">G: <span id="histWeekBaseGag">--</span></div>
+                            <div class="text-zinc-400 mt-0.5">P: <span id="histWeekBasePla">--</span></div>
                         </div>
-                        <div class="text-center bg-amber-950/30 p-2 rounded-lg border border-amber-500/20">
-                            <div class="text-[9px] text-amber-400 uppercase font-bold">Pépite</div>
-                            <div id="histWeekPepite" class="font-bold text-white mt-0.5">--</div>
+                        <div class="bg-zinc-900/80 p-1.5 rounded border border-amber-500/30 text-center leading-tight">
+                            <span class="text-amber-400 font-bold block mb-1">PÉPITE</span>
+                            <div class="text-zinc-400">G: <span id="histWeekPepiteGag">--</span></div>
+                            <div class="text-zinc-400 mt-0.5">P: <span id="histWeekPepitePla">--</span></div>
                         </div>
-                        <div class="text-center bg-blue-950/30 p-2 rounded-lg border border-blue-500/20">
-                            <div class="text-[9px] text-blue-400 uppercase font-bold">Couplé</div>
-                            <div id="histWeekCouple" class="font-bold text-white mt-0.5">--</div>
+                        <div class="bg-zinc-900/80 p-1.5 rounded border border-blue-500/30 text-center leading-tight">
+                            <span class="text-blue-400 font-bold block mb-1">COUPLÉ</span>
+                            <div class="text-zinc-400">G: <span id="histWeekCoupleGag">--</span></div>
+                            <div class="text-zinc-400 mt-0.5">P: <span id="histWeekCouplePla">--</span></div>
                         </div>
                     </div>
                     <div class="bg-zinc-900 p-2.5 rounded-lg border border-zinc-700 text-center flex justify-between items-center px-4">
@@ -74,10 +79,13 @@
                         <div id="histWeekTotal" class="font-black text-sm">--</div>
                     </div>
                 </div>
+
+                <!-- Bilan Mois par Mois Détaillé -->
                 <div class="bg-zinc-800/80 p-3 rounded-xl border border-zinc-700">
                     <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Mois par Mois (<span id="currentYearText"></span>)</h3>
                     <div id="monthsGrid" class="space-y-2"></div>
                 </div>
+
             </div>
         </div>
 
@@ -209,7 +217,7 @@
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
             <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center">
-                <!-- Rempli dynamiquement -->
+                <span>Partants & Cotes</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -234,6 +242,7 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
+        // Auto-Rafraîchissement toutes les 20 secondes
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -677,6 +686,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
+                        // Transition 30s après l'arrivée
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -795,7 +805,7 @@
             let key = `pmu_stats_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
-            return { netBase: 0, netPepite: 0, netCouple: 0 };
+            return { baseGag: 0, basePla: 0, pepGag: 0, pepPla: 0, cplGag: 0, cplPla: 0 };
         }
 
         function showHistoryStats() {
@@ -811,21 +821,29 @@
             let monday = new Date(today);
             monday.setDate(today.getDate() - (dayOfWeek - 1)); 
             
-            let weekBase = 0, weekPepite = 0, weekCouple = 0;
+            let wBaseGag = 0, wBasePla = 0, wPepGag = 0, wPepPla = 0, wCplGag = 0, wCplPla = 0;
+            
             for(let i=0; i<7; i++) {
                 let d = new Date(monday);
                 d.setDate(monday.getDate() + i);
                 let s = getStatForDateObj(d);
-                weekBase += s.netBase || 0;
-                weekPepite += s.netPepite || 0;
-                weekCouple += s.netCouple || 0;
+                wBaseGag += s.baseGag || 0;
+                wBasePla += s.basePla || 0;
+                wPepGag += s.pepGag || 0;
+                wPepPla += s.pepPla || 0;
+                wCplGag += s.cplGag || 0;
+                wCplPla += s.cplPla || 0;
             }
             
-            let weekTotal = weekBase + weekPepite + weekCouple;
+            let weekTotal = wBaseGag + wBasePla + wPepGag + wPepPla + wCplGag + wCplPla;
 
-            document.getElementById('histWeekBase').innerHTML = formatMoneyHTML(weekBase, 'base');
-            document.getElementById('histWeekPepite').innerHTML = formatMoneyHTML(weekPepite, 'pepite');
-            document.getElementById('histWeekCouple').innerHTML = formatMoneyHTML(weekCouple, 'couple');
+            document.getElementById('histWeekBaseGag').innerHTML = formatMoneyHTML(wBaseGag, 'base');
+            document.getElementById('histWeekBasePla').innerHTML = formatMoneyHTML(wBasePla, 'base');
+            document.getElementById('histWeekPepiteGag').innerHTML = formatMoneyHTML(wPepGag, 'pepite');
+            document.getElementById('histWeekPepitePla').innerHTML = formatMoneyHTML(wPepPla, 'pepite');
+            document.getElementById('histWeekCoupleGag').innerHTML = formatMoneyHTML(wCplGag, 'couple');
+            document.getElementById('histWeekCouplePla').innerHTML = formatMoneyHTML(wCplPla, 'couple');
+            
             document.getElementById('histWeekTotal').innerHTML = formatMoneyHTML(weekTotal, 'total');
             document.getElementById('histWeekTotal').className = weekTotal >= 0 ? "font-black text-emerald-400 text-sm" : "font-black text-red-400 text-sm";
 
@@ -834,37 +852,44 @@
             monthsGrid.innerHTML = '';
 
             for (let m = 0; m < 12; m++) {
-                let totalBase = 0, totalPepite = 0, totalCouple = 0;
+                let mBaseGag = 0, mBasePla = 0, mPepGag = 0, mPepPla = 0, mCplGag = 0, mCplPla = 0;
                 let daysInMonth = new Date(year, m + 1, 0).getDate(); 
                 
                 for (let d = 1; d <= daysInMonth; d++) {
                     let s = getStatForDateObj(new Date(year, m, d));
-                    totalBase += s.netBase || 0;
-                    totalPepite += s.netPepite || 0;
-                    totalCouple += s.netCouple || 0;
+                    mBaseGag += s.baseGag || 0;
+                    mBasePla += s.basePla || 0;
+                    mPepGag += s.pepGag || 0;
+                    mPepPla += s.pepPla || 0;
+                    mCplGag += s.cplGag || 0;
+                    mCplPla += s.cplPla || 0;
                 }
                 
-                let monthTotal = totalBase + totalPepite + totalCouple;
+                let monthTotal = mBaseGag + mBasePla + mPepGag + mPepPla + mCplGag + mCplPla;
 
                 let div = document.createElement('div');
-                div.className = "flex justify-between items-center bg-zinc-900 p-2 rounded-xl border border-zinc-700/50 text-xs";
+                div.className = "bg-zinc-800/50 p-2 rounded-xl border border-zinc-700/50 mb-2";
                 div.innerHTML = `
-                    <div class="w-14 font-bold text-zinc-300 pl-1">${monthNames[m]}</div>
-                    <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
-                        <span class="text-[8px] text-zinc-500 uppercase block mb-0.5">Base</span>
-                        ${formatMoneyHTML(totalBase, 'base')}
+                    <div class="flex justify-between items-center mb-1.5 px-1">
+                        <span class="font-bold text-zinc-300">${monthNames[m]}</span>
+                        <span class="text-[10px] font-bold text-zinc-400">Total : ${formatMoneyHTML(monthTotal, 'total')}</span>
                     </div>
-                    <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
-                        <span class="text-[8px] text-zinc-500 uppercase block mb-0.5">Pépite</span>
-                        ${formatMoneyHTML(totalPepite, 'pepite')}
-                    </div>
-                    <div class="flex-1 text-center border-l border-zinc-700/50 px-1">
-                        <span class="text-[8px] text-zinc-500 uppercase block mb-0.5">Couplé</span>
-                        ${formatMoneyHTML(totalCouple, 'couple')}
-                    </div>
-                    <div class="flex-1 text-center border-l border-zinc-700/50 bg-zinc-800/60 rounded-r-lg py-1 px-1">
-                        <span class="text-[8px] font-bold text-zinc-300 uppercase block mb-0.5">Total</span>
-                        ${formatMoneyHTML(monthTotal, 'total')}
+                    <div class="grid grid-cols-3 gap-2 text-[10px]">
+                        <div class="bg-zinc-900/80 p-1.5 rounded border border-emerald-500/20 text-center leading-tight">
+                            <span class="text-emerald-400 font-bold block mb-1 uppercase text-[9px]">Base</span>
+                            <div class="text-zinc-400">G: ${formatMoneyHTML(mBaseGag, 'base')}</div>
+                            <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mBasePla, 'base')}</div>
+                        </div>
+                        <div class="bg-zinc-900/80 p-1.5 rounded border border-amber-500/20 text-center leading-tight">
+                            <span class="text-amber-400 font-bold block mb-1 uppercase text-[9px]">Pépite</span>
+                            <div class="text-zinc-400">G: ${formatMoneyHTML(mPepGag, 'pepite')}</div>
+                            <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mPepPla, 'pepite')}</div>
+                        </div>
+                        <div class="bg-zinc-900/80 p-1.5 rounded border border-blue-500/20 text-center leading-tight">
+                            <span class="text-blue-400 font-bold block mb-1 uppercase text-[9px]">Couplé</span>
+                            <div class="text-zinc-400">G: ${formatMoneyHTML(mCplGag, 'couple')}</div>
+                            <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mCplPla, 'couple')}</div>
+                        </div>
                     </div>
                 `;
                 monthsGrid.appendChild(div);
@@ -1031,10 +1056,6 @@
                 
                 let netCoupleGag = totalGainCoupleGag - coursesValidees;
                 let netCouplePla = totalGainCouplePla - coursesValideesCP; 
-                
-                let totalNetBase = netBaseGag + netBasePla;
-                let totalNetPepite = netPepiteGag + netPepitePla;
-                let totalNetCouple = netCoupleGag + netCouplePla;
 
                 statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
                 statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
@@ -1052,9 +1073,12 @@
                 statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan actualisé avec succès (${coursesValidees} courses prêtes)</span>`;
 
                 localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
-                    netBase: totalNetBase,
-                    netPepite: totalNetPepite,
-                    netCouple: totalNetCouple
+                    baseGag: netBaseGag,
+                    basePla: netBasePla,
+                    pepGag: netPepiteGag,
+                    pepPla: netPepitePla,
+                    cplGag: netCoupleGag,
+                    cplPla: netCouplePla
                 }));
             }
         }
@@ -1062,4 +1086,4 @@
         window.onload = loadLivePmu;
     </script>
 </body>
-</html>
+</html>>
