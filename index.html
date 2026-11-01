@@ -725,13 +725,13 @@
             gainPepiteGag.textContent = `--`;
             gainPepitePla.textContent = `--`;
             statGlobal.textContent = "Recherche en cours...";
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse de toutes les courses du jour...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse de l'intégralité des courses du jour...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
-            // Récupérer toutes les courses de la journée (indépendamment de l'heure actuelle) pour être sûr de comptabiliser le jour entier
+            // Récupère TOUTES les courses de la journée sans restriction d'horaire
             let allRacesToday = [];
             liveMeetingsData.forEach((m, mIdx) => {
                 let rNum = m.numOfficiel || (mIdx + 1);
@@ -763,7 +763,7 @@
                     let partants = data.participants || [];
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     
-                    // On comptabilise uniquement si la course a une arrivée officielle enregistrée
+                    // La course est comptabilisée dès qu'il y a une arrivée officielle
                     if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
@@ -787,7 +787,7 @@
                             totalGainPepitePla += gPla;
                         }
 
-                        // 2 paris par course : Base (1€ Gagnant + 1€ Placé optionnel ou Base seule selon vos règles - ici 2€ misés par course)
+                        // Mise totale : 2€ par course (1€ Base [Gag+Pla] ou séparé - ici 2€ misés par course validée)
                         let miseTotale = coursesValidees * 2;
                         let netBase = (totalGainBaseGag + totalGainBasePla) - coursesValidees;
                         let netPepite = (totalGainPepiteGag + totalGainPepitePla) - coursesValidees;
@@ -802,7 +802,7 @@
                         gainPepiteGag.innerHTML = `${totalGainPepiteGag.toFixed(2)} €<br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepite >= 0 ? '+' : ''}${netPepite.toFixed(2)}€</span>`;
                         gainPepitePla.innerHTML = `${totalGainPepitePla.toFixed(2)} €`;
                         
-                        statGlobal.innerHTML = `Bilan sur ${coursesValidees} courses terminées (Mise : ${miseTotale} €) — <span class="${netGlobal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">Bénéfice Net : ${netGlobal >= 0 ? '+' : ''}${netGlobal.toFixed(2)} €</span>`;
+                        statGlobal.innerHTML = `Bilan sur ${coursesValidees} courses (Mise : ${miseTotale} €) — <span class="${netGlobal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">Bénéfice Net : ${netGlobal >= 0 ? '+' : ''}${netGlobal.toFixed(2)} €</span>`;
 
                         localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
