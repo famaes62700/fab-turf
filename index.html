@@ -213,7 +213,7 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
-        // Auto-Rafraîchissement toutes les 20 secondes (20 000 ms) pour les cotes et l'arrivée (sans perdre le focus)
+        // Auto-Rafraîchissement toutes les 20 secondes (20 000 ms) pour les cotes et l'arrivée
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -725,26 +725,25 @@
             gainPepiteGag.textContent = `--`;
             gainPepitePla.textContent = `--`;
             statGlobal.textContent = "Recherche en cours...";
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Détection des courses...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse de toutes les courses du jour...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
-            let finishedRaces = [];
+            // Récupérer toutes les courses de la journée (indépendamment de l'heure actuelle) pour être sûr de comptabiliser le jour entier
+            let allRacesToday = [];
             liveMeetingsData.forEach((m, mIdx) => {
                 let rNum = m.numOfficiel || (mIdx + 1);
                 let courses = m.courses || m.races || m.lesCourses || [];
                 courses.forEach((c, cIdx) => {
                     let cNum = c.numOrdre || (cIdx + 1);
-                    if (c.heureDepart && new Date(c.heureDepart) < new Date()) {
-                        finishedRaces.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
-                    }
+                    allRacesToday.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
                 });
             });
 
-            if (finishedRaces.length === 0) {
-                statsProgress.textContent = "Aucune course terminée pour cette date.";
+            if (allRacesToday.length === 0) {
+                statsProgress.textContent = "Aucune course trouvée pour cette date.";
                 return;
             }
 
@@ -753,9 +752,9 @@
             let totalGainPepiteGag = 0, totalGainPepitePla = 0;
             let coursesValidees = 0;
 
-            for (let i = 0; i < finishedRaces.length; i++) {
-                let r = finishedRaces[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse (${i+1}/${finishedRaces.length}) : ${r.name}`;
+            for (let i = 0; i < allRacesToday.length; i++) {
+                let r = allRacesToday[i];
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse (${i+1}/${allRacesToday.length}) : ${r.name}`;
 
                 try {
                     const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
@@ -764,6 +763,7 @@
                     let partants = data.participants || [];
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     
+                    // On comptabilise uniquement si la course a une arrivée officielle enregistrée
                     if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
@@ -787,7 +787,7 @@
                             totalGainPepitePla += gPla;
                         }
 
-                        // 2 paris par course : Base (1€) + Pépite (1€) = 2€ de mise par course
+                        // 2 paris par course : Base (1€ Gagnant + 1€ Placé optionnel ou Base seule selon vos règles - ici 2€ misés par course)
                         let miseTotale = coursesValidees * 2;
                         let netBase = (totalGainBaseGag + totalGainBasePla) - coursesValidees;
                         let netPepite = (totalGainPepiteGag + totalGainPepitePla) - coursesValidees;
@@ -802,7 +802,7 @@
                         gainPepiteGag.innerHTML = `${totalGainPepiteGag.toFixed(2)} €<br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepite >= 0 ? '+' : ''}${netPepite.toFixed(2)}€</span>`;
                         gainPepitePla.innerHTML = `${totalGainPepitePla.toFixed(2)} €`;
                         
-                        statGlobal.innerHTML = `Bilan sur ${coursesValidees} courses (Mise totale : ${miseTotale} €) — <span class="${netGlobal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">Bénéfice Net : ${netGlobal >= 0 ? '+' : ''}${netGlobal.toFixed(2)} €</span>`;
+                        statGlobal.innerHTML = `Bilan sur ${coursesValidees} courses terminées (Mise : ${miseTotale} €) — <span class="${netGlobal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">Bénéfice Net : ${netGlobal >= 0 ? '+' : ''}${netGlobal.toFixed(2)} €</span>`;
 
                         localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
                             netBase: netBase,
@@ -811,7 +811,13 @@
                     }
                 } catch (e) {}
             }
-            statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan complété et sauvegardé !</span>`;
+
+            if (coursesValidees === 0) {
+                statsProgress.innerHTML = `<span class="text-amber-400">Aucune arrivée officielle disponible pour le moment.</span>`;
+                statGlobal.textContent = "Patientez la fin des premières courses.";
+            } else {
+                statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan complété et sauvegardé avec succès !</span>`;
+            }
         }
 
         window.onload = loadLivePmu;
