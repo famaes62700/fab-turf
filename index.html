@@ -467,80 +467,77 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
-        // AMÉLIORATION UNIVERSELLE : Compatible PMU France et PMU International (Étranger)
+        // FONCTION UNIVERSELLE RENFORCÉE (France + Étranger / International)
         function getRapportForHorse(listeRapports, horseNum, targetType) {
             let maxGain = 0;
-            if (!listeRapports || listeRapports.length === 0) return 0;
+            if (!listeRapports || !Array.isArray(listeRapports) || listeRapports.length === 0) return 0;
             
             listeRapports.forEach(repGroup => {
                 let typePari = (repGroup.typePari || repGroup.libellePari || repGroup.codePari || "").toUpperCase();
                 
-                // Analyse tous les types de paris simples, internationaux ou directs
                 if (typePari.includes('SIMPLE') || typePari.includes('SG') || typePari.includes('SP') || typePari.includes('SGP') || typePari.includes('INTER') || typePari === 'PARI') {
                     let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
                     
-                    details.forEach(r => {
-                        let libelle = (r.libelleRapport || r.libelle || r.typeRapport || "").toUpperCase();
-                        let combo = String(r.combinaison || r.cheval || r.numeroCheval || r.partant || "");
-                        
-                        let isMatch = (combo === String(horseNum));
-                        let isTarget = false;
+                    if (Array.isArray(details)) {
+                        details.forEach(r => {
+                            let libelle = (r.libelleRapport || r.libelle || r.typeRapport || "").toUpperCase();
+                            let combo = String(r.combinaison || r.cheval || r.numeroCheval || r.partant || "").trim();
+                            
+                            let isMatch = (combo === String(horseNum).trim());
+                            let isTarget = false;
 
-                        if (targetType === 'GAGNANT') {
-                            if (libelle.includes('GAGNANT') || libelle === 'G' || libelle.includes('SG') || libelle.includes('1ER') || libelle.includes('WIN') || typePari.includes('GAGNANT')) {
-                                if (!libelle.includes('PLACE') && !libelle.includes('P') && !libelle.includes('SHOW')) isTarget = true;
+                            if (targetType === 'GAGNANT') {
+                                if (libelle.includes('GAGNANT') || libelle === 'G' || libelle.includes('SG') || libelle.includes('1ER') || libelle.includes('WIN') || typePari.includes('GAGNANT')) {
+                                    if (!libelle.includes('PLACE') && !libelle.includes('P') && !libelle.includes('SHOW')) isTarget = true;
+                                }
+                                if (typePari.includes('GAGNANT') || typePari === 'SG' || typePari.includes('INTER')) isTarget = true;
                             }
-                            if (typePari.includes('GAGNANT') || typePari === 'SG') isTarget = true;
-                        }
 
-                        if (targetType === 'PLACE') {
-                            if (libelle.includes('PLACE') || libelle === 'P' || libelle.includes('SP') || libelle.includes('2EM') || libelle.includes('3EM') || libelle.includes('SHOW') || typePari.includes('PLACE')) {
-                                isTarget = true;
+                            if (targetType === 'PLACE') {
+                                if (libelle.includes('PLACE') || libelle === 'P' || libelle.includes('SP') || libelle.includes('2EM') || libelle.includes('3EM') || libelle.includes('SHOW') || typePari.includes('PLACE')) {
+                                    isTarget = true;
+                                }
+                                if (typePari.includes('PLACE') || typePari === 'SP') isTarget = true;
                             }
-                            if (typePari.includes('PLACE') || typePari === 'SP') isTarget = true;
-                        }
 
-                        // Si aucun libellé précis n'est détecté mais que le cheval correspond directement au groupe de rapport
-                        if (isMatch && (isTarget || libelle === '')) {
-                            let montant = r.gainEuro || r.dividende || r.rapport || r.montant || r.dividendeEuro;
-                            if (montant) {
-                                let val = parseFloat(String(montant).replace(',', '.'));
-                                if (val > 100) val = val / 100;
-                                if (val > maxGain) maxGain = val;
+                            if (isMatch && (isTarget || libelle === '' || typePari.includes('INTER'))) {
+                                let montant = r.gainEuro || r.dividende || r.rapport || r.montant || r.dividendeEuro;
+                                if (montant !== undefined && montant !== null) {
+                                    let val = parseFloat(String(montant).replace(',', '.'));
+                                    if (!isNaN(val)) {
+                                        if (val > 100) val = val / 100;
+                                        if (val > maxGain) maxGain = val;
+                                    }
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
             });
 
-            // Fallback de secours si l'API internationale ne renvoie pas le format standard de dividendes 
-            // mais fournit la cote officielle de fin de course (pour éviter de fausser le bilan à 0 sur l'étranger)
-            if (maxGain === 0 && targetType === 'GAGNANT') {
-                // Si le cheval est arrivé 1er, on utilise sa cote ou une estimation minimale de sécurité
-                let montantDirect = getDirectGainFallback(listeRapports, horseNum, targetType);
-                if (montantDirect > 0) maxGain = montantDirect;
+            // Fallback universel pour les courses internationales si aucun libellé strict n'a matché
+            if (maxGain === 0) {
+                listeRapports.forEach(repGroup => {
+                    let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
+                    if (Array.isArray(details)) {
+                        details.forEach(r => {
+                            let combo = String(r.combinaison || r.cheval || r.numeroCheval || "").trim();
+                            if (combo === String(horseNum).trim()) {
+                                let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
+                                if (montant !== undefined && montant !== null) {
+                                    let val = parseFloat(String(montant).replace(',', '.'));
+                                    if (!isNaN(val)) {
+                                        if (val > 100) val = val / 100;
+                                        if (val > maxGain) maxGain = val;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
             }
 
             return maxGain;
-        }
-
-        function getDirectGainFallback(listeRapports, horseNum, targetType) {
-            let fallbackVal = 0;
-            listeRapports.forEach(repGroup => {
-                let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
-                details.forEach(r => {
-                    let combo = String(r.combinaison || r.cheval || r.numeroCheval || "");
-                    if (combo === String(horseNum)) {
-                        let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
-                        if (montant) {
-                            let val = parseFloat(String(montant).replace(',', '.'));
-                            if (val > 100) val = val / 100;
-                            if (val > fallbackVal) fallbackVal = val;
-                        }
-                    }
-                });
-            });
-            return fallbackVal;
         }
 
         async function fetchRaceData(isBackground = false) {
@@ -583,6 +580,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
+                        // Transition automatique 1 minute (60 000 ms) après l'arrivée officielle
                         setTimeout(() => {
                             goToNextRace();
                         }, 60000);
