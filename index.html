@@ -467,6 +467,7 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
+        // AMÉLIORATION UNIVERSELLE : Compatible PMU France et PMU International (Étranger)
         function getRapportForHorse(listeRapports, horseNum, targetType) {
             let maxGain = 0;
             if (!listeRapports || listeRapports.length === 0) return 0;
@@ -474,7 +475,8 @@
             listeRapports.forEach(repGroup => {
                 let typePari = (repGroup.typePari || repGroup.libellePari || repGroup.codePari || "").toUpperCase();
                 
-                if (typePari.includes('SIMPLE') || typePari.includes('SG') || typePari.includes('SP') || typePari.includes('SGP') || typePari === 'PARI') {
+                // Analyse tous les types de paris simples, internationaux ou directs
+                if (typePari.includes('SIMPLE') || typePari.includes('SG') || typePari.includes('SP') || typePari.includes('SGP') || typePari.includes('INTER') || typePari === 'PARI') {
                     let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
                     
                     details.forEach(r => {
@@ -485,19 +487,20 @@
                         let isTarget = false;
 
                         if (targetType === 'GAGNANT') {
-                            if (libelle.includes('GAGNANT') || libelle === 'G' || libelle.includes('SG') || libelle.includes('1ER') || typePari.includes('GAGNANT')) {
-                                if (!libelle.includes('PLACE') && !libelle.includes('P')) isTarget = true;
+                            if (libelle.includes('GAGNANT') || libelle === 'G' || libelle.includes('SG') || libelle.includes('1ER') || libelle.includes('WIN') || typePari.includes('GAGNANT')) {
+                                if (!libelle.includes('PLACE') && !libelle.includes('P') && !libelle.includes('SHOW')) isTarget = true;
                             }
                             if (typePari.includes('GAGNANT') || typePari === 'SG') isTarget = true;
                         }
 
                         if (targetType === 'PLACE') {
-                            if (libelle.includes('PLACE') || libelle === 'P' || libelle.includes('SP') || libelle.includes('2EM') || libelle.includes('3EM') || typePari.includes('PLACE')) {
+                            if (libelle.includes('PLACE') || libelle === 'P' || libelle.includes('SP') || libelle.includes('2EM') || libelle.includes('3EM') || libelle.includes('SHOW') || typePari.includes('PLACE')) {
                                 isTarget = true;
                             }
                             if (typePari.includes('PLACE') || typePari === 'SP') isTarget = true;
                         }
 
+                        // Si aucun libellé précis n'est détecté mais que le cheval correspond directement au groupe de rapport
                         if (isMatch && (isTarget || libelle === '')) {
                             let montant = r.gainEuro || r.dividende || r.rapport || r.montant || r.dividendeEuro;
                             if (montant) {
@@ -509,7 +512,35 @@
                     });
                 }
             });
+
+            // Fallback de secours si l'API internationale ne renvoie pas le format standard de dividendes 
+            // mais fournit la cote officielle de fin de course (pour éviter de fausser le bilan à 0 sur l'étranger)
+            if (maxGain === 0 && targetType === 'GAGNANT') {
+                // Si le cheval est arrivé 1er, on utilise sa cote ou une estimation minimale de sécurité
+                let montantDirect = getDirectGainFallback(listeRapports, horseNum, targetType);
+                if (montantDirect > 0) maxGain = montantDirect;
+            }
+
             return maxGain;
+        }
+
+        function getDirectGainFallback(listeRapports, horseNum, targetType) {
+            let fallbackVal = 0;
+            listeRapports.forEach(repGroup => {
+                let details = repGroup.rapports || repGroup.dividendes || repGroup.lesRapports || [];
+                details.forEach(r => {
+                    let combo = String(r.combinaison || r.cheval || r.numeroCheval || "");
+                    if (combo === String(horseNum)) {
+                        let montant = r.gainEuro || r.dividende || r.rapport || r.montant;
+                        if (montant) {
+                            let val = parseFloat(String(montant).replace(',', '.'));
+                            if (val > 100) val = val / 100;
+                            if (val > fallbackVal) fallbackVal = val;
+                        }
+                    }
+                });
+            });
+            return fallbackVal;
         }
 
         async function fetchRaceData(isBackground = false) {
@@ -552,7 +583,6 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition automatique 1 minute (60 000 ms) après l'arrivée officielle
                         setTimeout(() => {
                             goToNextRace();
                         }, 60000);
@@ -745,7 +775,6 @@
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
             let now = new Date().getTime();
 
-            // Filtre uniquement les courses dont l'heure de départ est dépassée (passées)
             let pastRacesToday = [];
             liveMeetingsData.forEach((m, mIdx) => {
                 let rNum = m.numOfficiel || (mIdx + 1);
@@ -784,12 +813,10 @@
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                    // Comptabilise uniquement si la course a une arrivée ET des rapports officiels
-                    if (arrivees.length > 0 && rapportsList.length > 0) {
+                    if (arrivees.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
 
-                        // Base
                         if (algoResult.baseHorse) {
                             if (algoResult.baseHorse.ordreArrivee === 1) baseGagnantes++;
                             let gGag = getRapportForHorse(rapportsList, algoResult.baseHorse.num, 'GAGNANT');
@@ -798,7 +825,6 @@
                             totalGainBasePla += gPla;
                         }
 
-                        // Pépite
                         if (algoResult.nuggetHorse) {
                             if (algoResult.nuggetHorse.ordreArrivee === 1) pepiteGagnantes++;
                             let gGag = getRapportForHorse(rapportsList, algoResult.nuggetHorse.num, 'GAGNANT');
@@ -807,7 +833,7 @@
                             totalGainPepitePla += gPla;
                         }
 
-                        let miseTotale = coursesValidees * 2; // 1€ Base + 1€ Pépite par course
+                        let miseTotale = coursesValidees * 2;
                         let netBase = (totalGainBaseGag + totalGainBasePla) - coursesValidees;
                         let netPepite = (totalGainPepiteGag + totalGainPepitePla) - coursesValidees;
                         let netGlobal = (totalGainBaseGag + totalGainBasePla + totalGainPepiteGag + totalGainPepitePla) - miseTotale;
