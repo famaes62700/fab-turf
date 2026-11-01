@@ -213,6 +213,7 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
+        // Auto-Rafraîchissement toutes les 20 secondes des cotes et arrivées
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -254,7 +255,7 @@
             if (!discipline) return '<i class="fa-solid fa-horse text-emerald-400 mr-1.5" title="Plat"></i>';
             let d = String(discipline).toUpperCase();
             if (d.includes('TROT') || d.includes('ATTETE') || d.includes('MONTE')) {
-                return '<i class="fa-solid fa-cart-flatbed text-amber-400 mr-1.5" title="Trot"></i>'; // ou icône chariot/roue
+                return '<i class="fa-solid fa-cart-flatbed text-amber-400 mr-1.5" title="Trot"></i>';
             }
             if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE') || d.includes('CROSS')) {
                 return '<i class="fa-solid fa-shield-halved text-blue-400 mr-1.5" title="Obstacle / Haies"></i>';
@@ -414,11 +415,11 @@
                     opt.value = cIdx;
                     let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
-                    let discIcon = "";
+                    
                     let d = String(c.discipline || "").toUpperCase();
+                    let discIcon = "🐎 ";
                     if (d.includes('TROT')) discIcon = "🛒 ";
                     else if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE')) discIcon = "🦘 ";
-                    else discIcon = "🐎 ";
                     
                     opt.textContent = `${discIcon}C${c.numOrdre || (cIdx+1)}${courseTime} : ${libelleCourse}`;
                     raceSelect.appendChild(opt);
@@ -563,7 +564,8 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        setTimeout(() => { goToNextRace(); }, 60000);
+                        // Transition automatique 30 secondes après l'arrivée officielle
+                        setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
                     arrivalBlock.classList.add('hidden');
@@ -623,7 +625,7 @@
                 
                 let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
                 let discIcon = getDisciplineIcon(race.discipline);
-                document.getElementById('raceInfoDetails</u>').innerHTML = `${discIcon} ${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
+                document.getElementById('raceInfoDetails').innerHTML = `${discIcon} Partants & Cotes — ${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
             } catch (e) {}
         }
 
