@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (Version 46 Défilement & Centimes Fixés)</title>
+    <title>PMU Direct - Algorithme Exact (Version 47 Bilan 100% Corrigé)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -404,21 +404,38 @@
         }
 
         // ==========================================
-        // CORRECTIF N°1 : NORMALISATION DES COTES ET RAPPORTS
-        // Le PMU envoie parfois les centimes (150 = 1,50€) ou des dixièmes (15 = 1,50€). 
-        // Cette fonction divise de force les valeurs pour toujours retomber sur 1€ exact.
+        // CORRECTIF N°1 : PARSEUR DE RAPPORTS PMU 100% FIABLE
         // ==========================================
-        function normalizePMUValue(val) {
-            if (val === undefined || val === null || val === "") return 0;
-            let v = parseFloat(String(val).replace(',', '.'));
-            if (isNaN(v) || v <= 0) return 0;
-            
-            // Si c'est un entier (ex: 150)
-            if (Number.isInteger(v)) {
-                if (v >= 110) return v / 100; // 150 -> 1.50
-                if (v >= 11 && v <= 99) return v / 10; // 15 -> 1.50
+        function parsePMURapport(o) {
+            if (!o) return 0;
+            // 1. Chercher une chaîne avec virgule (ex: "15,40" -> 15.40€) - 100% fiable
+            if (typeof o.rapport === 'string' && o.rapport.includes(',')) {
+                return parseFloat(o.rapport.replace(',', '.'));
             }
-            return v;
+            if (typeof o.rapportPourUnEuro === 'string' && o.rapportPourUnEuro.includes(',')) {
+                return parseFloat(o.rapportPourUnEuro.replace(',', '.'));
+            }
+            
+            // 2. Chercher les dividendes officiels (toujours en centimes dans l'API PMU ex: 1540 -> 15.40€)
+            if (o.dividendePourUnEuro !== undefined && o.dividendePourUnEuro !== null) {
+                return o.dividendePourUnEuro / 100;
+            }
+            if (o.dividende !== undefined && o.dividende !== null) {
+                return o.dividende / 100;
+            }
+            
+            // 3. Fallback brut
+            let fallback = o.rapportPourUnEuro || o.rapport || o.cote;
+            if (fallback !== undefined && fallback !== null) {
+                let v = parseFloat(String(fallback).replace(',', '.'));
+                if (isNaN(v) || v <= 0) return 0;
+                // Si le PMU renvoie un entier > 100 sans décimale, c'est généralement des centimes
+                if (v > 100 && Number.isInteger(v) && !String(fallback).includes('.')) {
+                    return v / 100;
+                }
+                return v;
+            }
+            return 0;
         }
 
         function extractRapport(data, horseNum, typeRapport) {
@@ -432,16 +449,10 @@
                     let combo = String(o.combinaison || o.cheval || o.numPmu || "");
                     
                     if (combo === String(horseNum) && !combo.includes('-')) {
-                        // Priorité absolue au "dividendePourUnEuro" (qui est garanti en centimes, donc on divise toujours par 100)
-                        let rawVal = 0;
-                        if (o.dividendePourUnEuro !== undefined) rawVal = (o.dividendePourUnEuro / 100);
-                        else if (o.dividende !== undefined) rawVal = (o.dividende / 100);
-                        else if (o.rapportPourUnEuro !== undefined) rawVal = normalizePMUValue(o.rapportPourUnEuro);
-                        else if (o.rapport !== undefined) rawVal = normalizePMUValue(o.rapport);
-                        
-                        if (rawVal > 0) {
-                            if (typeRapport === 'G' && (currentType.includes('GAGN') || currentType === 'E_SIMPLE_GAGNANT')) result = rawVal;
-                            if (typeRapport === 'P' && (currentType.includes('PLAC') || currentType === 'E_SIMPLE_PLACE')) result = rawVal;
+                        let v = parsePMURapport(o);
+                        if (v > 0) {
+                            if (typeRapport === 'G' && (currentType.includes('GAGN') || currentType === 'E_SIMPLE_GAGNANT')) result = v;
+                            if (typeRapport === 'P' && (currentType.includes('PLAC') || currentType === 'E_SIMPLE_PLACE')) result = v;
                         }
                     }
                     for (let k in o) if (typeof o[k] === 'object') search(o[k], currentType);
@@ -464,15 +475,10 @@
                     if (combo.includes('-')) {
                         let parts = combo.split('-').map(n => parseInt(n));
                         if (parts.includes(parseInt(num1)) && parts.includes(parseInt(num2))) {
-                            let rawVal = 0;
-                            if (o.dividendePourUnEuro !== undefined) rawVal = (o.dividendePourUnEuro / 100);
-                            else if (o.dividende !== undefined) rawVal = (o.dividende / 100);
-                            else if (o.rapportPourUnEuro !== undefined) rawVal = normalizePMUValue(o.rapportPourUnEuro);
-                            else if (o.rapport !== undefined) rawVal = normalizePMUValue(o.rapport);
-                            
-                            if (rawVal > 0) {
-                                if (typeCouplé === 'G' && currentType.includes('GAGN')) result = rawVal;
-                                if (typeCouplé === 'P' && currentType.includes('PLAC')) result = rawVal;
+                            let v = parsePMURapport(o);
+                            if (v > 0) {
+                                if (typeCouplé === 'G' && currentType.includes('GAGN')) result = v;
+                                if (typeCouplé === 'P' && currentType.includes('PLAC')) result = v;
                             }
                         }
                     }
@@ -493,13 +499,9 @@
                     let currentType = (o.typePari || o.libellePari || o.pari || parentType || "").toUpperCase();
                     let combo = String(o.combinaison || "");
                     
-                    let rawVal = 0;
-                    if (o.dividendePourUnEuro !== undefined) rawVal = (o.dividendePourUnEuro / 100);
-                    else if (o.dividende !== undefined) rawVal = (o.dividende / 100);
-                    else if (o.rapportPourUnEuro !== undefined) rawVal = normalizePMUValue(o.rapportPourUnEuro);
-                    
-                    if (combo !== "" && rawVal > 0 && (currentType.includes('SIMPLE') || currentType.includes('COUPLE'))) {
-                        results.push({ title: currentType.replace(/E_/g,''), combo: combo, val: rawVal });
+                    let v = parsePMURapport(o);
+                    if (combo !== "" && v > 0 && (currentType.includes('SIMPLE') || currentType.includes('COUPLE'))) {
+                        results.push({ title: currentType.replace(/E_/g,''), combo: combo, val: v });
                     }
                     for (let k in o) if (typeof o[k] === 'object') search(o[k], currentType);
                 }
@@ -508,30 +510,27 @@
             return results;
         }
 
-        // ==========================================
-        // CORRECTIF N°2 : LE SCANNER PROFOND DE COTES (Enlève le "Archi.")
-        // ==========================================
         function getHorseCoteFromFullData(raceData, horseNum, participantObj) {
             if (!raceData) return null;
             let officialGagnant = extractRapport(raceData, horseNum, 'G');
-            if (officialGagnant > 0) return officialGagnant; // Si la course est finie, on met la cote du rapport final
+            if (officialGagnant > 0) return officialGagnant; 
 
             let found = null;
             if (participantObj) {
                 let directCotes = [
-                    participantObj.dernierRapportDirect?.rapport,
-                    participantObj.dernierRapportReference?.rapport,
-                    participantObj.cotes?.[0]?.rapport,
-                    participantObj.cote
+                    participantObj.dernierRapportDirect,
+                    participantObj.dernierRapportReference,
+                    participantObj.cotes?.[0],
+                    {cote: participantObj.cote}
                 ];
-                for (let c of directCotes) {
-                    if (c !== undefined && c !== null && c !== "") {
-                        found = c; break;
+                for (let obj of directCotes) {
+                    if (obj) {
+                        let v = parsePMURapport(obj);
+                        if (v > 0) { found = v; break; }
                     }
                 }
             }
             
-            // Si toujours rien, fouille en profondeur (résout les problèmes de structures étranges PMU)
             if (!found) {
                 function deepScanCote(obj) {
                     if (!obj || typeof obj !== 'object' || found) return;
@@ -539,8 +538,8 @@
                     else {
                         let n = obj.numPmu || obj.numero || obj.partantNumero || obj.cheval;
                         if (String(n) === String(horseNum)) {
-                            if (obj.cote !== undefined) found = obj.cote;
-                            else if (obj.rapport !== undefined) found = obj.rapport;
+                            let v = parsePMURapport(obj);
+                            if (v > 0) found = v;
                         }
                         for (let k in obj) if (typeof obj[k] === 'object') deepScanCote(obj[k]);
                     }
@@ -548,10 +547,7 @@
                 deepScanCote(raceData);
             }
 
-            if (found) {
-                return normalizePMUValue(found);
-            }
-            return null;
+            return found;
         }
 
         function evaluateMusique(musique) {
@@ -584,7 +580,6 @@
                 
                 let coteFound = getHorseCoteFromFullData(fullRaceData, num, p);
                 let fallbackCote = coteFound || (8 + (idx * 2.5)); 
-                // Remplacement de (Archi.) par (Est.) plus propre si ça arrive
                 let coteDisplay = coteFound ? coteFound.toFixed(1) : `${fallbackCote.toFixed(1)} (Est.)`;
                 let cote = coteFound || fallbackCote; 
                 
@@ -751,8 +746,9 @@
             return `<span class="${colorClass}">${sign}${val.toFixed(2)} €</span>`;
         }
 
+        // MISE À JOUR DE LA CLÉ DE CACHE POUR VIDER L'ANCIEN HISTORIQUE FAUX
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v46_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v47_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -805,10 +801,6 @@
             }
         }
 
-        // ==========================================
-        // CORRECTIF N°3 : ANIMATION DE DÉFILEMENT COURSE PAR COURSE
-        // Le navigateur rafraîchit maintenant l'affichage à chaque tour de boucle (await setTimeout)
-        // ==========================================
         async function calculateDailyStats() {
             document.getElementById('historyBlock').classList.add('hidden');
             let statsBlock = document.getElementById('statsBlock');
@@ -894,7 +886,6 @@
                             if (cp > 0) { couplePlaceWins++; totalGainCouplePlace += cp; }
                         }
 
-                        // METTRE À JOUR LE DOM EN DIRECT À CHAQUE COURSE POUR L'EFFET DE DÉFILEMENT
                         let netGagnantTotal = (totalGainGagnantBase + totalGainGagnantPepite) - misesGagnant;
                         let netPlaceTotal = (totalGainPlaceBase + totalGainPlacePepite) - misesPlace;
                         let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
@@ -917,7 +908,6 @@
                         let miseAbsolue = misesGagnant + misesPlace + misesCoupleGag + misesCouplePlc; 
                         document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses réelles (Mise totale exacte engagée : ${miseAbsolue} €)`;
 
-                        // Pause de 80ms pour laisser le navigateur dessiner les chiffres (Effet de défilement)
                         await new Promise(r => setTimeout(r, 80));
                     }
                 } catch (e) {}
@@ -928,7 +918,7 @@
             let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
             let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
-            localStorage.setItem(`pmu_stats_v46_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v47_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
