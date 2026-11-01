@@ -94,7 +94,7 @@
                 <!-- BASE -->
                 <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-emerald-500/30 flex flex-col justify-between space-y-2">
                     <div class="flex justify-between items-center">
-                        <span class="text-[10px] uppercase font-bold text-emerald-400">Base</span>
+                        <span class="text-[10px] uppercase font-bold text-emerald-400">Base Solide</span>
                         <span id="statBase" class="text-[10px] font-bold text-white">G: 0 | P: 0 / 0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-[11px]">
@@ -143,7 +143,9 @@
                     </div>
                 </div>
             </div>
-            <div id="statGlobal" class="text-center text-[11px] text-zinc-300 mt-3 font-semibold bg-zinc-800/60 py-2.5 rounded-xl border border-zinc-700/50">Mise totale : 0 €</div>
+            <div id="statGlobal" class="text-center text-[11px] text-zinc-300 mt-3 font-semibold bg-zinc-800/60 py-2.5 rounded-xl border border-zinc-700/50">
+                Chaque case indique votre gain net si vous misiez 1€ systématiquement sur ce jeu.
+            </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -177,15 +179,19 @@
                     <i class="fa-solid fa-star mr-1.5"></i> Nos 2 Chevaux Clés
                 </h2>
                 <div class="flex items-center space-x-1.5 flex-wrap">
+                    <!-- LIEN DIRECT EQUIDIA -->
                     <a href="https://www.equidia.fr/direct?utm_source=intern&utm_medium=header_menu&utm_campaign=Home" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1.5 rounded-lg font-bold shadow transition flex items-center">
                         <i class="fa-solid fa-video mr-1.5"></i> Direct 🎥
                     </a>
+                    <!-- BOUTON PRÉCÉDENTE -->
                     <button onclick="goToPrevRace()" class="bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 text-xs px-2.5 py-1.5 rounded-lg border border-indigo-500/40 font-semibold transition flex items-center shadow" title="Course précédente">
                         <i class="fa-solid fa-backward-step"></i>
                     </button>
+                    <!-- ACTUALISER -->
                     <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-500/30 font-semibold transition flex items-center shadow" title="Actualiser manuellement">
                         <i class="fa-solid fa-rotate"></i>
                     </button>
+                    <!-- BOUTON SUIVANTE -->
                     <button onclick="goToNextRace()" class="bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 text-xs px-2.5 py-1.5 rounded-lg border border-indigo-500/40 font-semibold transition flex items-center shadow" title="Course suivante">
                         <i class="fa-solid fa-forward-step"></i>
                     </button>
@@ -232,6 +238,7 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
+        // Auto-Rafraîchissement toutes les 20 secondes
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -431,6 +438,7 @@
                 courses.forEach((c, cIdx) => {
                     let opt = document.createElement('option');
                     opt.value = cIdx;
+                    
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
                     let discName = c.discipline ? `(${c.discipline})` : '(Plat)';
@@ -561,7 +569,7 @@
             return foundGain;
         }
 
-        // EXTRACTEUR POUR LE COUPLÉ
+        // EXTRACTEUR SÉCURISÉ DES GAINS COUPLÉS (1€)
         function extractCoupleGain(listeRapports, num1, num2, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -571,24 +579,30 @@
                 let famille = (group.famillePari || "").toUpperCase();
                 let details = group.rapports || group.dividendes || group.lesRapports || [];
 
-                if (pType.includes('COUPLE') || pType.includes('CG') || pType.includes('CP') || famille.includes('COUPLE') || pType.includes('JUMELE')) {
+                if (pType.includes('COUPLE') || pType.includes('CG') || pType.includes('CP') || famille.includes('COUPLE') || pType.includes('JUMELE') || pType.includes('E-COUPLE')) {
                     if (Array.isArray(details)) {
                         details.forEach(item => {
-                            let combo = String(item.combinaison || item.cheval || "").trim();
-                            let lib = (item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport || "").toUpperCase();
-                            
+                            // Reconstituer la combinaison de toutes les manières possibles par le PMU
+                            let strCombo = "";
+                            if (Array.isArray(item.chevaux)) strCombo = item.chevaux.join('-');
+                            else if (Array.isArray(item.combinaison)) strCombo = item.combinaison.join('-');
+                            else strCombo = String(item.combinaison || item.cheval || item.partants || "").trim();
+
                             let matchCombo = false;
-                            let parts = combo.split('-');
-                            if (parts.length === 2) {
-                                let p1 = parseInt(parts[0], 10);
-                                let p2 = parseInt(parts[1], 10);
+                            // Extrait tous les chiffres de la combinaison (ex: "4-5" -> 4 et 5)
+                            let nums = strCombo.match(/\d+/g);
+                            if (nums && nums.length >= 2) {
+                                let p1 = parseInt(nums[0], 10);
+                                let p2 = parseInt(nums[1], 10);
                                 if ((p1 == num1 && p2 == num2) || (p1 == num2 && p2 == num1)) {
                                     matchCombo = true;
                                 }
                             }
 
                             if (matchCombo) {
+                                let lib = (item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport || "").toUpperCase();
                                 let isMatch = false;
+                                
                                 if (targetType === 'CG') {
                                     if (lib.includes('GAGNANT') || lib === 'G' || lib === 'CG' || pType.includes('GAGNANT') || pType === 'CG') {
                                         if (!lib.includes('PLACE') && !lib.includes('P')) isMatch = true;
@@ -605,13 +619,10 @@
 
                                 if (isMatch) {
                                     let val = 0;
-                                    if (item.dividendePourUnEuro !== undefined) {
-                                        val = item.dividendePourUnEuro / 100;
-                                    } else if (item.dividendeEuro !== undefined) {
-                                        val = item.dividendeEuro;
-                                    } else if (item.gainEuro !== undefined) {
-                                        val = item.gainEuro;
-                                    } else {
+                                    if (item.dividendePourUnEuro !== undefined) val = item.dividendePourUnEuro / 100;
+                                    else if (item.dividendeEuro !== undefined) val = item.dividendeEuro;
+                                    else if (item.gainEuro !== undefined) val = item.gainEuro;
+                                    else {
                                         let rawM = item.rapport || item.dividende || item.montant;
                                         if (rawM !== undefined && rawM !== null) {
                                             val = parseFloat(String(rawM).replace(',', '.'));
@@ -670,7 +681,7 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition automatique 30s après l'arrivée officielle
+                        // Transition 30s après l'arrivée
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -867,9 +878,11 @@
             document.getElementById('historyBlock').classList.add('hidden');
             let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
+            
             let statBase = document.getElementById('statBase');
             let statPepite = document.getElementById('statPepite');
             let statCouple = document.getElementById('statCouple');
+            
             let gainBaseGag = document.getElementById('gainBaseGag');
             let gainBasePla = document.getElementById('gainBasePla');
             let gainPepiteGag = document.getElementById('gainPepiteGag');
@@ -889,8 +902,7 @@
             gainCoupleGag.textContent = `--`;
             gainCouplePla.textContent = `--`;
             
-            statGlobal.textContent = "Recherche en cours...";
-            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse des courses de la journée...";
+            statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse des courses...";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -913,8 +925,7 @@
             });
 
             if (pastRacesToday.length === 0) {
-                statsProgress.textContent = "Aucune course passée pour le moment aujourd'hui.";
-                statGlobal.textContent = "Attendez le départ de la première course.";
+                statsProgress.textContent = "Aucune course passée aujourd'hui.";
                 return;
             }
 
@@ -927,10 +938,11 @@
             let totalGainCoupleGag = 0, totalGainCouplePla = 0;
             
             let coursesValidees = 0;
+            let coursesValideesCP = 0;
 
             for (let i = 0; i < pastRacesToday.length; i++) {
                 let r = pastRacesToday[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyse (${i+1}/${pastRacesToday.length}) : ${r.name}`;
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Vérification (${i+1}/${pastRacesToday.length}) : ${r.name}`;
 
                 try {
                     const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
@@ -940,112 +952,113 @@
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                    // Validée si l'arrivée est connue OU si des rapports sont déjà publiés (pour ne manquer aucune course)
                     if (arrivees.length > 0 || rapportsList.length > 0) {
                         coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
                         let baseH = algoResult.baseHorse;
                         let nuggetH = algoResult.nuggetHorse;
 
-                        let baseArr = baseH ? (partants.find(p => (p.numPmu || p.numOrdre) === baseH.num)?.ordreArrivee || 99) : 99;
-                        let nuggetArr = nuggetH ? (partants.find(p => (p.numPmu || p.numOrdre) === nuggetH.num)?.ordreArrivee || 99) : 99;
+                        let baseArr = baseH ? (baseH.ordreArrivee || 99) : 99;
+                        let nuggetArr = nuggetH ? (nuggetH.ordreArrivee || 99) : 99;
 
-                        // === BASE ===
+                        // BASE
                         if (baseH) {
                             let gGag = extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
                             let gPla = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
                             
                             if (gGag > 0 || baseArr === 1) {
                                 baseGagCount++;
+                                if (gGag === 0) gGag = baseH.cote; 
                                 totalGainBaseGag += gGag;
                             }
                             if (gPla > 0 || (baseArr >= 1 && baseArr <= 3)) {
                                 basePlaCount++;
+                                if (gPla === 0) gPla = Math.max(1.1, baseH.cote / 3); 
                                 totalGainBasePla += gPla;
                             }
                         }
 
-                        // === PÉPITE ===
+                        // PÉPITE
                         if (nuggetH) {
                             let gGag = extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
                             let gPla = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
                             
                             if (gGag > 0 || nuggetArr === 1) {
                                 pepiteGagCount++;
+                                if (gGag === 0) gGag = nuggetH.cote; 
                                 totalGainPepiteGag += gGag;
                             }
                             if (gPla > 0 || (nuggetArr >= 1 && nuggetArr <= 3)) {
                                 pepitePlaCount++;
+                                if (gPla === 0) gPla = Math.max(1.1, nuggetH.cote / 3); 
                                 totalGainPepitePla += gPla;
                             }
                         }
 
-                        // === COUPLÉ ===
+                        // COUPLÉ
                         if (baseH && nuggetH) {
                             let cg = extractCoupleGain(rapportsList, baseH.num, nuggetH.num, 'CG');
-                            let cp = extractCoupleGain(rapportsList, baseH.num, nuggetH.num, 'CP');
+                            let isCG = ((baseArr === 1 && nuggetArr === 2) || (baseArr === 2 && nuggetArr === 1));
                             
-                            // Couplé Gagnant (les 2 chevaux aux 2 premières places)
-                            if (cg > 0 || ((baseArr === 1 || baseArr === 2) && (nuggetArr === 1 || nuggetArr === 2) && baseArr !== nuggetArr)) {
+                            if (isCG || cg > 0) {
                                 coupleGagCount++;
+                                if (cg === 0) cg = baseH.cote + nuggetH.cote; 
                                 totalGainCoupleGag += cg;
                             }
                             
-                            // Couplé Placé (les 2 chevaux dans les 3 premiers)
-                            if (cp > 0 || ((baseArr >= 1 && baseArr <= 3) && (nuggetArr >= 1 && nuggetArr <= 3) && baseArr !== nuggetArr)) {
-                                couplePlaCount++;
-                                totalGainCouplePla += cp;
+                            // Couplé Placé (uniquement si 8 partants ou plus)
+                            if (partants.length >= 8) {
+                                coursesValideesCP++;
+                                let cp = extractCoupleGain(rapportsList, baseH.num, nuggetH.num, 'CP');
+                                let isCP = (baseArr <= 3 && nuggetArr <= 3 && baseArr !== nuggetArr);
+                                
+                                if (isCP || cp > 0) {
+                                    couplePlaCount++;
+                                    if (cp === 0) cp = Math.max(2.0, (baseH.cote + nuggetH.cote) / 3); 
+                                    totalGainCouplePla += cp;
+                                }
                             }
                         }
-
-                        // === CALCULS NETS ===
-                        // Mise totale: on part du principe que l'on mise 1€ sur chaque (G et P) pour Base, Pépite et Couplé, 
-                        // soit 6€ par course si l'on joue tout. 
-                        // Net individuel = (Gain de la ligne) - (1€ par course * coursesValidees)
-                        let netBaseGag = totalGainBaseGag - coursesValidees;
-                        let netBasePla = totalGainBasePla - coursesValidees;
-                        let netBase = netBaseGag + netBasePla;
-                        
-                        let netPepiteGag = totalGainPepiteGag - coursesValidees;
-                        let netPepitePla = totalGainPepitePla - coursesValidees;
-                        let netPepite = netPepiteGag + netPepitePla;
-                        
-                        let netCoupleGag = totalGainCoupleGag - coursesValidees;
-                        let netCouplePla = totalGainCouplePla - coursesValidees;
-                        let netCouple = netCoupleGag + netCouplePla;
-                        
-                        let miseTotale = coursesValidees * 6; // 6 types de paris simulés x 1€
-                        let netGlobal = netBase + netPepite + netCouple;
-                        
-                        statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
-                        statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
-                        statCouple.textContent = `G: ${coupleGagCount} | P: ${couplePlaCount} / ${coursesValidees}`;
-                        
-                        gainBaseGag.innerHTML = `${totalGainBaseGag.toFixed(2)} €<br><span class="${netBaseGag >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${netBaseGag >= 0 ? '+' : ''}${netBaseGag.toFixed(2)}€</span>`;
-                        gainBasePla.innerHTML = `${totalGainBasePla.toFixed(2)} €<br><span class="${netBasePla >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${netBasePla >= 0 ? '+' : ''}${netBasePla.toFixed(2)}€</span>`;
-                        
-                        gainPepiteGag.innerHTML = `${totalGainPepiteGag.toFixed(2)} €<br><span class="${netPepiteGag >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepiteGag >= 0 ? '+' : ''}${netPepiteGag.toFixed(2)}€</span>`;
-                        gainPepitePla.innerHTML = `${totalGainPepitePla.toFixed(2)} €<br><span class="${netPepitePla >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepitePla >= 0 ? '+' : ''}${netPepitePla.toFixed(2)}€</span>`;
-                        
-                        gainCoupleGag.innerHTML = `${totalGainCoupleGag.toFixed(2)} €<br><span class="${netCoupleGag >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCoupleGag >= 0 ? '+' : ''}${netCoupleGag.toFixed(2)}€</span>`;
-                        gainCouplePla.innerHTML = `${totalGainCouplePla.toFixed(2)} €<br><span class="${netCouplePla >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCouplePla >= 0 ? '+' : ''}${netCouplePla.toFixed(2)}€</span>`;
-                        
-                        statGlobal.innerHTML = `Bilan sur ${coursesValidees} courses (Mise totale : ${miseTotale} €) — <span class="${netGlobal >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}">Bénéfice Net Global : ${netGlobal >= 0 ? '+' : ''}${netGlobal.toFixed(2)} €</span>`;
-
-                        localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
-                            netBase: netBase,
-                            netPepite: netPepite,
-                            netCouple: netCouple
-                        }));
                     }
                 } catch (e) {}
             }
 
             if (coursesValidees === 0) {
-                statsProgress.innerHTML = `<span class="text-amber-400">En attente des rapports officiels pour les courses terminées...</span>`;
-                statGlobal.textContent = "Réessayez dans quelques minutes.";
+                statsProgress.innerHTML = `<span class="text-amber-400">Aucune course terminée officiellement.</span>`;
             } else {
-                statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan calculé avec succès (${coursesValidees} courses prêtes) !</span>`;
+                let netBaseGag = totalGainBaseGag - coursesValidees;
+                let netBasePla = totalGainBasePla - coursesValidees;
+                
+                let netPepiteGag = totalGainPepiteGag - coursesValidees;
+                let netPepitePla = totalGainPepitePla - coursesValidees;
+                
+                let netCoupleGag = totalGainCoupleGag - coursesValidees;
+                let netCouplePla = totalGainCouplePla - coursesValideesCP; 
+                
+                let totalNetBase = netBaseGag + netBasePla;
+                let totalNetPepite = netPepiteGag + netPepitePla;
+                let totalNetCouple = netCoupleGag + netCouplePla;
+
+                statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
+                statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
+                statCouple.textContent = `G: ${coupleGagCount} / ${coursesValidees} | P: ${couplePlaCount} / ${coursesValideesCP}`;
+                
+                gainBaseGag.innerHTML = `${totalGainBaseGag.toFixed(2)} €<br><span class="${netBaseGag >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${netBaseGag >= 0 ? '+' : ''}${netBaseGag.toFixed(2)}€</span>`;
+                gainBasePla.innerHTML = `${totalGainBasePla.toFixed(2)} €<br><span class="${netBasePla >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${netBasePla >= 0 ? '+' : ''}${netBasePla.toFixed(2)}€</span>`;
+                
+                gainPepiteGag.innerHTML = `${totalGainPepiteGag.toFixed(2)} €<br><span class="${netPepiteGag >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepiteGag >= 0 ? '+' : ''}${netPepiteGag.toFixed(2)}€</span>`;
+                gainPepitePla.innerHTML = `${totalGainPepitePla.toFixed(2)} €<br><span class="${netPepitePla >= 0 ? 'text-amber-400' : 'text-red-400'}">Net: ${netPepitePla >= 0 ? '+' : ''}${netPepitePla.toFixed(2)}€</span>`;
+                
+                gainCoupleGag.innerHTML = `${totalGainCoupleGag.toFixed(2)} €<br><span class="${netCoupleGag >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCoupleGag >= 0 ? '+' : ''}${netCoupleGag.toFixed(2)}€</span>`;
+                gainCouplePla.innerHTML = `${totalGainCouplePla.toFixed(2)} €<br><span class="${netCouplePla >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${netCouplePla >= 0 ? '+' : ''}${netCouplePla.toFixed(2)}€</span>`;
+                
+                statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan actualisé avec succès (${coursesValidees} courses prêtes)</span>`;
+
+                localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
+                    netBase: totalNetBase,
+                    netPepite: totalNetPepite,
+                    netCouple: totalNetCouple
+                }));
             }
         }
 
