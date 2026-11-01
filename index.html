@@ -456,185 +456,111 @@
             showToast("Données actualisées avec succès !");
         }
 
-        // -------------------------------
-        // COTES / RAPPORTS : normalisation
-        // -------------------------------
-        function parseAmount(value) {
-            if (value === null || value === undefined || value === '') return null;
-            if (typeof value === 'number' && Number.isFinite(value)) return value;
-            let str = String(value).trim()
-                .replace(/\u00a0/g, ' ')
-                .replace(/[€$£]/g, '')
-                .replace(/\s+/g, '');
-
-            // Formats : 12,50 | 12.50 | 1 234,50
-            if (str.includes(',') && str.includes('.')) {
-                if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-                    str = str.replace(/\./g, '').replace(',', '.');
-                } else {
-                    str = str.replace(/,/g, '');
-                }
-            } else if (str.includes(',')) {
-                str = str.replace(',', '.');
-            }
-
-            const n = Number(str.replace(/[^0-9.+-]/g, ''));
+        function parseNumber(value) {
+            if (value === null || value === undefined || value === "") return null;
+            if (typeof value === "number") return Number.isFinite(value) ? value : null;
+            let s = String(value).trim().replace(/\s/g, "").replace(/[€$£]/g, "");
+            if (s.includes(",") && s.includes(".")) {
+                if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+                else s = s.replace(/,/g, "");
+            } else s = s.replace(",", ".");
+            const n = Number.parseFloat(s);
             return Number.isFinite(n) ? n : null;
         }
 
-        function getNumericField(obj, keys) {
-            for (const key of keys) {
-                if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
-                    const n = parseAmount(obj[key]);
-                    if (n !== null && n > 0) return { value: n, key };
+        // Recherche les cotes dans les structures courantes des flux PMU et étrangers.
+        // Ne jamais utiliser probabiliteEvolution : ce n'est pas une cote.
+        function extractOdds(p) {
+            if (!p || typeof p !== "object") return null;
+            const fields = ["cote", "coteActuelle", "coteDirect", "coteLive", "coteReference", "odds", "oddsDecimal", "decimalOdds", "currentOdds", "liveOdds", "startingPrice", "startPrice", "prixDepart", "prix"];
+            const containers = [p, p.cotes, p.oddsData, p.dernierRapportDirect, p.rapportDirect, p.dernierRapport, p.informationsCote, p.prix];
+            for (const obj of containers) {
+                if (!obj || typeof obj !== "object") continue;
+                for (const field of fields) {
+                    const n = parseNumber(obj[field]);
+                    if (n !== null && n > 1) return n;
                 }
             }
             return null;
         }
 
-        // Ne jamais utiliser probabiliteEvolution comme une cote :
-        // une probabilité n'est pas un rapport de pari.
-        function getOfficialOdds(partant) {
-            const candidates = [
-                [partant?.dernierRapportDirect, ['rapport', 'cote', 'odds', 'value']],
-                [partant, [
-                    'cote', 'coteDirect', 'coteDerniere', 'coteFinale',
-                    'rapportDirect', 'rapportDernier', 'odds', 'oddsDecimal',
-                    'decimalOdds', 'startingPrice'
-                ]]
-            ];
+        function normalizeText(v) {
+            return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+        }
 
-            for (const [obj, keys] of candidates) {
-                const found = getNumericField(obj, keys);
-                if (found) return { value: found.value, source: found.key };
+        // Les rapports de la source sont ici ramenés à une mise de référence de 1 €.
+        // La valeur source est supposée être exprimée pour 10 € ; division par 10.
+        // Les champs explicitement en centimes sont d'abord convertis en euros, puis /10.
+        function extractReportAmount(r) {
+            if (!r || typeof r !== "object") return null;
+            const centsFields = ["gainCentimes", "dividendeCentimes", "montantCentimes", "rapportCentimes", "valueCentimes"];
+            for (const f of centsFields) {
+                const n = parseNumber(r[f]);
+                if (n !== null) return n / 1000;
             }
-            return { value: null, source: null };
-        }
-
-        function getHorseNumber(obj) {
-            return String(obj?.numPmu ?? obj?.numOrdre ?? obj?.numero ?? obj?.num ?? '');
-        }
-
-        function getReportGroups(rapportsData) {
-            if (Array.isArray(rapportsData)) return rapportsData;
-            return rapportsData?.lesRapports || rapportsData?.rapports || rapportsData?.results || [];
-        }
-
-        function getReportDetails(repGroup) {
-            return repGroup?.rapports || repGroup?.dividendes || repGroup?.details || repGroup?.results || [];
-        }
-
-        function normalizeReportLabel(value) {
-            return String(value || '')
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                .toUpperCase().trim();
-        }
-
-        function reportHorseNumbers(r) {
-            const raw = r?.combinaison ?? r?.cheval ?? r?.numero ?? r?.numPmu ?? r?.numOrdre;
-            if (raw === undefined || raw === null) return [];
-            return String(raw).match(/\d+/g) || [];
-        }
-
-        function isWinningReport(label) {
-            const l = normalizeReportLabel(label);
-            return l === 'G' || l.includes('GAGNANT') || l.includes('WINNER');
-        }
-
-        function isPlaceReport(label) {
-            const l = normalizeReportLabel(label);
-            return l === 'P' || l.includes('PLACE') || l.includes('PLACED') || l.includes('SHOW');
-        }
-
-        function getOfficialReportValue(r) {
-            // gainEuro est prioritaire : il est explicitement exprimé en euros.
-            const euro = getNumericField(r, ['gainEuro', 'gainEur', 'montantEuro', 'dividendeEuro']);
-            if (euro) return euro.value;
-
-            // Pour les autres champs, on ne convertit pas arbitrairement en centimes :
-            // la devise/unité doit être donnée par l'API.
-            const other = getNumericField(r, ['dividende', 'rapport', 'montant', 'gain']);
-            if (!other) return null;
-
-            const currency = normalizeReportLabel(r?.devise || r?.currency || r?.monnaie);
-            const unit = normalizeReportLabel(r?.unite || r?.unit);
-            if (currency && currency !== 'EUR' && currency !== 'EURO' && currency !== '€') {
-                // Un rapport en devise étrangère ne doit pas être présenté comme des euros.
-                return null;
+            const euroFields = ["gainEuro", "dividendeEuro", "montantEuro", "rapportEuro", "valueEuro"];
+            for (const f of euroFields) {
+                const n = parseNumber(r[f]);
+                if (n !== null) return n / 10;
             }
-            if (unit.includes('CENT')) return other.value / 100;
-            return other.value;
-        }
-
-        function findOfficialReport(listeRapports, horseNum, kind) {
-            const target = String(horseNum);
-            let best = null;
-
-            for (const repGroup of getReportGroups(listeRapports)) {
-                const details = getReportDetails(repGroup);
-                for (const r of details) {
-                    const label = r?.libelleRapport || r?.type || r?.nature || repGroup?.libellePari || repGroup?.typePari || '';
-                    const matchesKind = kind === 'gagnant' ? isWinningReport(label) : isPlaceReport(label);
-                    if (!matchesKind) continue;
-
-                    const nums = reportHorseNumbers(r);
-                    if (!nums.includes(target)) continue;
-
-                    const value = getOfficialReportValue(r);
-                    if (value === null || value <= 0) continue;
-
-                    if (!best || value > best.value) {
-                        best = { value, raw: r, label };
-                    }
-                }
+            const genericFields = ["gain", "dividende", "rapport", "montant", "value"];
+            for (const f of genericFields) {
+                const n = parseNumber(r[f]);
+                if (n !== null) return n / 10;
             }
-            return best;
+            return null;
         }
 
-        function getGagnantRapport(listeRapports, horseNum) {
-            return findOfficialReport(listeRapports, horseNum, 'gagnant')?.value || 0;
+        function extractHorseNumber(r) {
+            if (!r || typeof r !== "object") return null;
+            for (const v of [r.combinaison, r.combo, r.cheval, r.numero, r.num, r.numeroCheval, r.horseNumber, r.participant]) {
+                if (v === null || v === undefined || v === "") continue;
+                const match = String(v).match(/\d+/);
+                if (match) return parseInt(match[0], 10);
+            }
+            return null;
         }
 
-        function getPlaceRapport(listeRapports, horseNum) {
-            return findOfficialReport(listeRapports, horseNum, 'place')?.value || 0;
+        function getReportLabel(r) {
+            return normalizeText(r?.libelleRapport || r?.libelle || r?.type || r?.label || r?.nature || r?.pari || r?.nom || "");
+        }
+
+        function getAllReports(data, out = []) {
+            if (!data) return out;
+            if (Array.isArray(data)) { data.forEach(x => getAllReports(x, out)); return out; }
+            if (typeof data !== "object") return out;
+            if (extractReportAmount(data) !== null && (extractHorseNumber(data) !== null || getReportLabel(data))) out.push(data);
+            Object.values(data).forEach(v => { if (v && typeof v === "object") getAllReports(v, out); });
+            return out;
         }
 
         function computeAlgorithm(partants) {
-            const processed = partants.map((p, idx) => {
-                const musique = p.musique || p.form || "0p";
-                const odds = getOfficialOdds(p);
-                const cote = odds.value;
-
-                // Une cote absente reste absente : on ne remplace plus par
-                // 15.0 ni par une probabilité.
-                const coteScore = cote === null
-                    ? 45
-                    : (cote <= 3 ? 90 : (cote <= 6 ? 75 : (cote <= 12 ? 60 : (cote <= 25 ? 35 : 15))));
-                const musiqueScore = evaluateMusique(musique);
-
-                const baseScore = Math.round((coteScore * 0.6) + (musiqueScore * 0.4));
-                const nuggetRaw = (cote !== null && cote >= 5 && cote <= 20)
-                    ? Math.round((coteScore * 0.3) + (musiqueScore * 0.7))
-                    : musiqueScore;
-
-                return {
-                    num: p.numPmu || p.numOrdre || p.numero || (idx + 1),
-                    nom: p.nom || "Cheval",
-                    musique,
-                    coteDisplay: cote === null ? '--' : cote.toFixed(2),
-                    cote,
-                    coteSource: odds.source,
-                    baseScore: Math.min(100, Math.max(5, baseScore)),
-                    nuggetScore: Math.min(100, Math.max(5, nuggetRaw)),
-                    ordreArrivee: p.ordreArrivee
-                };
+            const processed=(partants||[]).map((p,idx)=>{
+                const musique=p.musique||p.form||"0p";
+                const cote=extractOdds(p);
+                const coteScore=cote!==null?(cote<=3?90:(cote<=6?75:(cote<=12?60:(cote<=25?35:15)))):0;
+                const musiqueScore=evaluateMusique(musique);
+                const baseScore=cote!==null?Math.round(coteScore*.6+musiqueScore*.4):musiqueScore;
+                const nuggetRaw=cote!==null&&cote>=5&&cote<=20?Math.round(coteScore*.3+musiqueScore*.7):musiqueScore;
+                return {num:p.numPmu||p.numOrdre||p.numero||(idx+1),nom:p.nom||"Cheval",musique,coteDisplay:cote!==null?cote.toFixed(2):"—",cote,baseScore:Math.min(100,Math.max(5,baseScore)),nuggetScore:Math.min(100,Math.max(5,nuggetRaw)),ordreArrivee: (p.ordreArrivee === null || p.ordreArrivee === undefined || p.ordreArrivee === '') ? null : Number.parseInt(String(p.ordreArrivee).match(/\\d+/)?.[0] || '', 10)};
             });
+            const sorted=[...processed].sort((a,b)=>b.baseScore-a.baseScore||(a.cote??Infinity)-(b.cote??Infinity));
+            const baseHorse=sorted[0];
+            const remaining=processed.filter(p=>p.num!==baseHorse?.num);
+            const nuggetHorse=remaining.sort((a,b)=>b.nuggetScore-a.nuggetScore||(a.cote??Infinity)-(b.cote??Infinity))[0];
+            return {processed,baseHorse,nuggetHorse};
+        }
 
-            const sortedByBase = [...processed].sort((a, b) => b.baseScore - a.baseScore);
-            const baseHorse = sortedByBase[0];
-            const remaining = processed.filter(p => p.num !== baseHorse?.num);
-            const nuggetHorse = remaining.sort((a, b) => b.nuggetScore - a.nuggetScore)[0];
-            return { processed, baseHorse, nuggetHorse };
+        function getGagnantRapport(data,horseNum){
+            let best=null;
+            for(const r of getAllReports(data)){if(extractHorseNumber(r)!==Number(horseNum))continue;const l=getReportLabel(r);if(!(l.includes("GAGNANT")||l==="G"||l.startsWith("G ")))continue;const n=extractReportAmount(r);if(n!==null&&n>0&&(best===null||n>best))best=n;}
+            return best;
+        }
+
+        function getPlaceRapport(data,horseNum){
+            let best=null;
+            for(const r of getAllReports(data)){if(extractHorseNumber(r)!==Number(horseNum))continue;const l=getReportLabel(r);if(!(l.includes("PLACE")||l==="P"||l.startsWith("P ")))continue;const n=extractReportAmount(r);if(n!==null&&n>0&&(best===null||n>best))best=n;}
+            return best;
         }
 
         async function fetchRaceData(isBackground = false) {
@@ -691,23 +617,19 @@
                 const reportsGrid = document.getElementById('reportsGrid');
                 reportsGrid.innerHTML = '';
                 let hasReports = false;
-                const listeRapports = getReportGroups(rapportsData);
+                const listeRapports = Array.isArray(rapportsData) ? rapportsData : (rapportsData?.lesRapports || rapportsData?.rapports || []);
 
-                listeRapports.forEach(repGroup => {
-                    const typeJeu = repGroup.typePari || repGroup.libellePari || 'Pari';
-                    const details = getReportDetails(repGroup);
-                    details.forEach(r => {
-                        const val = getOfficialReportValue(r);
-                        if (val === null || val <= 0) return;
-
-                        hasReports = true;
-                        const label = r.libelleRapport || r.type || r.nature || typeJeu;
-                        const combo = r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
-                        const div = document.createElement('div');
-                        div.className = "bg-zinc-800/80 p-2.5 rounded-xl border border-zinc-700/60 flex justify-between items-center";
-                        div.innerHTML = `<span class="text-zinc-400 font-medium">${label}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} €</span>`;
-                        reportsGrid.appendChild(div);
-                    });
+                getAllReports(rapportsData).forEach(r => {
+                    const val=extractReportAmount(r);
+                    if(val===null||val<=0)return;
+                    hasReports=true;
+                    const label=getReportLabel(r)||"Rapport";
+                    const combo=r.combinaison ? ` (${r.combinaison})` : (r.cheval ? ` (N°${r.cheval})` : '');
+                    const devise=r.devise||r.currency||r.monnaie||'€';
+                    const div=document.createElement('div');
+                    div.className="bg-zinc-800/80 p-2.5 rounded-xl border border-zinc-700/60 flex justify-between items-center";
+                    div.innerHTML=`<span class="text-zinc-400 font-medium">${label}${combo} :</span> <span class="text-emerald-400 font-bold">${val.toFixed(2)} ${devise}</span>`;
+                    reportsGrid.appendChild(div);
                 });
 
                 if (hasReports) reportsBlock.classList.remove('hidden');
@@ -905,45 +827,39 @@
                         const algoResult = computeAlgorithm(partants);
                         const rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                        // Validation des rapports :
-                        // on ne déduit plus le gain à partir de la cote et on ne suppose
-                        // plus "placé = 1er/2e/3e". Le statut gagnant/placé vient
-                        // exclusivement du rapport officiel fourni par l'API.
+                        // Base Calculations (Mise 1€ Gagnant + 1€ Placé = 2€ misés par course)
                         if (algoResult.baseHorse) {
-                            const baseG = findOfficialReport(rapportsList, algoResult.baseHorse.num, 'gagnant');
-                            const baseP = findOfficialReport(rapportsList, algoResult.baseHorse.num, 'place');
-
-                            if (baseG) {
+                            if (Number(algoResult.baseHorse.ordreArrivee) === 1) {
                                 baseGagnantes++;
-                                totalGainBase += baseG.value;
+                                const gainG=getGagnantRapport(rapportsList, algoResult.baseHorse.num); if(gainG!==null) totalGainBase += gainG;
                             }
-                            if (baseP) {
+                            const placeBase = getPlaceRapport(rapportsList, algoResult.baseHorse.num);
+                            if (placeBase !== null || (Number(algoResult.baseHorse.ordreArrivee) >= 1 && Number(algoResult.baseHorse.ordreArrivee) <= 3)) {
                                 basePlacees++;
-                                totalGainBase += baseP.value;
+                                if (placeBase !== null) totalGainBase += placeBase;
                             }
                         }
 
+                        // Pépite Calculations (Mise 1€ Gagnant + 1€ Placé = 2€ misés par course)
                         if (algoResult.nuggetHorse) {
-                            const pepiteG = findOfficialReport(rapportsList, algoResult.nuggetHorse.num, 'gagnant');
-                            const pepiteP = findOfficialReport(rapportsList, algoResult.nuggetHorse.num, 'place');
-
-                            if (pepiteG) {
+                            if (Number(algoResult.nuggetHorse.ordreArrivee) === 1) {
                                 pepiteGagnantes++;
-                                totalGainPepite += pepiteG.value;
+                                const gainG=getGagnantRapport(rapportsList, algoResult.nuggetHorse.num); if(gainG!==null) totalGainPepite += gainG;
                             }
-                            if (pepiteP) {
+                            const placePepite = getPlaceRapport(rapportsList, algoResult.nuggetHorse.num);
+                            if (placePepite !== null || (Number(algoResult.nuggetHorse.ordreArrivee) >= 1 && Number(algoResult.nuggetHorse.ordreArrivee) <= 3)) {
                                 pepitePlacees++;
-                                totalGainPepite += pepiteP.value;
+                                if (placePepite !== null) totalGainPepite += placePepite;
                             }
                         }
 
-                        const miseTotale = coursesValidees * 2; // 1€ G + 1€ P
-                        const netBase = totalGainBase - coursesValidees;
-                        const netPepite = totalGainPepite - coursesValidees;
-                        const netGlobal = (totalGainBase + totalGainPepite) - (coursesValidees * 2);
+                        const miseTotale = coursesValidees * 4; // Base : 1€ G + 1€ P ; Pépite : 1€ G + 1€ P
+                        const netBase = totalGainBase - (coursesValidees * 2);
+                        const netPepite = totalGainPepite - (coursesValidees * 2);
+                        const netGlobal = (totalGainBase + totalGainPepite) - (coursesValidees * 4);
                         
-                        statBase.innerHTML = `${baseGagnantes} / ${basePlacees} <span class="text-[10px] text-zinc-400 block font-normal">Gagnant / Placé (sur ${coursesValidees})</span>`;
-                        statPepite.innerHTML = `${pepiteGagnantes} / ${pepitePlacees} <span class="text-[10px] text-zinc-400 block font-normal">Gagnant / Placé (sur ${coursesValidees})</span>`;
+                        statBase.innerHTML = `${baseGagnantes} / ${coursesValidees} <span class="text-[10px] text-zinc-400 block font-normal">courses gagnées</span><span class="text-[10px] text-zinc-400 block font-normal">${basePlacees} placé(s)</span>`;
+                        statPepite.innerHTML = `${pepiteGagnantes} / ${coursesValidees} <span class="text-[10px] text-zinc-400 block font-normal">courses gagnées</span><span class="text-[10px] text-zinc-400 block font-normal">${pepitePlacees} placé(s)</span>`;
                         
                         gainBaseEl.innerHTML = `Retours : ${totalGainBase.toFixed(2)} € <br><span class="${netBase >= 0 ? 'text-emerald-400' : 'text-red-400'} font-bold">Bénéfice : ${netBase > 0 ? '+' : ''}${netBase.toFixed(2)} €</span>`;
                         gainPepiteEl.innerHTML = `Retours : ${totalGainPepite.toFixed(2)} € <br><span class="${netPepite >= 0 ? 'text-amber-400' : 'text-red-400'} font-bold">Bénéfice : ${netPepite > 0 ? '+' : ''}${netPepite.toFixed(2)} €</span>`;
