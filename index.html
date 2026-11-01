@@ -48,7 +48,7 @@
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-2xl p-4 shadow-xl mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider flex items-center">
-                    <i class="fa-solid fa-vault mr-1.5 text-emerald-400"></i> Vos Gains Cumulés
+                    <i class="fa-solid fa-vault mr-1.5 text-emerald-400"></i> Historique (Martingale)
                 </h2>
                 <button onclick="document.getElementById('historyBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg px-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -57,7 +57,7 @@
                 <!-- Bilan Semaine Détaillé -->
                 <div class="bg-zinc-800/80 p-3 rounded-xl border border-zinc-700">
                     <h3 class="text-[11px] uppercase font-bold text-zinc-300 mb-2">Cette Semaine (Lun - Dim)</h3>
-                    <div class="grid grid-cols-3 gap-2 text-[10px] mb-2">
+                    <div class="grid grid-cols-3 gap-2 text-[10px]">
                         <div class="bg-zinc-900/80 p-1.5 rounded border border-emerald-500/30 text-center leading-tight">
                             <span class="text-emerald-400 font-bold block mb-1">BASE</span>
                             <div class="text-zinc-400">G: <span id="histWeekBaseGag">--</span></div>
@@ -74,10 +74,6 @@
                             <div class="text-zinc-400 mt-0.5">P: <span id="histWeekCouplePla">--</span></div>
                         </div>
                     </div>
-                    <div class="bg-zinc-900 p-2.5 rounded-lg border border-zinc-700 text-center flex justify-between items-center px-4">
-                        <span class="text-[11px] text-zinc-400 uppercase font-bold">Total Cumulé :</span>
-                        <div id="histWeekTotal" class="font-black text-sm">--</div>
-                    </div>
                 </div>
 
                 <!-- Bilan Mois par Mois Détaillé -->
@@ -93,7 +89,7 @@
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-2xl p-4 shadow-xl mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-trophy mr-1.5"></i> Bilan du Jour (Pour 1€ parié)
+                    <i class="fa-solid fa-trophy mr-1.5"></i> Bilan du Jour (Stratégie Martingale)
                 </h2>
                 <button onclick="document.getElementById('statsBlock').classList.add('hidden')" class="text-zinc-500 hover:text-white text-lg px-2"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -151,9 +147,10 @@
                     </div>
                 </div>
             </div>
-            <div id="statGlobal" class="text-center text-[11px] text-zinc-300 mt-3 font-semibold bg-zinc-800/60 py-2.5 rounded-xl border border-zinc-700/50">
-                Chaque case indique votre gain net si vous misiez 1€ systématiquement sur ce jeu.
+            <div class="text-center text-[11px] text-zinc-300 mt-3 font-semibold bg-zinc-800/60 py-2.5 rounded-xl border border-zinc-700/50">
+                Chaque case indique le bénéfice net avec une stratégie Martingale (Mise de départ 1€, doublée si perte, retour à 1€ si gain).
             </div>
+            <div id="statGlobal" class="text-center text-[10px] text-zinc-400 mt-1"></div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -217,7 +214,7 @@
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
             <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center">
-                <span>Partants & Cotes</span>
+                <!-- Rempli dynamiquement -->
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -242,7 +239,7 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
-        // Auto-Rafraîchissement toutes les 20 secondes
+        // Auto-Rafraîchissement 20s
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -511,7 +508,6 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
-        // EXTRACTEUR SÉCURISÉ DES GAINS SIMPLES (1€)
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -576,7 +572,6 @@
             return foundGain;
         }
 
-        // EXTRACTEUR SÉCURISÉ DES GAINS COUPLÉS (1€)
         function extractCoupleGain(listeRapports, num1, num2, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -686,7 +681,6 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition 30s après l'arrivée
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -765,10 +759,10 @@
                 
                 document.getElementById('raceInfoDetails').innerHTML = `
                     <div class="flex items-center">
+                        <span class="mr-2 text-zinc-400 font-normal">${timeInfo}</span>
                         <span>Partants & Cotes</span>
                         ${discBadge}
                     </div>
-                    <span class="flex items-center text-sm font-normal text-zinc-400">${timeInfo} ${race.distance ? race.distance + 'm' : ''}</span>
                 `;
             } catch (e) {}
         }
@@ -834,8 +828,6 @@
                 wCplGag += s.cplGag || 0;
                 wCplPla += s.cplPla || 0;
             }
-            
-            let weekTotal = wBaseGag + wBasePla + wPepGag + wPepPla + wCplGag + wCplPla;
 
             document.getElementById('histWeekBaseGag').innerHTML = formatMoneyHTML(wBaseGag, 'base');
             document.getElementById('histWeekBasePla').innerHTML = formatMoneyHTML(wBasePla, 'base');
@@ -843,9 +835,6 @@
             document.getElementById('histWeekPepitePla').innerHTML = formatMoneyHTML(wPepPla, 'pepite');
             document.getElementById('histWeekCoupleGag').innerHTML = formatMoneyHTML(wCplGag, 'couple');
             document.getElementById('histWeekCouplePla').innerHTML = formatMoneyHTML(wCplPla, 'couple');
-            
-            document.getElementById('histWeekTotal').innerHTML = formatMoneyHTML(weekTotal, 'total');
-            document.getElementById('histWeekTotal').className = weekTotal >= 0 ? "font-black text-emerald-400 text-sm" : "font-black text-red-400 text-sm";
 
             const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
             let monthsGrid = document.getElementById('monthsGrid');
@@ -864,35 +853,38 @@
                     mCplGag += s.cplGag || 0;
                     mCplPla += s.cplPla || 0;
                 }
-                
-                let monthTotal = mBaseGag + mBasePla + mPepGag + mPepPla + mCplGag + mCplPla;
 
-                let div = document.createElement('div');
-                div.className = "bg-zinc-800/50 p-2 rounded-xl border border-zinc-700/50 mb-2";
-                div.innerHTML = `
-                    <div class="flex justify-between items-center mb-1.5 px-1">
-                        <span class="font-bold text-zinc-300">${monthNames[m]}</span>
-                        <span class="text-[10px] font-bold text-zinc-400">Total : ${formatMoneyHTML(monthTotal, 'total')}</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 text-[10px]">
-                        <div class="bg-zinc-900/80 p-1.5 rounded border border-emerald-500/20 text-center leading-tight">
-                            <span class="text-emerald-400 font-bold block mb-1 uppercase text-[9px]">Base</span>
-                            <div class="text-zinc-400">G: ${formatMoneyHTML(mBaseGag, 'base')}</div>
-                            <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mBasePla, 'base')}</div>
+                // N'affiche que les mois où il y a eu une activité
+                if (mBaseGag !== 0 || mBasePla !== 0 || mPepGag !== 0 || mPepPla !== 0 || mCplGag !== 0 || mCplPla !== 0) {
+                    let div = document.createElement('div');
+                    div.className = "bg-zinc-800/50 p-2 rounded-xl border border-zinc-700/50 mb-2";
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center mb-1.5 px-1">
+                            <span class="font-bold text-zinc-300">${monthNames[m]}</span>
                         </div>
-                        <div class="bg-zinc-900/80 p-1.5 rounded border border-amber-500/20 text-center leading-tight">
-                            <span class="text-amber-400 font-bold block mb-1 uppercase text-[9px]">Pépite</span>
-                            <div class="text-zinc-400">G: ${formatMoneyHTML(mPepGag, 'pepite')}</div>
-                            <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mPepPla, 'pepite')}</div>
+                        <div class="grid grid-cols-3 gap-2 text-[10px]">
+                            <div class="bg-zinc-900/80 p-1.5 rounded border border-emerald-500/20 text-center leading-tight">
+                                <span class="text-emerald-400 font-bold block mb-1 uppercase text-[9px]">Base</span>
+                                <div class="text-zinc-400">G: ${formatMoneyHTML(mBaseGag, 'base')}</div>
+                                <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mBasePla, 'base')}</div>
+                            </div>
+                            <div class="bg-zinc-900/80 p-1.5 rounded border border-amber-500/20 text-center leading-tight">
+                                <span class="text-amber-400 font-bold block mb-1 uppercase text-[9px]">Pépite</span>
+                                <div class="text-zinc-400">G: ${formatMoneyHTML(mPepGag, 'pepite')}</div>
+                                <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mPepPla, 'pepite')}</div>
+                            </div>
+                            <div class="bg-zinc-900/80 p-1.5 rounded border border-blue-500/20 text-center leading-tight">
+                                <span class="text-blue-400 font-bold block mb-1 uppercase text-[9px]">Couplé</span>
+                                <div class="text-zinc-400">G: ${formatMoneyHTML(mCplGag, 'couple')}</div>
+                                <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mCplPla, 'couple')}</div>
+                            </div>
                         </div>
-                        <div class="bg-zinc-900/80 p-1.5 rounded border border-blue-500/20 text-center leading-tight">
-                            <span class="text-blue-400 font-bold block mb-1 uppercase text-[9px]">Couplé</span>
-                            <div class="text-zinc-400">G: ${formatMoneyHTML(mCplGag, 'couple')}</div>
-                            <div class="text-zinc-400 mt-0.5">P: ${formatMoneyHTML(mCplPla, 'couple')}</div>
-                        </div>
-                    </div>
-                `;
-                monthsGrid.appendChild(div);
+                    `;
+                    monthsGrid.appendChild(div);
+                }
+            }
+            if(monthsGrid.innerHTML === '') {
+                monthsGrid.innerHTML = '<div class="text-zinc-500 text-center text-xs py-2">Aucune donnée trouvée pour cette année.</div>';
             }
         }
 
@@ -925,6 +917,7 @@
             gainCouplePla.textContent = `--`;
             
             statsProgress.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Analyse des courses...";
+            statGlobal.innerHTML = "";
 
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
@@ -958,6 +951,14 @@
             let totalGainBaseGag = 0, totalGainBasePla = 0;
             let totalGainPepiteGag = 0, totalGainPepitePla = 0;
             let totalGainCoupleGag = 0, totalGainCouplePla = 0;
+
+            // Variables de Martingale
+            let mBaseGag = 1, costBaseGag = 0;
+            let mBasePla = 1, costBasePla = 0;
+            let mPepGag = 1, costPepGag = 0;
+            let mPepPla = 1, costPepPla = 0;
+            let mCplGag = 1, costCplGag = 0;
+            let mCplPla = 1, costCplPla = 0;
             
             let coursesValidees = 0;
             let coursesValideesCP = 0;
@@ -986,34 +987,54 @@
                         // BASE
                         if (baseH) {
                             let gGag = extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT');
-                            let gPla = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
+                            if (gGag === 0 && baseArr === 1) gGag = baseH.cote; 
                             
-                            if (gGag > 0 || baseArr === 1) {
+                            costBaseGag += mBaseGag;
+                            if (gGag > 0) {
                                 baseGagCount++;
-                                if (gGag === 0) gGag = baseH.cote; 
-                                totalGainBaseGag += gGag;
+                                totalGainBaseGag += gGag * mBaseGag;
+                                mBaseGag = 1; // Gain = Reset Martingale
+                            } else {
+                                mBaseGag *= 2; // Perte = x2
                             }
-                            if (gPla > 0 || (baseArr >= 1 && baseArr <= 3)) {
+
+                            let gPla = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
+                            if (gPla === 0 && baseArr >= 1 && baseArr <= 3) gPla = Math.max(1.1, baseH.cote / 3); 
+                            
+                            costBasePla += mBasePla;
+                            if (gPla > 0) {
                                 basePlaCount++;
-                                if (gPla === 0) gPla = Math.max(1.1, baseH.cote / 3); 
-                                totalGainBasePla += gPla;
+                                totalGainBasePla += gPla * mBasePla;
+                                mBasePla = 1;
+                            } else {
+                                mBasePla *= 2;
                             }
                         }
 
                         // PÉPITE
                         if (nuggetH) {
                             let gGag = extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT');
-                            let gPla = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
+                            if (gGag === 0 && nuggetArr === 1) gGag = nuggetH.cote; 
                             
-                            if (gGag > 0 || nuggetArr === 1) {
+                            costPepGag += mPepGag;
+                            if (gGag > 0) {
                                 pepiteGagCount++;
-                                if (gGag === 0) gGag = nuggetH.cote; 
-                                totalGainPepiteGag += gGag;
+                                totalGainPepiteGag += gGag * mPepGag;
+                                mPepGag = 1;
+                            } else {
+                                mPepGag *= 2;
                             }
-                            if (gPla > 0 || (nuggetArr >= 1 && nuggetArr <= 3)) {
+
+                            let gPla = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
+                            if (gPla === 0 && nuggetArr >= 1 && nuggetArr <= 3) gPla = Math.max(1.1, nuggetH.cote / 3); 
+                            
+                            costPepPla += mPepPla;
+                            if (gPla > 0) {
                                 pepitePlaCount++;
-                                if (gPla === 0) gPla = Math.max(1.1, nuggetH.cote / 3); 
-                                totalGainPepitePla += gPla;
+                                totalGainPepitePla += gPla * mPepPla;
+                                mPepPla = 1;
+                            } else {
+                                mPepPla *= 2;
                             }
                         }
 
@@ -1021,23 +1042,30 @@
                         if (baseH && nuggetH) {
                             let cg = extractCoupleGain(rapportsList, baseH.num, nuggetH.num, 'CG');
                             let isCG = ((baseArr === 1 && nuggetArr === 2) || (baseArr === 2 && nuggetArr === 1));
-                            
-                            if (isCG || cg > 0) {
+                            if (cg === 0 && isCG) cg = baseH.cote + nuggetH.cote; 
+
+                            costCplGag += mCplGag;
+                            if (cg > 0) {
                                 coupleGagCount++;
-                                if (cg === 0) cg = baseH.cote + nuggetH.cote; 
-                                totalGainCoupleGag += cg;
+                                totalGainCoupleGag += cg * mCplGag;
+                                mCplGag = 1;
+                            } else {
+                                mCplGag *= 2;
                             }
                             
-                            // Couplé Placé (uniquement si 8 partants ou plus)
                             if (partants.length >= 8) {
                                 coursesValideesCP++;
                                 let cp = extractCoupleGain(rapportsList, baseH.num, nuggetH.num, 'CP');
                                 let isCP = (baseArr <= 3 && nuggetArr <= 3 && baseArr !== nuggetArr);
+                                if (cp === 0 && isCP) cp = Math.max(2.0, (baseH.cote + nuggetH.cote) / 3); 
                                 
-                                if (isCP || cp > 0) {
+                                costCplPla += mCplPla;
+                                if (cp > 0) {
                                     couplePlaCount++;
-                                    if (cp === 0) cp = Math.max(2.0, (baseH.cote + nuggetH.cote) / 3); 
-                                    totalGainCouplePla += cp;
+                                    totalGainCouplePla += cp * mCplPla;
+                                    mCplPla = 1;
+                                } else {
+                                    mCplPla *= 2;
                                 }
                             }
                         }
@@ -1048,14 +1076,14 @@
             if (coursesValidees === 0) {
                 statsProgress.innerHTML = `<span class="text-amber-400">Aucune course terminée officiellement.</span>`;
             } else {
-                let netBaseGag = totalGainBaseGag - coursesValidees;
-                let netBasePla = totalGainBasePla - coursesValidees;
+                let netBaseGag = totalGainBaseGag - costBaseGag;
+                let netBasePla = totalGainBasePla - costBasePla;
                 
-                let netPepiteGag = totalGainPepiteGag - coursesValidees;
-                let netPepitePla = totalGainPepitePla - coursesValidees;
+                let netPepiteGag = totalGainPepiteGag - costPepGag;
+                let netPepitePla = totalGainPepitePla - costPepPla;
                 
-                let netCoupleGag = totalGainCoupleGag - coursesValidees;
-                let netCouplePla = totalGainCouplePla - coursesValideesCP; 
+                let netCoupleGag = totalGainCoupleGag - costCplGag;
+                let netCouplePla = totalGainCouplePla - costCplPla; 
 
                 statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
                 statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
@@ -1086,4 +1114,4 @@
         window.onload = loadLivePmu;
     </script>
 </body>
-</html>>
+</html>
