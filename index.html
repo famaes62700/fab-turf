@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (V58 - Moteur V50 + Correctifs)</title>
+    <title>PMU Direct - Algorithme Exact (V59 - Auto-Zappeur)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -213,7 +213,7 @@
             let keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 let key = localStorage.key(i);
-                if (key && key.startsWith('pmu_stats_') && !key.includes('_v58_')) {
+                if (key && key.startsWith('pmu_stats_') && !key.includes('_v59_')) {
                     keysToRemove.push(key);
                 }
             }
@@ -249,22 +249,41 @@
         }
 
         // ==========================================
-        // MOTEUR V50 (CELUI QUI FONCTIONNE CHEZ VOUS)
+        // MOTEUR V59 (LE SCANNER MULTI-PROXYS)
         // ==========================================
         async function fetchPmuDirect(url) {
             const timestamp = new Date().getTime();
             const pmuUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`;
             
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error("Connexion PMU échouée");
-            return await response.json();
+            // Le script va tester ces 4 serveurs l'un après l'autre
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(pmuUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(pmuUrl)}`,
+                `https://thingproxy.freeboard.io/fetch/${pmuUrl}`
+            ];
+
+            for (let i = 0; i < proxies.length; i++) {
+                try {
+                    const response = await fetch(proxies[i]);
+                    if (response.ok) {
+                        const text = await response.text();
+                        // Vérifie que le PMU ne nous a pas renvoyé une fausse page de blocage
+                        if (!text.includes("DataDome") && !text.includes("<html") && text.length > 50) {
+                            return JSON.parse(text);
+                        }
+                    }
+                } catch (e) {
+                    // Si le proxy est mort, on passe au suivant silencieusement
+                }
+            }
+            throw new Error("Tous les serveurs sont bloqués par la sécurité du PMU.");
         }
 
         async function loadLivePmu() {
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement de TOUTES les réunions...';
+            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Test des relais et chargement des courses...';
             document.getElementById('statsBlock').classList.add('hidden');
             document.getElementById('historyBlock').classList.add('hidden');
 
@@ -332,7 +351,7 @@
                     throw new Error("Aucune réunion");
                 }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès aux courses impossible.</span>`;
+                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès bloqué par le PMU (Réessayez dans 5 min).</span>`;
             }
         }
 
@@ -437,7 +456,6 @@
         // =========================================================================
         function normalizeCombo(c) {
             if (!c) return "";
-            // Transforme n'importe quel format (ex: "01-02", "1 - 2", "1,2") en format standard "1-2"
             let matches = String(c).match(/\d+/g);
             if (!matches) return "";
             return matches.map(n => parseInt(n, 10)).sort((a,b)=>a-b).join('-');
@@ -445,7 +463,6 @@
 
         function extractRealPayout(raceData, type, combosArr) {
             if (!raceData) return 0;
-            // Compile tous les types de rapports possibles
             let rapportsList = [];
             if (raceData.rapports) rapportsList = rapportsList.concat(raceData.rapports);
             if (raceData.rapportsDefinitifs) rapportsList = rapportsList.concat(raceData.rapportsDefinitifs);
@@ -505,7 +522,6 @@
 
         function getHorseCote(p) {
             if (!p) return null;
-            // Ajout exhaustif pour les courses australiennes et internationales
             let possibleCotes = [
                 p.dernierRapportDirect?.rapport,
                 p.dernierRapportDirect?.cote,
@@ -513,7 +529,7 @@
                 p.dernierRapportProbable?.cote,
                 p.dernierRapportReference?.rapport,
                 p.dernierRapportReference?.cote,
-                p.coteReference, // <- Très souvent utilisé pour l'Australie
+                p.coteReference, // Prise en compte de l'Australie
                 (p.cotes && p.cotes.length > 0) ? (p.cotes[0].cote || p.cotes[0].rapport) : null,
                 p.cote
             ];
@@ -724,7 +740,7 @@
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v58_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v59_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
@@ -816,7 +832,7 @@
 
             for (let i = 0; i < finishedRaces.length; i++) {
                 let r = finishedRaces[i];
-                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Traitement de la course : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Traitement : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
 
                 try {
                     const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${r.rNum}/C${r.cNum}`);
@@ -880,7 +896,7 @@
                         document.getElementById('gainCouplePlace').innerHTML = `Combiné [${couplePlaceWins}/${misesCouplePlc}] : ${totalGainCouplePlace.toFixed(2)}€`;
 
                         let miseAbsolue = misesGagnant + misesPlace + misesCoupleGag + misesCouplePlc; 
-                        document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses réelles (Mise totale exacte engagée : ${miseAbsolue} €)`;
+                        document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses (Mise totale : ${miseAbsolue} €)`;
 
                         await new Promise(r => setTimeout(r, 40));
                     }
@@ -892,7 +908,7 @@
             let netCoupledGag = totalGainCoupleGagnant - misesCoupleGag;
             let netCoupledPlc = totalGainCouplePlace - misesCouplePlc;
 
-            localStorage.setItem(`pmu_stats_v58_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v59_${ddmmyyyy}`, JSON.stringify({
                 netPlace: netPlaceTotal, netGagnant: netGagnantTotal, netCoupleGag: netCoupledGag, netCouplePlc: netCoupledPlc
             }));
             
