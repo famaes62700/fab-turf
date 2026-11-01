@@ -91,7 +91,7 @@
                 <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-emerald-500/30 flex flex-col justify-between space-y-2">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] uppercase font-bold text-emerald-400">Base Solide</span>
-                        <span id="statBase" class="text-sm font-black text-white">0 / 0</span>
+                        <span id="statBase" class="text-xs font-bold text-white">Gag: 0 | Pla: 0 / 0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-[11px]">
                         <div class="bg-zinc-900/60 p-2 rounded border border-zinc-700/50 text-center">
@@ -108,7 +108,7 @@
                 <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-amber-500/30 flex flex-col justify-between space-y-2">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] uppercase font-bold text-amber-400">Pépite / Coup de Cœur</span>
-                        <span id="statPepite" class="text-sm font-black text-white">0 / 0</span>
+                        <span id="statPepite" class="text-xs font-bold text-white">Gag: 0 | Pla: 0 / 0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-[11px]">
                         <div class="bg-zinc-900/60 p-2 rounded border border-zinc-700/50 text-center">
@@ -189,7 +189,7 @@
         </div>
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
-            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300">Partants & Cotes</div>
+            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex items-center">Partants & Cotes</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
@@ -248,6 +248,18 @@
                 return `${h}h${m}`;
             }
             return String(timeValue);
+        }
+
+        function getDisciplineIcon(discipline) {
+            if (!discipline) return '<i class="fa-solid fa-horse text-emerald-400 mr-1.5" title="Plat"></i>';
+            let d = String(discipline).toUpperCase();
+            if (d.includes('TROT') || d.includes('ATTETE') || d.includes('MONTE')) {
+                return '<i class="fa-solid fa-cart-flatbed text-amber-400 mr-1.5" title="Trot"></i>'; // ou icône chariot/roue
+            }
+            if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE') || d.includes('CROSS')) {
+                return '<i class="fa-solid fa-shield-halved text-blue-400 mr-1.5" title="Obstacle / Haies"></i>';
+            }
+            return '<i class="fa-solid fa-horse-head text-emerald-400 mr-1.5" title="Plat"></i>';
         }
 
         async function loadLivePmu() {
@@ -402,7 +414,13 @@
                     opt.value = cIdx;
                     let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
-                    opt.textContent = `C${c.numOrdre || (cIdx+1)}${courseTime} : ${libelleCourse}`;
+                    let discIcon = "";
+                    let d = String(c.discipline || "").toUpperCase();
+                    if (d.includes('TROT')) discIcon = "🛒 ";
+                    else if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE')) discIcon = "🦘 ";
+                    else discIcon = "🐎 ";
+                    
+                    opt.textContent = `${discIcon}C${c.numOrdre || (cIdx+1)}${courseTime} : ${libelleCourse}`;
                     raceSelect.appendChild(opt);
                 });
             } else {
@@ -463,7 +481,6 @@
             return { processed, baseHorse, nuggetHorse };
         }
 
-        // ANALYSEUR UNIVERSEL ROBUSTE (France & Étranger)
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -489,14 +506,12 @@
                                 }
                             }
 
-                            // Si le type de pari est simple ou international et que la combinaison correspond
                             if (isMatch || pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || pType.includes('INTER') || pType === 'PARI') {
                                 let m = item.gainEuro || item.dividende || item.rapport || item.montant || item.dividendeEuro;
                                 if (m !== undefined && m !== null) {
                                     let val = parseFloat(String(m).replace(',', '.'));
                                     if (!isNaN(val) && val > 0) {
                                         if (val > 100) val = val / 100;
-                                        // On retient le montant le plus pertinent (supérieur à 1€)
                                         if (val > foundGain) foundGain = val;
                                     }
                                 }
@@ -605,8 +620,10 @@
                     tr.innerHTML = `<td class="p-3 font-bold"><span class="text-emerald-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-mono">${p.musique}</td><td class="p-3 text-emerald-400 font-bold">${p.coteDisplay}</td><td class="p-3 font-semibold">${p.baseScore}%</td>`;
                     tbody.appendChild(tr);
                 });
+                
                 let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
-                document.getElementById('raceInfoDetails').textContent = `${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
+                let discIcon = getDisciplineIcon(race.discipline);
+                document.getElementById('raceInfoDetails</u>').innerHTML = `${discIcon} ${timeInfo}${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
             } catch (e) {}
         }
 
@@ -724,8 +741,8 @@
             let statGlobal = document.getElementById('statGlobal');
 
             statsBlock.classList.remove('hidden');
-            statBase.textContent = `0 / 0`;
-            statPepite.textContent = `0 / 0`;
+            statBase.textContent = `Gag: 0 | Pla: 0 / 0`;
+            statPepite.textContent = `Gag: 0 | Pla: 0 / 0`;
             gainBaseGag.textContent = `--`;
             gainBasePla.textContent = `--`;
             gainPepiteGag.textContent = `--`;
@@ -759,7 +776,8 @@
                 return;
             }
 
-            let baseGagnantes = 0, pepiteGagnantes = 0;
+            let baseGagCount = 0, basePlaCount = 0;
+            let pepiteGagCount = 0, pepitePlaCount = 0;
             let totalGainBaseGag = 0, totalGainBasePla = 0;
             let totalGainPepiteGag = 0, totalGainPepitePla = 0;
             let coursesValidees = 0;
@@ -776,7 +794,8 @@
                     let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0);
                     let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
 
-                    if (arrivees.length > 0 && rapportsList.length > 0) {
+                    if (arrivees.length > 0) {
+                        coursesValidees++;
                         let algoResult = computeAlgorithm(partants);
                         let baseH = algoResult.baseHorse;
                         let nuggetH = algoResult.nuggetHorse;
@@ -784,26 +803,30 @@
                         let baseArr = baseH ? (partants.find(p => (p.numPmu || p.numOrdre) === baseH.num)?.ordreArrivee || 99) : 99;
                         let nuggetArr = nuggetH ? (partants.find(p => (p.numPmu || p.numOrdre) === nuggetH.num)?.ordreArrivee || 99) : 99;
 
-                        // La course n'est comptabilisée dans le bilan que si l'un de nos 2 chevaux est classé dans l'arrivée (ou au moins si les rapports sont prêts)
-                        coursesValidees++;
+                        // Base
+                        if (baseH) {
+                            if (baseArr === 1) baseGagCount++;
+                            if (baseArr <= 3) basePlaCount++;
 
-                        // Calcul Base
-                        if (baseH && baseArr <= 3) {
-                            if (baseArr === 1) baseGagnantes++;
                             let gGag = (baseArr === 1) ? extractGainFromRapports(rapportsList, baseH.num, 'GAGNANT') : 0;
-                            let gPla = extractGainFromRapports(rapportsList, baseH.num, 'PLACE');
-                            // Fallback sur la cote si le rapport API direct est manquant
+                            let gPla = (baseArr <= 3) ? extractGainFromRapports(rapportsList, baseH.num, 'PLACE') : 0;
                             if (baseArr === 1 && gGag === 0) gGag = baseH.cote;
+                            if (baseArr <= 3 && gPla === 0) gPla = Math.max(1.1, baseH.cote / 3);
+
                             totalGainBaseGag += gGag;
                             totalGainBasePla += gPla;
                         }
 
-                        // Calcul Pépite
-                        if (nuggetH && nuggetArr <= 3) {
-                            if (nuggetArr === 1) pepiteGagnantes++;
+                        // Pépite
+                        if (nuggetH) {
+                            if (nuggetArr === 1) pepiteGagCount++;
+                            if (nuggetArr <= 3) pepitePlaCount++;
+
                             let gGag = (nuggetArr === 1) ? extractGainFromRapports(rapportsList, nuggetH.num, 'GAGNANT') : 0;
-                            let gPla = extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE');
+                            let gPla = (nuggetArr <= 3) ? extractGainFromRapports(rapportsList, nuggetH.num, 'PLACE') : 0;
                             if (nuggetArr === 1 && gGag === 0) gGag = nuggetH.cote;
+                            if (nuggetArr <= 3 && gPla === 0) gPla = Math.max(1.1, nuggetH.cote / 3);
+
                             totalGainPepiteGag += gGag;
                             totalGainPepitePla += gPla;
                         }
@@ -813,8 +836,8 @@
                         let netPepite = (totalGainPepiteGag + totalGainPepitePla) - coursesValidees;
                         let netGlobal = (totalGainBaseGag + totalGainBasePla + totalGainPepiteGag + totalGainPepitePla) - miseTotale;
                         
-                        statBase.textContent = `${baseGagnantes} / ${coursesValidees}`;
-                        statPepite.textContent = `${pepiteGagnantes} / ${coursesValidees}`;
+                        statBase.textContent = `Gag: ${baseGagCount} | Pla: ${basePlaCount} / ${coursesValidees}`;
+                        statPepite.textContent = `Gag: ${pepiteGagCount} | Pla: ${pepitePlaCount} / ${coursesValidees}`;
                         
                         gainBaseGag.innerHTML = `${totalGainBaseGag.toFixed(2)} €<br><span class="${netBase >= 0 ? 'text-emerald-400' : 'text-red-400'}">Net: ${netBase >= 0 ? '+' : ''}${netBase.toFixed(2)}€</span>`;
                         gainBasePla.innerHTML = `${totalGainBasePla.toFixed(2)} €`;
