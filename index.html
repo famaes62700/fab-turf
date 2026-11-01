@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - Algorithme Exact (Base V50 + Rapports & Cotes 20s)</title>
+    <title>PMU Direct - Version 50 (Complète & Débloquée)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,12 +20,17 @@
     <header class="bg-zinc-900 border-b border-zinc-800 p-4 sticky top-0 z-50 shadow-md">
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <h1 class="text-lg font-black uppercase tracking-wider text-emerald-500"><i class="fa-solid fa-horse-head mr-2"></i>PMU Direct</h1>
-            <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer" onchange="loadLivePmu()">
+            <div class="flex items-center space-x-2">
+                <button onclick="loadLivePmu()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1.5 rounded-lg border border-zinc-700 font-bold" title="Recharger le programme">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+                <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer" onchange="loadLivePmu()">
+            </div>
         </div>
     </header>
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center flex-wrap gap-2">
             <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement du programme...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
@@ -154,7 +159,7 @@
             <div class="flex flex-wrap justify-between items-center gap-2">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Les 2 Incontournables</h2>
                 <div class="flex items-center space-x-1.5 flex-wrap">
-                    <span id="refreshBadge" class="text-[10px] text-emerald-400 font-mono mr-1"><i class="fa-solid fa-clock-rotate-left"></i> Auto 20s</span>
+                    <span id="refreshBadge" class="text-[10px] text-emerald-400 font-mono mr-1"><i class="fa-solid fa-clock-rotate-left"></i> 20s</span>
                     <a href="https://www.equidia.fr/direct?utm_source=intern&utm_medium=header_menu" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1 rounded font-bold shadow transition flex items-center">
                         <i class="fa-solid fa-video mr-1.5"></i> Direct 🎥
                     </a>
@@ -225,9 +230,13 @@
                 let mIdx = document.getElementById('meetingSelect').value;
                 let cIdx = document.getElementById('raceSelect').value;
                 if (mIdx !== "" && cIdx !== "") {
-                    fetchRaceData(true);
+                    let b = document.getElementById('refreshBadge');
+                    if (b) b.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> 20s';
+                    fetchRaceData(true).finally(() => {
+                        if (b) b.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> 20s';
+                    });
                 }
-            }, 20000); // 20 secondes exactes
+            }, 20000);
         }
 
         function formatTime(timeValue) {
@@ -241,17 +250,61 @@
             return String(timeValue);
         }
 
-        // ==========================================
-        // CONNEXION PURE DE LA VERSION 50
-        // ==========================================
-        async function fetchPmuDirect(url) {
-            const timestamp = new Date().getTime();
-            const pmuUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`;
-            
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error("Connexion PMU échouée");
-            return await response.json();
+        // =========================================================
+        // CONNEXION CORRIGÉE : SANS SPAM DE CACHE + BASCULE AUTO
+        // =========================================================
+        async function fetchWithTimeout(url, ms = 8000) {
+            const ctrl = new AbortController();
+            const id = setTimeout(() => ctrl.abort(), ms);
+            try {
+                const res = await fetch(url, { signal: ctrl.signal });
+                clearTimeout(id);
+                return res;
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
+        }
+
+        async function fetchPmuEndpoint(path) {
+            // 3 serveurs PMU officiels testés (client 1, client 7, et online client 61)
+            const pmuBases = [
+                `https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${path}`,
+                `https://offline.turfinfo.api.pmu.fr/rest/client/7/programme/${path}`,
+                `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${path}`
+            ];
+
+            for (let pmuUrl of pmuBases) {
+                const encoded = encodeURIComponent(pmuUrl);
+                // On teste d'abord AllOrigins RAW (V50) SANS timestamp aléatoire pour profiter de son cache et éviter l'erreur 429,
+                // puis AllOrigins JSON wrapper, puis CodeTabs si AllOrigins a banni temporairement votre IP.
+                const routes = [
+                    { url: `https://api.allorigins.win/raw?url=${encoded}`, mode: 'raw' },
+                    { url: `https://api.allorigins.win/get?url=${encoded}`, mode: 'wrapper' },
+                    { url: `https://api.codetabs.com/v1/proxy?quest=${encoded}`, mode: 'raw' }
+                ];
+
+                for (let route of routes) {
+                    try {
+                        const res = await fetchWithTimeout(route.url, 7000);
+                        if (!res.ok) continue;
+                        if (route.mode === 'wrapper') {
+                            const wrapper = await res.json();
+                            if (wrapper && wrapper.contents && !wrapper.contents.includes('<html')) {
+                                return JSON.parse(wrapper.contents);
+                            }
+                        } else {
+                            const text = await res.text();
+                            if (text && !text.trim().startsWith('<') && text.length > 20) {
+                                return JSON.parse(text);
+                            }
+                        }
+                    } catch (e) {
+                        // Passe silencieusement au canal suivant
+                    }
+                }
+            }
+            throw new Error("Serveurs PMU injoignables");
         }
 
         async function loadLivePmu() {
@@ -265,7 +318,13 @@
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
             try {
-                const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/toutes-reunions`);
+                // Tente d'abord /toutes-reunions, puis /programme/{date} standard si le 1er échoue
+                let data = null;
+                try {
+                    data = await fetchPmuEndpoint(`${ddmmyyyy}/toutes-reunions`);
+                } catch (e1) {
+                    data = await fetchPmuEndpoint(`${ddmmyyyy}`);
+                }
                 
                 let rawReunions = [];
                 if (data.programme && data.programme.reunions) rawReunions.push(...data.programme.reunions);
@@ -306,7 +365,7 @@
                         }
                         
                         let hipName = r.hippodrome ? (r.hippodrome.libelleLong || r.hippodrome.libelleCourt || r.hippodrome.nom) : 'Hippodrome';
-                        let paysCode = typeof r.pays === 'string' ? r.pays : (r.pays?.code || '');
+                        let paysCode = typeof r.pays === 'string' ? r.pays : (r.pays?.code || r.pays?.libelle || '');
                         let paysIcon = "";
                         if (paysCode && paysCode.toUpperCase() !== 'FRA' && paysCode.toUpperCase() !== 'FR') {
                             paysIcon = ` 🌍 (${paysCode.toUpperCase()})`;
@@ -323,10 +382,10 @@
                     
                     startGlobalRefreshLoop();
                 } else {
-                    throw new Error("Aucune réunion");
+                    throw new Error("Aucune réunion trouvée");
                 }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès aux courses impossible.</span>`;
+                statusText.innerHTML = `<span class="text-red-400"><i class="fa-solid fa-triangle-exclamation"></i> Accès aux courses impossible (Cliquez sur 🔄 en haut à droite).</span>`;
             }
         }
 
@@ -448,6 +507,7 @@
                 if (Array.isArray(extraRapports)) list.push(...extraRapports);
                 else if (Array.isArray(extraRapports.rapports)) list.push(...extraRapports.rapports);
                 else if (Array.isArray(extraRapports.rapportsDefinitifs)) list.push(...extraRapports.rapportsDefinitifs);
+                else if (extraRapports.typePari || extraRapports.dividendes) list.push(extraRapports);
             }
             return list;
         }
@@ -475,7 +535,6 @@
                             if (normalizeCombo(comb) === targetComboKeys) {
                                 let raw = d.dividendePourUnEuro ?? d.dividende ?? d.montant ?? d.rapport;
                                 if (raw !== undefined && raw !== null) {
-                                    // Si la valeur est en centimes (ex: 350 pour 3.50€), on divise par 100
                                     return raw > 50 ? raw / 100 : raw;
                                 }
                             }
@@ -544,7 +603,6 @@
                 if (c !== undefined && c !== null && typeof c !== 'object') {
                     let val = parseFloat(String(c).replace(',', '.'));
                     if (!isNaN(val) && val > 0) {
-                        // Certaines cotes étrangères sont parfois transmises x100 (ex: 450 au lieu de 4.5)
                         if (val > 500) val = val / 100;
                         return val;
                     }
@@ -614,6 +672,18 @@
             return { processed, baseHorse, nuggetHorse, partantsCount: processed.length };
         }
 
+        async function fetchExtraRapportsForCourse(coursePath) {
+            try {
+                return await fetchPmuEndpoint(`${coursePath}/rapports-definitifs`);
+            } catch (e) {
+                try {
+                    return await fetchPmuEndpoint(`${coursePath}/rapports`);
+                } catch (e2) {
+                    return null;
+                }
+            }
+        }
+
         async function fetchRaceData(isBackground = false) {
             let mIdx = document.getElementById('meetingSelect').value;
             let rIdx = document.getElementById('raceSelect').value;
@@ -629,26 +699,32 @@
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
             let rNum = meeting.numOfficiel;
             let cNum = race.numOrdre || (parseInt(rIdx) + 1);
+            let coursePath = `${ddmmyyyy}/R${rNum}/C${cNum}`;
 
             try {
-                const baseCourseUrl = `https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${rNum}/C${cNum}`;
-                const data = await fetchPmuDirect(baseCourseUrl);
+                let data = null;
+                try {
+                    data = await fetchPmuEndpoint(coursePath);
+                } catch (e) {
+                    data = race;
+                }
                 
                 let partants = data.participants || [];
-                // Si la course est internationale et que les cotes sont sur l'endpoint /participants
                 if (partants.length === 0 || partants.every(p => getHorseCote(p) === null)) {
                     try {
-                        const partData = await fetchPmuDirect(`${baseCourseUrl}/participants`);
+                        const partData = await fetchPmuEndpoint(`${coursePath}/participants`);
                         if (partData && Array.isArray(partData.participants) && partData.participants.length > 0) {
                             partants = partData.participants;
+                        } else if (Array.isArray(partData) && partData.length > 0) {
+                            partants = partData;
                         }
                     } catch (e) {}
                 }
 
-                // Fallback sur l'arrivée officielle de la réunion si ordreArrivee n'est pas dans participants
                 let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a, b) => a.ordreArrivee - b.ordreArrivee);
-                if (arrivees.length === 0 && Array.isArray(data.ordreArrivee) && data.ordreArrivee.length > 0) {
-                    data.ordreArrivee.forEach((nums, idx) => {
+                let rawOrdre = data.ordreArrivee || race.ordreArrivee;
+                if (arrivees.length === 0 && Array.isArray(rawOrdre) && rawOrdre.length > 0) {
+                    rawOrdre.forEach((nums, idx) => {
                         let numArr = Array.isArray(nums) ? nums[0] : nums;
                         let found = partants.find(p => (p.numPmu || p.numOrdre) == numArr);
                         if (found) {
@@ -658,14 +734,11 @@
                     });
                 }
 
-                // Si la course est terminée mais que les rapports définitifs sont sur l'endpoint dédié
                 let extraRapports = null;
                 let allRapportsDisplay = getAllRapportsForDisplay(data, null);
                 if ((arrivees.length > 0 || data.rapportsDefinitifsDisponibles || race.rapportsDefinitifsDisponibles) && allRapportsDisplay.length === 0) {
-                    try {
-                        extraRapports = await fetchPmuDirect(`${baseCourseUrl}/rapports-definitifs`);
-                        allRapportsDisplay = getAllRapportsForDisplay(data, extraRapports);
-                    } catch (e) {}
+                    extraRapports = await fetchExtraRapportsForCourse(coursePath);
+                    allRapportsDisplay = getAllRapportsForDisplay(data, extraRapports);
                 }
                 
                 let arrivalBlock = document.getElementById('arrivalBlock');
@@ -845,18 +918,23 @@
             let parts = dateInput.split('-');
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
 
+            let now = Date.now();
             let finishedRaces = [];
             liveMeetingsData.forEach((m) => {
                 let rNum = m.numOfficiel;
                 let courses = m.courses || [];
                 courses.forEach((c, cIdx) => {
-                    let cNum = c.numOrdre || (cIdx + 1);
-                    finishedRaces.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
+                    // On n'analyse que les courses déjà parties ou terminées pour éviter 50 appels inutiles
+                    let isPast = !c.heureDepart || (new Date(c.heureDepart).getTime() <= now);
+                    if (isPast || c.rapportsDefinitifsDisponibles || (Array.isArray(c.ordreArrivee) && c.ordreArrivee.length > 0)) {
+                        let cNum = c.numOrdre || (cIdx + 1);
+                        finishedRaces.push({ rNum, cNum, name: `R${rNum}C${cNum}` });
+                    }
                 });
             });
 
             if (finishedRaces.length === 0) {
-                statsProgress.textContent = "Aucune course trouvée pour le bilan.";
+                statsProgress.textContent = "Aucune course terminée trouvée pour le moment.";
                 return;
             }
 
@@ -875,18 +953,22 @@
                 statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400"></i> Traitement de la course : <span class="text-white font-bold">${r.name}</span> (${i+1}/${finishedRaces.length})`;
 
                 try {
-                    const baseCourseUrl = `https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/R${r.rNum}/C${r.cNum}`;
-                    const data = await fetchPmuDirect(baseCourseUrl);
+                    const coursePath = `${ddmmyyyy}/R${r.rNum}/C${r.cNum}`;
+                    const data = await fetchPmuEndpoint(coursePath);
                     let partants = data.participants || [];
+                    if (partants.length === 0 || partants.every(p => getHorseCote(p) === null)) {
+                        try {
+                            const partData = await fetchPmuEndpoint(`${coursePath}/participants`);
+                            if (partData && Array.isArray(partData.participants)) partants = partData.participants;
+                        } catch (e) {}
+                    }
                     
                     let hasFinished = partants.filter(p => p.ordreArrivee > 0).length > 0 || (Array.isArray(data.ordreArrivee) && data.ordreArrivee.length > 0);
 
                     if (hasFinished) {
                         let extraRapports = null;
                         if (collectRapportsArray(data, null).length === 0) {
-                            try {
-                                extraRapports = await fetchPmuDirect(`${baseCourseUrl}/rapports-definitifs`);
-                            } catch (e) {}
+                            extraRapports = await fetchExtraRapportsForCourse(coursePath);
                         }
 
                         coursesValidees++;
@@ -948,7 +1030,7 @@
                         let miseAbsolue = misesGagnant + misesPlace + misesCoupleGag + misesCouplePlc; 
                         document.getElementById('statGlobal').textContent = `Analysé sur ${coursesValidees} courses réelles (Mise totale exacte engagée : ${miseAbsolue} €)`;
 
-                        await new Promise(r => setTimeout(r, 40));
+                        await new Promise(r => setTimeout(r, 350));
                     }
                 } catch (e) {}
             }
