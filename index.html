@@ -110,8 +110,7 @@
                     </div>
                 </div>
                 <!-- PÉPITE -->
-                <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-amber-500/30 flex flex-col justify-between space-y-2 relative">
-                    <div class="absolute -top-2 -right-2 bg-amber-500 text-zinc-900 text-[8px] font-black px-1.5 py-0.5 rounded shadow">MARTINGALE PLACÉ</div>
+                <div class="bg-zinc-800/90 p-3.5 rounded-xl border border-amber-500/30 flex flex-col justify-between space-y-2">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] uppercase font-bold text-amber-400">Pépite</span>
                         <span id="statPepite" class="text-[10px] font-bold text-white">G: 0 | P: 0 / 0</span>
@@ -146,7 +145,7 @@
                 </div>
             </div>
             <div class="text-center text-[10px] text-zinc-400 mt-3 font-semibold bg-zinc-800/60 py-2.5 rounded-xl border border-zinc-700/50">
-                Mise 1€/jeu, SAUF Base et Pépite Placé : Martingale (x2 si perte, reset à 1€ si gain).
+                Mise 1€/jeu, SAUF Base Placé : Martingale (x2 si perte, reset à 1€ si gain).
             </div>
             <div id="statGlobal" class="text-center text-[11px] text-zinc-300 mt-2 font-medium"></div>
         </div>
@@ -818,6 +817,7 @@
         }
 
         function showHistoryStats() {
+            document.getElementById('historyBlock').classList.remove('hidden');
             let today = new Date();
             let year = today.getFullYear();
             document.getElementById('currentYearText').textContent = year;
@@ -899,6 +899,7 @@
         }
 
         async function calculateDailyStats(isAuto = false) {
+            let statsBlock = document.getElementById('statsBlock');
             let statsProgress = document.getElementById('statsProgress');
             
             let statBase = document.getElementById('statBase');
@@ -963,9 +964,8 @@
             let totalGainPepiteGag = 0, totalGainPepitePla = 0;
             let totalGainCoupleGag = 0, totalGainCouplePla = 0;
 
-            let costBaseGag = 0, costCplGag = 0, costCplPla = 0, costPepGag = 0;
-            let costBasePla = 0, mBasePla = 1; // Martingale Base
-            let costPepPla = 0, mPepPla = 1;   // Martingale Pépite
+            let costBaseGag = 0, costBasePla = 0, costPepGag = 0, costPepPla = 0, costCplGag = 0, costCplPla = 0;
+            let mBasePla = 1; 
             
             let coursesValidees = 0;
             let coursesValideesCP = 0;
@@ -1032,7 +1032,7 @@
                         let gGag = extractGainFromRapports(raceData.rapportsList, nuggetH.num, 'GAGNANT');
                         if (gGag === 0 && nuggetArr === 1) gGag = nuggetH.cote; 
                         
-                        costPepGag += 1; // 1€ fixe
+                        costPepGag += 1;
                         if (gGag > 0) {
                             pepiteGagCount++;
                             totalGainPepiteGag += gGag;
@@ -1041,13 +1041,10 @@
                         let gPla = extractGainFromRapports(raceData.rapportsList, nuggetH.num, 'PLACE');
                         if (gPla === 0 && nuggetArr >= 1 && nuggetArr <= 3) gPla = Math.max(1.1, nuggetH.cote / 3); 
                         
-                        costPepPla += mPepPla; // Martingale Pépite
+                        costPepPla += 1;
                         if (gPla > 0) {
                             pepitePlaCount++;
-                            totalGainPepitePla += gPla * mPepPla;
-                            mPepPla = 1; // Reset
-                        } else {
-                            mPepPla *= 2; // Doubler
+                            totalGainPepitePla += gPla;
                         }
                     }
 
@@ -1098,11 +1095,9 @@
                         gainCoupleGag.innerHTML = `${totalGainCoupleGag.toFixed(2)} €<br><span class="${nCG >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${nCG >= 0 ? '+' : ''}${nCG.toFixed(2)}€</span>`;
                         gainCouplePla.innerHTML = `${totalGainCouplePla.toFixed(2)} €<br><span class="${nCP >= 0 ? 'text-blue-400' : 'text-red-400'}">Net: ${nCP >= 0 ? '+' : ''}${nCP.toFixed(2)}€</span>`;
 
-                        let totalInvesti = costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla;
                         statGlobal.innerHTML = `
-                            <div class="mb-1 text-zinc-300">Investissement en cours : <b>${totalInvesti} €</b>...</div>
-                            <div class="text-emerald-400">Martingale Base Placé : <b>${costBasePla} €</b> (Prochaine : ${mBasePla}€)</div>
-                            <div class="text-amber-400">Martingale Pépite Placé : <b>${costPepPla} €</b> (Prochaine : ${mPepPla}€)</div>
+                            <div class="mb-1 text-zinc-300">Investissement en cours : <b>${costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla} €</b>...</div>
+                            <div class="text-emerald-400">Dont Martingale Base Placé : <b>${costBasePla} €</b> (Prochaine mise : ${mBasePla}€)</div>
                         `;
 
                         // Légère pause pour l'animation
@@ -1133,11 +1128,9 @@
                 
                 statsProgress.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1.5"></i> Bilan en direct (${coursesValidees} courses)</span>`;
 
-                let totalInvesti = costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla;
                 statGlobal.innerHTML = `
-                    <div class="mb-1 text-zinc-300">Investissement total du jour : <b>${totalInvesti} €</b></div>
-                    <div class="text-emerald-400">Martingale Base Placé : <b>${costBasePla} €</b> (Prochaine mise : ${mBasePla}€)</div>
-                    <div class="text-amber-400">Martingale Pépite Placé : <b>${costPepPla} €</b> (Prochaine mise : ${mPepPla}€)</div>
+                    <div class="mb-1 text-zinc-300">Investissement total du jour : <b>${costBaseGag + costBasePla + costPepGag + costPepPla + costCplGag + costCplPla} €</b></div>
+                    <div class="text-emerald-400">Dont investissement de la Martingale (Base Placé) : <b>${costBasePla} €</b> (Prochaine mise : ${mBasePla}€)</div>
                 `;
 
                 localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
