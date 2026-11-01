@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - V63 (Super Multi-Relais)</title>
+    <title>PMU Direct - V64 (Ultra-Stable)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,7 +27,7 @@
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
         <div class="flex justify-between items-center">
-            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion Multi-Relais...</div>
+            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion en cours...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
                     <i class="fa-solid fa-calendar-days mr-1"></i> Mensuel
@@ -38,7 +38,6 @@
             </div>
         </div>
 
-        <!-- BLOC HISTORIQUE -->
         <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-lg mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider"><i class="fa-solid fa-vault mr-1"></i> Gains Cumulés (Net)</h2>
@@ -73,7 +72,6 @@
             </div>
         </div>
 
-        <!-- BLOC STATISTIQUES DU JOUR -->
         <div id="statsBlock" class="hidden bg-zinc-900 border border-indigo-500/30 rounded-xl p-4 shadow-lg mb-2 space-y-3">
             <div class="flex justify-between items-center">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Bilan du Jour</h2>
@@ -153,7 +151,6 @@
             <div class="flex flex-wrap justify-between items-center gap-2">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider"><i class="fa-solid fa-star mr-1"></i> Les 2 Incontournables</h2>
                 <div class="flex items-center space-x-1.5 flex-wrap">
-                    <span id="refreshIndicator" class="text-[10px] text-emerald-500 font-mono mr-2 hidden"><i class="fa-solid fa-rotate fa-spin"></i> 20s</span>
                     <a href="https://www.equidia.fr/direct" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1 rounded font-bold shadow flex items-center">
                         <i class="fa-solid fa-video mr-1.5"></i> Direct
                     </a>
@@ -216,7 +213,6 @@
         let liveMeetingsData = [];
         let autoTransitionStarted = false;
         let transitionTimerInterval = null;
-        let globalRefreshTimer = null;
 
         function formatTime(timeValue) {
             if (!timeValue) return '';
@@ -224,42 +220,21 @@
             return `${String(date.getHours()).padStart(2, '0')}h${String(date.getMinutes()).padStart(2, '0')}`;
         }
 
-        // =========================================================
-        // LE FAMEUX SUPER MULTI-RELAIS ANTI-BLOCAGE
-        // =========================================================
+        // PROXY DIRECT DE SECOURS ULTRA-STABLE
         async function fetchPmuDirect(url) {
             const timestamp = new Date().getTime();
             const pmuUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
-            const encodedUrl = encodeURIComponent(pmuUrl);
-
-            // Liste de 4 serveurs de secours (si le 1er bloque, il passe au 2e, etc)
-            const proxies = [
-                `https://api.codetabs.com/v1/proxy?quest=${encodedUrl}`,
-                `https://api.allorigins.win/raw?url=${encodedUrl}`,
-                `https://corsproxy.io/?${encodedUrl}`,
-                `https://thingproxy.freeboard.io/fetch/${pmuUrl}`
-            ];
-
-            for (let proxy of proxies) {
-                try {
-                    let res = await fetch(proxy);
-                    if (res.ok) {
-                        let text = await res.text();
-                        if (text.includes('numOfficiel') || text.includes('participants')) {
-                            return JSON.parse(text);
-                        }
-                    }
-                } catch(e) {
-                    // Échec sur ce proxy, on essaie le suivant silencieusement
-                }
-            }
-            throw new Error("Tous les serveurs sont bloqués. Patientez.");
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(pmuUrl)}`;
+            
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error("Erreur de connexion");
+            return await response.json();
         }
 
         async function loadLivePmu() {
             const ddmmyyyy = document.getElementById('raceDate').value.split('-').reverse().join('');
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement...';
+            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement des courses...';
 
             try {
                 const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/toutes-reunions`);
@@ -299,22 +274,9 @@
                     
                     statusText.innerHTML = `<span class="text-emerald-400">Prêt : ${totalC} courses chargées <i class="fa-solid fa-check ml-1"></i></span>`;
                     autoSelectCurrentRace();
-                    
-                    // RAFRAÎCHISSEMENT 20 SECONDES
-                    if(globalRefreshTimer) clearInterval(globalRefreshTimer);
-                    globalRefreshTimer = setInterval(() => {
-                        let mIdx = document.getElementById('meetingSelect').value;
-                        let cIdx = document.getElementById('raceSelect').value;
-                        if (mIdx !== "" && cIdx !== "") {
-                            document.getElementById('refreshIndicator').classList.remove('hidden');
-                            fetchRaceData(true).then(() => {
-                                setTimeout(() => document.getElementById('refreshIndicator').classList.add('hidden'), 1000);
-                            });
-                        }
-                    }, 20000);
                 }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded border border-red-500/50"><i class="fa-solid fa-ban mr-1"></i> Blocs de sécurité PMU actifs. Patientez 2 min.</span>`;
+                statusText.innerHTML = `<span class="text-red-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Connexion temporairement indisponible. Réessayez dans 30 secondes.</span>`;
             }
         }
 
@@ -540,7 +502,7 @@
             let sBlock = document.getElementById('statsBlock');
             let prog = document.getElementById('statsProgress');
             sBlock.classList.remove('hidden');
-            prog.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul Multi-Relais en cours (Plus long, mais sûr)...";
+            prog.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul du Bilan en cours...";
 
             let ddmmyyyy = document.getElementById('raceDate').value.split('-').reverse().join('');
             let fRaces = [];
@@ -551,9 +513,6 @@
             let tGB=0, tGP=0, tPB=0, tPP=0, tCG=0, tCP=0;
             let mG=0, mP=0, mCG=0, mCP=0, val=0;
             let cGB=0, cGP=0, cPB=0, cPP=0, cCG=0, cCP=0;
-
-            // ON COUPE LE REFRESH PENDANT LE BILAN POUR PROTÉGER LA CONNEXION
-            if(globalRefreshTimer) clearInterval(globalRefreshTimer);
 
             for (let i = 0; i < fRaces.length; i++) {
                 let r = fRaces[i];
@@ -610,31 +569,19 @@
                     }
                 } catch (e) {}
 
-                // DÉLAI DE SÉCURITÉ PLUS LONG POUR PROTÉGER LES RELAIS (2 Secondes)
-                await new Promise(r => setTimeout(r, 2000));
+                // Pause de sécurité d'une seconde pour éviter le blocage IP
+                await new Promise(r => setTimeout(r, 1000));
             }
 
-            localStorage.setItem(`pmu_stats_v63_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v64_${ddmmyyyy}`, JSON.stringify({
                 netPlace: (tPB+tPP-mP), netGagnant: (tGB+tGP-mG), netCoupleGag: (tCG-mCG), netCouplePlc: (tCP-mCP)
             }));
             
-            prog.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan terminé. (Rafraîchissement réactivé)</span>`;
-            
-            // ON RÉACTIVE LE REFRESH APRES LE BILAN
-            globalRefreshTimer = setInterval(() => {
-                let mIdx = document.getElementById('meetingSelect').value;
-                let cIdx = document.getElementById('raceSelect').value;
-                if (mIdx !== "" && cIdx !== "") {
-                    document.getElementById('refreshIndicator').classList.remove('hidden');
-                    fetchRaceData(true).then(() => {
-                        setTimeout(() => document.getElementById('refreshIndicator').classList.add('hidden'), 1000);
-                    });
-                }
-            }, 20000);
+            prog.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan terminé.</span>`;
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v63_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v64_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
