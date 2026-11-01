@@ -189,7 +189,7 @@
         </div>
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
-            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex items-center">Partants & Cotes</div>
+            <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300">Partants & Cotes</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
@@ -249,18 +249,6 @@
                 return `${h}h${m}`;
             }
             return String(timeValue);
-        }
-
-        function getDisciplineIcon(discipline) {
-            if (!discipline) return '<i class="fa-solid fa-horse text-emerald-400 mr-1.5" title="Plat"></i>';
-            let d = String(discipline).toUpperCase();
-            if (d.includes('TROT') || d.includes('ATTETE') || d.includes('MONTE')) {
-                return '<i class="fa-solid fa-cart-flatbed text-amber-400 mr-1.5" title="Trot"></i>';
-            }
-            if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE') || d.includes('CROSS')) {
-                return '<i class="fa-solid fa-shield-halved text-blue-400 mr-1.5" title="Obstacle / Haies"></i>';
-            }
-            return '<i class="fa-solid fa-horse-head text-emerald-400 mr-1.5" title="Plat"></i>';
         }
 
         async function loadLivePmu() {
@@ -413,15 +401,11 @@
                 courses.forEach((c, cIdx) => {
                     let opt = document.createElement('option');
                     opt.value = cIdx;
-                    let courseTime = c.heureDepart ? ` - 🕒 ${formatTime(c.heureDepart)}` : '';
+                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
+                    let discName = c.discipline ? `(${c.discipline})` : '(Plat)';
                     
-                    let d = String(c.discipline || "").toUpperCase();
-                    let discIcon = "🐎 ";
-                    if (d.includes('TROT')) discIcon = "🛒 ";
-                    else if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE')) discIcon = "🦘 ";
-                    
-                    opt.textContent = `${discIcon}C${c.numOrdre || (cIdx+1)}${courseTime} : ${libelleCourse}`;
+                    opt.textContent = `${courseTime} C${c.numOrdre || (cIdx+1)} : ${libelleCourse} ${discName}`;
                     raceSelect.appendChild(opt);
                 });
             } else {
@@ -624,8 +608,8 @@
                 });
                 
                 let timeInfo = race.heureDepart ? `🕒 ${formatTime(race.heureDepart)} — ` : '';
-                let discIcon = getDisciplineIcon(race.discipline);
-                document.getElementById('raceInfoDetails').innerHTML = `${discIcon} Partants & Cotes — ${race.discipline || 'Plat'} (${race.distance ? race.distance + 'm' : ''})`;
+                let discName = race.discipline ? `(${race.discipline})` : '(Plat)';
+                document.getElementById('raceInfoDetails').textContent = `${timeInfo}Partants & Cotes — ${discName} (${race.distance ? race.distance + 'm' : ''})`;
             } catch (e) {}
         }
 
