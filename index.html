@@ -179,19 +179,15 @@
                     <i class="fa-solid fa-star mr-1.5"></i> Nos 2 Chevaux Clés
                 </h2>
                 <div class="flex items-center space-x-1.5 flex-wrap">
-                    <!-- LIEN DIRECT EQUIDIA -->
                     <a href="https://www.equidia.fr/direct?utm_source=intern&utm_medium=header_menu&utm_campaign=Home" target="_blank" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-2.5 py-1.5 rounded-lg font-bold shadow transition flex items-center">
                         <i class="fa-solid fa-video mr-1.5"></i> Direct 🎥
                     </a>
-                    <!-- BOUTON PRÉCÉDENTE -->
                     <button onclick="goToPrevRace()" class="bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 text-xs px-2.5 py-1.5 rounded-lg border border-indigo-500/40 font-semibold transition flex items-center shadow" title="Course précédente">
                         <i class="fa-solid fa-backward-step"></i>
                     </button>
-                    <!-- ACTUALISER -->
                     <button onclick="refreshCurrentRace()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-500/30 font-semibold transition flex items-center shadow" title="Actualiser manuellement">
                         <i class="fa-solid fa-rotate"></i>
                     </button>
-                    <!-- BOUTON SUIVANTE -->
                     <button onclick="goToNextRace()" class="bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 text-xs px-2.5 py-1.5 rounded-lg border border-indigo-500/40 font-semibold transition flex items-center shadow" title="Course suivante">
                         <i class="fa-solid fa-forward-step"></i>
                     </button>
@@ -213,7 +209,7 @@
 
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl">
             <div id="raceInfoDetails" class="p-3.5 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center">
-                <span>Partants & Cotes</span>
+                <!-- Rempli dynamiquement -->
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -238,7 +234,6 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
 
-        // Auto-Rafraîchissement toutes les 20 secondes
         setInterval(() => {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
@@ -276,16 +271,15 @@
             return String(timeValue);
         }
 
-        function getDisciplineIcon(discipline) {
-            if (!discipline) return '<i class="fa-solid fa-horse text-emerald-400 ml-2" title="Plat"></i>';
-            let d = String(discipline).toUpperCase();
+        function getDisciplineBadge(discipline) {
+            let d = String(discipline || 'PLAT').toUpperCase();
             if (d.includes('TROT') || d.includes('ATTEL') || d.includes('MONTE')) {
-                return '<i class="fa-solid fa-cart-flatbed text-amber-400 ml-2" title="Trot"></i>';
+                return '<span class="bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">TROT</span>';
             }
             if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE') || d.includes('CROSS')) {
-                return '<i class="fa-solid fa-shield-halved text-blue-400 ml-2" title="Obstacle / Haies"></i>';
+                return '<span class="bg-blue-500/20 text-blue-400 border border-blue-500/40 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">OBSTACLE</span>';
             }
-            return '<i class="fa-solid fa-horse text-emerald-400 ml-2" title="Plat"></i>';
+            return '<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">PLAT</span>';
         }
 
         async function loadLivePmu() {
@@ -441,9 +435,13 @@
                     
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
                     let libelleCourse = c.libelle || c.nom || c.libelleCourt || 'Prix';
-                    let discName = c.discipline ? `(${c.discipline})` : '(Plat)';
                     
-                    opt.textContent = `${courseTime}C${c.numOrdre || (cIdx+1)} - ${libelleCourse} ${discName}`;
+                    let d = String(c.discipline || "PLAT").toUpperCase();
+                    let shortDisc = "PLAT";
+                    if (d.includes('TROT') || d.includes('ATTEL') || d.includes('MONTE')) shortDisc = "TROT";
+                    else if (d.includes('HAIES') || d.includes('STEEPLE') || d.includes('OBSTACLE') || d.includes('CROSS')) shortDisc = "OBSTACLE";
+                    
+                    opt.textContent = `${courseTime}C${c.numOrdre || (cIdx+1)} - ${libelleCourse} [${shortDisc}]`;
                     raceSelect.appendChild(opt);
                 });
             } else {
@@ -582,14 +580,12 @@
                 if (pType.includes('COUPLE') || pType.includes('CG') || pType.includes('CP') || famille.includes('COUPLE') || pType.includes('JUMELE') || pType.includes('E-COUPLE')) {
                     if (Array.isArray(details)) {
                         details.forEach(item => {
-                            // Reconstituer la combinaison de toutes les manières possibles par le PMU
                             let strCombo = "";
                             if (Array.isArray(item.chevaux)) strCombo = item.chevaux.join('-');
                             else if (Array.isArray(item.combinaison)) strCombo = item.combinaison.join('-');
                             else strCombo = String(item.combinaison || item.cheval || item.partants || "").trim();
 
                             let matchCombo = false;
-                            // Extrait tous les chiffres de la combinaison (ex: "4-5" -> 4 et 5)
                             let nums = strCombo.match(/\d+/g);
                             if (nums && nums.length >= 2) {
                                 let p1 = parseInt(nums[0], 10);
@@ -681,7 +677,6 @@
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
-                        // Transition 30s après l'arrivée
                         setTimeout(() => { goToNextRace(); }, 30000);
                     }
                 } else {
@@ -756,12 +751,14 @@
                 });
                 
                 let timeInfo = race.heureDepart ? `[${formatTime(race.heureDepart)}] ` : '';
-                let discName = race.discipline ? `(${race.discipline})` : '(Plat)';
-                let discIcon = getDisciplineIcon(race.discipline);
+                let discBadge = getDisciplineBadge(race.discipline);
                 
                 document.getElementById('raceInfoDetails').innerHTML = `
-                    <span>Partants & Cotes</span>
-                    <span class="flex items-center text-sm font-normal text-zinc-400">${timeInfo} ${discName} ${discIcon}</span>
+                    <div class="flex items-center">
+                        <span>Partants & Cotes</span>
+                        ${discBadge}
+                    </div>
+                    <span class="flex items-center text-sm font-normal text-zinc-400">${timeInfo} ${race.distance ? race.distance + 'm' : ''}</span>
                 `;
             } catch (e) {}
         }
