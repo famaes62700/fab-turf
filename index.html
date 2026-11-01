@@ -1,31 +1,33 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct - V60 (Anti-Ban & Moteur Exact)</title>
+    <title>PMU Direct - V61 (Anti-Blocage & Secours)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=PMU&background=00965e&color=fff&size=512&font-size=0.4&v=2">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=PMU&background=00965e&color=fff&size=512&font-size=0.4&v=2">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-zinc-950 text-slate-100 min-h-screen flex flex-col font-sans">
+<body class="bg-zinc-950 text-slate-100 min-h-screen flex flex-col font-sans relative">
 
     <header class="bg-zinc-900 border-b border-zinc-800 p-4 sticky top-0 z-50 shadow-md">
         <div class="max-w-3xl mx-auto flex justify-between items-center">
-            <h1 class="text-lg font-black uppercase tracking-wider text-emerald-500"><i class="fa-solid fa-horse-head mr-2"></i>PMU Direct</h1>
+            <div class="flex items-center space-x-2">
+                <h1 class="text-lg font-black uppercase tracking-wider text-emerald-500"><i class="fa-solid fa-horse-head mr-2"></i>PMU Direct</h1>
+                <button onclick="scrollToTop()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] px-2 py-1 rounded border border-zinc-700 transition" title="Remonter tout en haut">
+                    <i class="fa-solid fa-arrow-up"></i> Haut
+                </button>
+            </div>
             <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer" onchange="loadLivePmu()">
         </div>
     </header>
 
     <main class="flex-grow max-w-3xl w-full mx-auto p-4 space-y-4">
         <div class="flex justify-between items-center">
-            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion sécurisée en cours...</div>
+            <div id="statusText" class="text-xs text-amber-400 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion via relais de secours...</div>
             <div class="flex space-x-2">
                 <button onclick="showHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded border border-zinc-700 font-bold transition flex items-center">
                     <i class="fa-solid fa-calendar-days mr-1"></i> Bilan Mensuel
@@ -204,12 +206,21 @@
         </div>
     </main>
 
+    <!-- BOUTON FLOTTANT DE RETOUR EN HAUT -->
+    <button onclick="scrollToTop()" class="fixed bottom-4 right-4 bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-full shadow-2xl border border-emerald-400/40 transition-all z-50 flex items-center justify-center" title="Remonter tout en haut">
+        <i class="fa-solid fa-arrow-up text-sm"></i>
+    </button>
+
     <script>
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         (function purgeOldData() {
             let keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 let key = localStorage.key(i);
-                if (key && key.startsWith('pmu_stats_') && !key.includes('_v60_')) {
+                if (key && key.startsWith('pmu_stats_') && !key.includes('_v61_')) {
                     keysToRemove.push(key);
                 }
             }
@@ -228,16 +239,11 @@
             return `${String(date.getHours()).padStart(2, '0')}h${String(date.getMinutes()).padStart(2, '0')}`;
         }
 
-        // =========================================================================
-        // MOTEUR DE CONNEXION SÉCURISÉ V60 (AVEC GESTION ANTI-BAN)
-        // =========================================================================
+        // DOUBLE RELAIS AUTOMATIQUE
         async function fetchPmuDirect(url) {
             const timestamp = new Date().getTime();
             const pmuUrl = `${url}${url.includes('?') ? '&' : '?'}_=${timestamp}`;
-            
-            // Relais 1 : AllOrigins (Celui qui a bien marché, mais qui vous a bloqué pour cause de vitesse)
             const proxy1 = `https://api.allorigins.win/raw?url=${encodeURIComponent(pmuUrl)}`;
-            // Relais 2 : Corsproxy (Prend le relais si le 1er vous a temporairement bloqué)
             const proxy2 = `https://corsproxy.io/?${encodeURIComponent(pmuUrl)}`;
 
             try {
@@ -256,13 +262,13 @@
                 }
             } catch(e) {}
 
-            throw new Error("Connexion impossible, serveurs relais surchargés.");
+            throw new Error("Connexion impossible.");
         }
 
         async function loadLivePmu() {
             const ddmmyyyy = document.getElementById('raceDate').value.split('-').reverse().join('');
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Contournement des blocages en cours...';
+            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement...';
 
             try {
                 const data = await fetchPmuDirect(`https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${ddmmyyyy}/toutes-reunions`);
@@ -308,10 +314,10 @@
                         let mIdx = document.getElementById('meetingSelect').value;
                         let cIdx = document.getElementById('raceSelect').value;
                         if (mIdx !== "" && cIdx !== "") fetchRaceData(true);
-                    }, 30000); // Rafraîchissement plus lent (30s) pour éviter d'être banni
+                    }, 30000);
                 }
             } catch (e) {
-                statusText.innerHTML = `<span class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded border border-red-500/50"><i class="fa-solid fa-ban mr-1"></i> Serveurs bloqués (Bannissement temporaire de l'IP). Réessayez dans 10 minutes.</span>`;
+                statusText.innerHTML = `<span class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded border border-red-500/50"><i class="fa-solid fa-ban mr-1"></i> Serveur bloqué. Patientez 1 min.</span>`;
             }
         }
 
@@ -369,9 +375,6 @@
             }
         }
 
-        // =========================================================================
-        // DECODEUR EXACT (Rapports Definitifs, Cotes Etrangères, Combinaisons)
-        // =========================================================================
         function normalizeCombo(c) {
             if (!c) return "";
             let matches = String(c).match(/\d+/g);
@@ -543,7 +546,7 @@
             let sBlock = document.getElementById('statsBlock');
             let prog = document.getElementById('statsProgress');
             sBlock.classList.remove('hidden');
-            prog.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul en cours (Vitesse réduite pour éviter le ban)...";
+            prog.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Calcul en cours (vitesse anti-ban)...";
 
             let ddmmyyyy = document.getElementById('raceDate').value.split('-').reverse().join('');
             let fRaces = [];
@@ -606,23 +609,22 @@
                         document.getElementById('statCouplePlaceScore').innerHTML = `Bénéfice : <span class="${(tCP-mCP)>=0?'text-blue-400':'text-red-400'} font-black">${(tCP-mCP).toFixed(2)} €</span>`;
                         document.getElementById('gainCouplePlace').innerHTML = `Combiné [${cCP}/${mCP}] : ${tCP.toFixed(2)}€`;
 
-                        document.getElementById('statGlobal').textContent = `Analysé sur ${val} courses (Mise totale engagée : ${mG+mP+mCG+mCP} €)`;
+                        document.getElementById('statGlobal').textContent = `Analysé sur ${val} courses (Mise totale : ${mG+mP+mCG+mCP} €)`;
                     }
                 } catch (e) {}
 
-                // PAUSE ANTI-BANNISSEMENT OBLIGATOIRE : 1.2 secondes entre chaque requête
                 await new Promise(r => setTimeout(r, 1200));
             }
 
-            localStorage.setItem(`pmu_stats_v60_${ddmmyyyy}`, JSON.stringify({
+            localStorage.setItem(`pmu_stats_v61_${ddmmyyyy}`, JSON.stringify({
                 netPlace: (tPB+tPP-mP), netGagnant: (tGB+tGP-mG), netCoupleGag: (tCG-mCG), netCouplePlc: (tCP-mCP)
             }));
             
-            prog.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan exact et définitif généré.</span>`;
+            prog.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check-double mr-1"></i> Bilan définitif terminé.</span>`;
         }
 
         function getStatForDateObj(d) {
-            let key = `pmu_stats_v60_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
+            let key = `pmu_stats_v61_${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let saved = localStorage.getItem(key);
             if (saved) return JSON.parse(saved);
             return { netPlace: 0, netGagnant: 0, netCoupleGag: 0, netCouplePlc: 0 };
