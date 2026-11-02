@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMU Direct</title>
+    <title>PMU Direct - Bankroll Mensuelle</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,8 +27,13 @@
             </h1>
             <div class="flex items-center space-x-3">
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-xs px-3 py-1.5 rounded-lg border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500" onchange="loadLivePmu()">
-                <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg border border-zinc-700 font-bold transition flex items-center shadow" title="Historique Mensuel">
+                <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg border border-zinc-700 font-bold transition flex items-center shadow relative" title="Historique Mensuel">
                     <i class="fa-solid fa-calendar-days"></i>
+                    <!-- Petit point vert pour indiquer que la bankroll est active -->
+                    <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
                 </button>
             </div>
         </div>
@@ -42,7 +47,7 @@
         </div>
 
         <!-- BLOC HISTORIQUE -->
-        <div id="historyBlock" class="hidden bg-zinc-900 border border-zinc-700 rounded-2xl p-4 shadow-xl mb-2">
+        <div id="historyBlock" class="hidden bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-xl mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-zinc-300 tracking-wider flex items-center">
                     <i class="fa-solid fa-vault mr-1.5 text-emerald-400"></i> Vos Gains Cumulés
@@ -79,7 +84,7 @@
             </div>
         </div>
 
-        <!-- BLOC STATISTIQUES DU JOUR (Toujours visible) -->
+        <!-- BLOC STATISTIQUES DU JOUR -->
         <div id="statsBlock" class="bg-zinc-900 border border-indigo-500/30 rounded-2xl p-4 shadow-xl mb-2">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-xs font-bold uppercase text-indigo-400 tracking-wider flex items-center">
@@ -174,7 +179,7 @@
             <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
         </div>
 
-        <!-- BLOC CHEVAUX CLÉS + NAVIGATION ET LIEN DIRECT EQUIDIA -->
+        <!-- BLOC CHEVAUX CLÉS -->
         <div class="bg-gradient-to-r from-emerald-950/60 via-zinc-900 to-amber-950/40 border border-emerald-500/50 rounded-2xl p-4 space-y-3 shadow-xl relative">
             <div class="flex flex-wrap justify-between items-center gap-2">
                 <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
@@ -236,7 +241,6 @@
         let liveMeetingsData = [];
         let autoTransitionDone = false;
         
-        // Cache pour éviter de re-télécharger les courses déjà terminées
         let validatedRacesCache = {}; 
 
         // Rafraîchissement automatique toutes les 20s
@@ -246,13 +250,14 @@
             if (mIdx !== "" && cIdx !== "") {
                 fetchRaceData(true); 
             }
-            // Mise à jour silencieuse du bilan à chaque cycle
+            // Recalcul en arrière-plan (met aussi à jour l'historique mensuel si le panneau est ouvert)
             calculateDailyStats(true);
         }, 20000);
 
         function toggleHistoryStats() {
             let historyBlock = document.getElementById('historyBlock');
             if (historyBlock.classList.contains('hidden')) {
+                historyBlock.classList.remove('hidden');
                 showHistoryStats();
             } else {
                 historyBlock.classList.add('hidden');
@@ -303,7 +308,11 @@
             const dateInput = document.getElementById('raceDate').value;
             const statusText = document.getElementById('statusText');
             statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Chargement...';
-            document.getElementById('historyBlock').classList.add('hidden');
+
+            // Mise à jour de l'affichage de la bankroll si le panneau est ouvert quand on change la date
+            if (!document.getElementById('historyBlock').classList.contains('hidden')) {
+                showHistoryStats();
+            }
 
             const parts = dateInput.split('-');
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
@@ -342,7 +351,7 @@
                         select.value = currentVal;
                     }
                     
-                    // Lancer le calcul du bilan dès le chargement initial de la page
+                    // Lancer le calcul du bilan dès le chargement
                     calculateDailyStats(true);
                     
                 } else {
@@ -817,13 +826,15 @@
         }
 
         function showHistoryStats() {
-            let today = new Date();
-            let year = today.getFullYear();
+            let dateInput = document.getElementById('raceDate').value;
+            let currentViewDate = dateInput ? new Date(dateInput) : new Date();
+            let year = currentViewDate.getFullYear();
+            
             document.getElementById('currentYearText').textContent = year;
 
-            let dayOfWeek = today.getDay() || 7; 
-            let monday = new Date(today);
-            monday.setDate(today.getDate() - (dayOfWeek - 1)); 
+            let dayOfWeek = currentViewDate.getDay() || 7; 
+            let monday = new Date(currentViewDate);
+            monday.setDate(currentViewDate.getDate() - (dayOfWeek - 1)); 
             
             let wBaseGag = 0, wBasePla = 0, wPepGag = 0, wPepPla = 0, wCplGag = 0, wCplPla = 0;
             
@@ -850,6 +861,7 @@
             let monthsGrid = document.getElementById('monthsGrid');
             monthsGrid.innerHTML = '';
 
+            // Parcours des 12 mois de l'année sélectionnée
             for (let m = 0; m < 12; m++) {
                 let mBaseGag = 0, mBasePla = 0, mPepGag = 0, mPepPla = 0, mCplGag = 0, mCplPla = 0;
                 let daysInMonth = new Date(year, m + 1, 0).getDate(); 
@@ -866,10 +878,16 @@
 
                 if (mBaseGag !== 0 || mBasePla !== 0 || mPepGag !== 0 || mPepPla !== 0 || mCplGag !== 0 || mCplPla !== 0) {
                     let div = document.createElement('div');
-                    div.className = "bg-zinc-800/50 p-2 rounded-xl border border-zinc-700/50 mb-2";
+                    
+                    // Met le mois actuellement visionné en surbrillance
+                    let isCurrentViewMonth = (m === currentViewDate.getMonth());
+                    div.className = isCurrentViewMonth 
+                        ? "bg-zinc-800 p-2 rounded-xl border border-emerald-500/50 mb-2 shadow-lg" 
+                        : "bg-zinc-800/50 p-2 rounded-xl border border-zinc-700/50 mb-2";
+
                     div.innerHTML = `
                         <div class="flex justify-between items-center mb-1.5 px-1">
-                            <span class="font-bold text-zinc-300">${monthNames[m]}</span>
+                            <span class="font-bold ${isCurrentViewMonth ? 'text-emerald-400' : 'text-zinc-300'}">${monthNames[m]}</span>
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-[10px]">
                             <div class="bg-zinc-900/80 p-1.5 rounded border border-emerald-500/20 text-center leading-tight">
@@ -946,7 +964,6 @@
                 });
             });
 
-            // Tri par heure pour que la Martingale soit correcte chronologiquement
             pastRacesToday.sort((a, b) => a.time - b.time);
 
             if (pastRacesToday.length === 0) {
@@ -1071,7 +1088,6 @@
                         }
                     }
 
-                    // Défilement visuel des gains en live
                     if (!isAuto) {
                         let nBG = totalGainBaseGag - costBaseGag;
                         let nBP = totalGainBasePla - costBasePla;
@@ -1099,7 +1115,6 @@
                             <div class="text-emerald-400 text-[10px]">Martingale Base Placé : <b>${costBasePla}€</b> joués (Prochaine mise : ${mBasePla}€)</div>
                         `;
 
-                        // Légère pause pour l'animation
                         await new Promise(r => setTimeout(r, 20));
                     }
                 }
@@ -1113,7 +1128,6 @@
                 let netCoupleGag = totalGainCoupleGag - costCplGag;
                 let netCouplePla = totalGainCouplePla - costCplPla; 
 
-                // Mise à jour finale globale
                 statBase.textContent = `G: ${baseGagCount} | P: ${basePlaCount} / ${coursesValidees}`;
                 statPepite.textContent = `G: ${pepiteGagCount} | P: ${pepitePlaCount} / ${coursesValidees}`;
                 statCouple.textContent = `G: ${coupleGagCount} / ${coursesValidees} | P: ${couplePlaCount} / ${coursesValideesCP}`;
@@ -1135,6 +1149,7 @@
                     <div class="text-emerald-400 text-[10px]">Martingale Base Placé : <b>${costBasePla}€</b> joués (Prochaine mise : ${mBasePla}€)</div>
                 `;
 
+                // SAUVEGARDE ET RECALCUL MENSUEL :
                 localStorage.setItem(`pmu_stats_${ddmmyyyy}`, JSON.stringify({
                     baseGag: netBaseGag,
                     basePla: netBasePla,
@@ -1143,6 +1158,11 @@
                     cplGag: netCoupleGag,
                     cplPla: netCouplePla
                 }));
+                
+                // On met à jour l'affichage de l'historique seulement si le panneau est ouvert
+                if (!document.getElementById('historyBlock').classList.contains('hidden')) {
+                    showHistoryStats();
+                }
             }
         }
 
