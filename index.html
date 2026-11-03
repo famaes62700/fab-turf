@@ -312,10 +312,12 @@
                 if (localRes.ok) return await localRes.json();
             } catch (e) {}
 
-            const proxies = [
+           const proxies = [
                 `https://api.allorigins.win/raw?url=${encodeURIComponent(fullPmuUrl)}`,
                 `https://corsproxy.io/?${encodeURIComponent(fullPmuUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fullPmuUrl)}`
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fullPmuUrl)}`,
+                `https://thingproxy.freeboard.io/fetch/${fullPmuUrl}`, // Nouveau proxy
+                `https://proxy.cors.sh/${fullPmuUrl}` // Nouveau proxy
             ];
 
             for (let proxy of proxies) {
