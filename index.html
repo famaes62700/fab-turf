@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V112 Value Betting (Filtres & Compteurs)</title>
+    <title>Turf - V113 Value Betting (Tri Chronologique)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=50">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=50">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=51">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=51">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V112 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V113 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -294,7 +294,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v112_value"; 
+        const STATS_VERSION = "v113_value"; 
         
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 10.0;
@@ -524,6 +524,7 @@
             document.getElementById('inputMinMargin').value = MIN_VALUE_MARGIN;
             document.getElementById('inputMaxOdd').value = MAX_ODD_FILTER;
             
+            // MAJ Affichage Boutons Filtre
             let btnTrot = document.getElementById('btnFilterTrot');
             let btnAll = document.getElementById('btnFilterAll');
             if (currentDisciplineMode === 'TROT') {
@@ -966,13 +967,12 @@
                         for (let c of courses) {
                             if (cancelSyncFlag) break;
                             
-                            let targetCourses = [c].filter(course => {
-                                if (currentDisciplineMode === 'ALL') return true;
-                                let dStr = String(course.discipline || '').toUpperCase();
-                                let sStr = String(course.specialite || '').toUpperCase();
-                                return dStr === '' || dStr === 'UNDEFINED' || dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') || sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE');
-                            });
-                            if (targetCourses.length === 0) continue;
+                            if (currentDisciplineMode === 'TROT') {
+                                let disciplineStr = String(c.discipline || '').toUpperCase();
+                                let specStr = String(c.specialite || '').toUpperCase();
+                                let isTrot = disciplineStr === '' || disciplineStr === 'UNDEFINED' || disciplineStr.includes('TROT') || disciplineStr.includes('ATTEL') || disciplineStr.includes('MONTE') || specStr.includes('TROT') || specStr.includes('ATTEL') || specStr.includes('MONTE');
+                                if (!isTrot) continue;
+                            }
 
                             let rNum = m.numOfficiel || (rawR.indexOf(m) + 1);
                             let cNum = c.numOrdre || (courses.indexOf(c) + 1);
@@ -1076,40 +1076,33 @@
 
         function autoSelectCurrentRace() {
             let now = Date.now();
-            let bestMIdx = 0, bestCIdx = 0;
-            let minDiff = Infinity;
-            let lastFinishedMIdx = 0, lastFinishedCIdx = 0;
+            let sortedRaces = getSortedRacesList();
+            
+            if (sortedRaces.length === 0) return;
 
-            for (let mIdx = 0; mIdx < liveMeetingsData.length; mIdx++) {
-                let m = liveMeetingsData[mIdx];
-                for (let cIdx = 0; cIdx < m.courses.length; cIdx++) {
-                    let c = m.courses[cIdx];
-                    if (c.heureDepart) {
-                        let diff = c.heureDepart - now;
-                        if (diff > -300000 && diff < minDiff) {
-                            minDiff = diff;
-                            bestMIdx = mIdx;
-                            bestCIdx = cIdx;
-                        }
-                        if (isRaceFinished(c)) {
-                            lastFinishedMIdx = mIdx;
-                            lastFinishedCIdx = cIdx;
-                        }
-                    }
+            let targetRace = null;
+            
+            // On cherche la première course qui va partir (ou partie il y a moins de 5min)
+            for (let i = 0; i < sortedRaces.length; i++) {
+                let r = sortedRaces[i];
+                let diff = r.time - now;
+                if (diff > -300000 && !isRaceFinished(r.courseObj)) {
+                    targetRace = r;
+                    break;
                 }
             }
 
-            if (minDiff === Infinity) {
-                bestMIdx = lastFinishedMIdx;
-                bestCIdx = lastFinishedCIdx;
+            // Si tout est fini, on se cale sur la DERNIÈRE course CHRONOLOGIQUE
+            if (!targetRace) {
+                targetRace = sortedRaces[sortedRaces.length - 1];
             }
 
-            if (liveMeetingsData[bestMIdx]) {
-                document.getElementById('meetingSelect').value = bestMIdx;
+            if (targetRace && liveMeetingsData[targetRace.mIdx]) {
+                document.getElementById('meetingSelect').value = targetRace.mIdx;
                 
                 let raceSelect = document.getElementById('raceSelect');
                 raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
-                liveMeetingsData[bestMIdx].courses.forEach((c, idx) => {
+                liveMeetingsData[targetRace.mIdx].courses.forEach((c, idx) => {
                     let opt = document.createElement('option');
                     opt.value = idx;
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
@@ -1119,7 +1112,7 @@
                     raceSelect.appendChild(opt);
                 });
 
-                document.getElementById('raceSelect').value = bestCIdx;
+                document.getElementById('raceSelect').value = targetRace.cIdx;
             }
         }
 
@@ -1144,14 +1137,14 @@
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                 
                 liveMeetingsData = [];
+                let totalCourses = 0;
+                let totalCompletedGlobal = 0;
 
-                // 1. Filtrer les réunions en fonction du mode (TROT ou ALL)
-                rawReunions.forEach(r => {
+                rawReunions.forEach((r, rIdx) => {
                     let targetCourses = (r.courses || []).filter(c => {
                         if (currentDisciplineMode === 'ALL') return true;
                         let d = String(c.discipline || '').toUpperCase();
                         let s = String(c.specialite || '').toUpperCase();
-                        // Tolère les champs vides pour ne pas rater des courses non labellisées par l'API
                         return d === '' || d === 'UNDEFINED' || d.includes('TROT') || d.includes('ATTEL') || d.includes('MONTE') || s.includes('TROT') || s.includes('ATTEL') || s.includes('MONTE');
                     });
                     
@@ -1164,27 +1157,20 @@
                 if (liveMeetingsData.length > 0) {
                     let select = document.getElementById('meetingSelect');
                     select.innerHTML = '<option value="">-- Choisissez un hippodrome --</option>';
-                    let totalCourses = 0;
-                    let completedCourses = 0;
 
-                    // 2. Construire l'affichage du menu
                     liveMeetingsData.forEach((r, idx) => {
-                        let finishedCount = r.courses.filter(c => isRaceFinished(c)).length;
-                        completedCourses += finishedCount;
                         totalCourses += r.courses.length;
+                        totalCompletedGlobal += r.courses.filter(c => isRaceFinished(c)).length;
                         
                         let opt = document.createElement('option');
                         opt.value = idx;
                         let hipName = r.hippodrome?.libelleLong || r.hippodrome?.libelleCourt || r.hippodrome?.nom || 'Hippodrome';
-                        let mStart = getMeetingStartTime(r);
-                        let timeTag = mStart ? ` [${mStart}]` : '';
-                        
-                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${hipName}${timeTag} (${r.courses.length} courses)`;
+                        let rNum = r.numOfficiel || (idx+1);
+                        opt.textContent = `R${rNum} - ${hipName} (${r.courses.length} courses)`;
                         select.appendChild(opt);
                     });
                     
-                    // 3. Calculer les courses restantes globales
-                    let remainingGlobal = totalCourses - completedCourses;
+                    let remainingGlobal = totalCourses - totalCompletedGlobal;
                     statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${liveMeetingsData.length} réunions | ${remainingGlobal}/${totalCourses} rest.)</span>`;
                     document.getElementById('btnResumeMissing').style.display = 'inline-block';
                     
@@ -1195,7 +1181,7 @@
                 } else {
                     document.getElementById('meetingSelect').innerHTML = '<option value="">Aucune réunion</option>';
                     document.getElementById('raceSelect').innerHTML = '<option value="">-- Course --</option>';
-                    document.getElementById('runnersTableBody').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucune course pour ce filtre à cette date.</td></tr>';
+                    document.getElementById('runnersTableBody').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucune course pour cette date.</td></tr>';
                     statusText.innerHTML = `<span class="text-zinc-400">Aucune réunion au programme.</span>`;
                 }
             } catch (e) {
@@ -1216,6 +1202,7 @@
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+            
             let rNum = meeting.numOfficiel || (parseInt(mIdx, 10) + 1);
             let cNum = race.numOrdre || (parseInt(cIdx, 10) + 1);
             let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
@@ -1420,6 +1407,19 @@
 
                 if (!raceData || !raceData.partants || raceData.partants.length < 5 || !raceData.isComplete) {
                     continue;
+                }
+                
+                if (currentDisciplineMode === 'TROT') {
+                    let originalMeeting = liveMeetingsData.find(m => m.numOfficiel == r.rNum);
+                    if (originalMeeting) {
+                        let originalCourse = originalMeeting.courses.find(c => c.numOrdre == r.cNum);
+                        if (originalCourse) {
+                            let dStr = String(originalCourse.discipline || '').toUpperCase();
+                            let sStr = String(originalCourse.specialite || '').toUpperCase();
+                            let isTrot = dStr === '' || dStr === 'UNDEFINED' || dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') || sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE');
+                            if (!isTrot) continue;
+                        }
+                    }
                 }
 
                 let algo = computeAlgorithm(raceData.partants);
