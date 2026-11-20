@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V106 Value Betting (API Locale Corrigée)</title>
+    <title>Turf - V107 Value Betting (Bilan Corrigé)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=44">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=44">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=45">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=45">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V106 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V107 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -294,7 +294,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v106_value"; 
+        const STATS_VERSION = "v107_value"; 
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
@@ -310,11 +310,13 @@
         let isSyncingPeriod = false;
         let cancelSyncFlag = false;
         
+        // Zapping / Timer variables
         let autoTransitionDone = false;
         let countdownInterval = null; 
         let pollingInterval = null;
         let checkAlarmInterval = null;
         
+        // Sound variables
         let isSoundEnabled = false;
         let audioCtx = null;
         let alertedValues = new Set();
@@ -743,62 +745,43 @@
             return { algo: liveAlgo, isFrozen: false, isStarted: true };
         }
 
-        function extractGainFromRapports(listeRapports, horseNum, targetType) {
-            let foundGain = 0;
-            if (!listeRapports || !Array.isArray(listeRapports)) return 0;
+        // LE MOTEUR DE GAIN ORIGINAL ROBUSTE
+        function getDividendForOneEuro(item, group) {
+            if (!item || item.rembourse || (group && group.rembourse)) return 0;
+            let val = 0;
+            if (item.dividendePourUnEuro !== undefined) {
+                val = parseFloat(String(item.dividendePourUnEuro).replace(',', '.'));
+                if (String(item.dividendePourUnEuro).indexOf(',') === -1 && String(item.dividendePourUnEuro).indexOf('.') === -1) val = val / 100;
+            } else if (item.dividendeEuro !== undefined) {
+                val = parseFloat(String(item.dividendeEuro).replace(',', '.'));
+            }
+            return (!isNaN(val) && val > 0) ? val : 0;
+        }
 
+        function extractGainFromRapports(listeRapports, targetNum, targetType) {
+            if (!listeRapports || !Array.isArray(listeRapports) || isNaN(targetNum)) return 0;
+            let bestGain = 0;
             listeRapports.forEach(group => {
-                let pType = (group.typePari || group.libellePari || group.codePari || "").toUpperCase();
-                let famille = (group.famillePari || "").toUpperCase();
-                let details = group.rapports || group.dividendes || group.lesRapports || [];
-
-                if (pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || pType.includes('INTER') || famille.includes('SIMPLE') || pType === 'PARI') {
-                    if (Array.isArray(details)) {
-                        details.forEach(item => {
-                            let combo = String(item.combinaison || item.cheval || item.numeroCheval || item.partant || "").trim();
-                            let lib = (item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport || "").toUpperCase();
-
-                            if (combo === String(horseNum).trim()) {
-                                let isMatch = false;
-
-                                if (targetType === 'GAGNANT') {
-                                    if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || lib === 'DIRECT') {
-                                        if (!lib.includes('PLACE') && !lib.includes('SHOW')) isMatch = true;
-                                    } else if (pType.includes('GAGNANT') || pType === 'SG') {
-                                        isMatch = true;
-                                    } else if (lib === '' && !pType.includes('PLACE')) { 
-                                        isMatch = true;
-                                    }
-                                } else if (targetType === 'PLACE') {
-                                    if (lib.includes('PLACE') || lib === 'P' || lib.includes('SP') || lib.includes('2EM') || lib.includes('3EM') || lib.includes('SHOW')) {
-                                        isMatch = true;
-                                    } else if (pType.includes('PLACE') || pType === 'SP') {
-                                        isMatch = true;
-                                    } else if (lib === '' && pType.includes('PLACE')) {
-                                        isMatch = true;
-                                    }
-                                }
-
-                                if (isMatch) {
-                                    let val = 0;
-                                    if (item.dividendePourUnEuro !== undefined) val = item.dividendePourUnEuro / 100;
-                                    else if (item.dividendeEuro !== undefined) val = item.dividendeEuro;
-                                    else if (item.gainEuro !== undefined) val = item.gainEuro;
-                                    else {
-                                        let rawM = item.rapport || item.dividende || item.montant;
-                                        if (rawM !== undefined && rawM !== null) {
-                                            val = parseFloat(String(rawM).replace(',', '.'));
-                                            if (val > 100) val = val / 100; 
-                                        }
-                                    }
-                                    if (val > 0 && val > foundGain) foundGain = val;
-                                }
-                            }
-                        });
-                    }
+                let pType = String(group.typePari || group.codePari || "").toUpperCase();
+                let isPlace = pType.includes('PLAC') || pType === 'E_SP' || pType === 'SP';
+                let isGagnant = pType.includes('GAGN') || pType === 'E_SG' || pType === 'SG';
+                
+                if ((targetType === 'PLACE' && isPlace) || (targetType === 'GAGNANT' && isGagnant)) {
+                    let details = group.rapports || group.dividendes || group.lesRapports || [];
+                    details.forEach(item => {
+                        let num = -1;
+                        if (item.numeroCheval) num = parseInt(item.numeroCheval, 10);
+                        else if (item.partant) num = parseInt(item.partant, 10);
+                        else if (item.cheval) num = parseInt(item.cheval, 10);
+                        
+                        if (num === targetNum) {
+                            let val = getDividendForOneEuro(item, group);
+                            if (val >= 1.00 && val > bestGain) bestGain = val;
+                        }
+                    });
                 }
             });
-            return foundGain;
+            return bestGain;
         }
 
         function getStatForDateObj(d) {
@@ -938,8 +921,7 @@
 
                     if (bannerText) bannerText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Calcul du ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} (${idx+1}/${datesToSync.length})...`;
                     
-                    let res = await fetch(`/api/courses?date=${ddmmyyyy}`);
-                    let data = await res.json();
+                    let data = await fetch(`/api/courses?date=${ddmmyyyy}`).then(r => r.json()).catch(() => null);
                     if (!data) continue;
 
                     let rawR = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
@@ -963,8 +945,7 @@
                                 raceData = validatedRacesCache[cacheKey];
                             } else {
                                 try {
-                                    const rRes = await fetch(`/api/courses?date=${ddmmyyyy}&r=${m.numOfficiel}&c=${c.numOrdre}`);
-                                    const rData = await rRes.json();
+                                    const rData = await fetch(`/api/courses?date=${ddmmyyyy}&r=${m.numOfficiel}&c=${c.numOrdre}`).then(r => r.json());
                                     let partants = rData.participants || [];
                                     let rapportsList = Array.isArray(rData.rapports) ? rData.rapports : (rData.rapports?.lesRapports || rData.rapports?.rapports || []);
                                     raceData = { partants, rapportsList, isComplete: rapportsList.length > 0 };
@@ -1008,100 +989,6 @@
             calculateDailyStats(false);
         }
 
-        function getSortedRacesList() {
-            let list = [];
-            liveMeetingsData.forEach((m, mIdx) => {
-                let courses = m.courses || m.races || m.lesCourses || [];
-                courses.forEach((c, cIdx) => {
-                    if (c.heureDepart) {
-                        list.push({ mIdx, cIdx, time: new Date(c.heureDepart).getTime(), courseObj: c });
-                    }
-                });
-            });
-            return list.sort((a, b) => a.time - b.time);
-        }
-
-        function goToNextRace() {
-            let mIdx = parseInt(document.getElementById('meetingSelect').value, 10);
-            let cIdx = parseInt(document.getElementById('raceSelect').value, 10);
-            if (isNaN(mIdx) || isNaN(cIdx)) return;
-
-            let sortedRaces = getSortedRacesList();
-            let currentIndex = sortedRaces.findIndex(r => r.mIdx === mIdx && r.cIdx === cIdx);
-
-            if (currentIndex !== -1 && currentIndex + 1 < sortedRaces.length) {
-                let nextRace = sortedRaces[currentIndex + 1];
-                document.getElementById('meetingSelect').value = nextRace.mIdx;
-                
-                let meeting = liveMeetingsData[nextRace.mIdx];
-                let raceSelect = document.getElementById('raceSelect');
-                raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
-                meeting.courses.forEach((c, idx) => {
-                    let opt = document.createElement('option');
-                    opt.value = idx;
-                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
-                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
-                    raceSelect.appendChild(opt);
-                });
-
-                document.getElementById('raceSelect').value = nextRace.cIdx;
-                autoTransitionDone = false;
-                if (countdownInterval) clearInterval(countdownInterval);
-                fetchRaceData(false);
-            } else {
-                showToast("Fin des courses de la journée !", "info");
-            }
-        }
-
-        function autoSelectCurrentRace() {
-            let now = Date.now();
-            let bestMIdx = 0, bestCIdx = 0;
-            let minDiff = Infinity;
-            let lastFinishedMIdx = 0, lastFinishedCIdx = 0;
-
-            for (let mIdx = 0; mIdx < liveMeetingsData.length; mIdx++) {
-                let m = liveMeetingsData[mIdx];
-                for (let cIdx = 0; cIdx < m.courses.length; cIdx++) {
-                    let c = m.courses[cIdx];
-                    if (c.heureDepart) {
-                        let diff = c.heureDepart - now;
-                        if (diff > -300000 && diff < minDiff) {
-                            minDiff = diff;
-                            bestMIdx = mIdx;
-                            bestCIdx = cIdx;
-                        }
-                        if (isRaceFinished(c)) {
-                            lastFinishedMIdx = mIdx;
-                            lastFinishedCIdx = cIdx;
-                        }
-                    }
-                }
-            }
-
-            if (minDiff === Infinity) {
-                bestMIdx = lastFinishedMIdx;
-                bestCIdx = lastFinishedCIdx;
-            }
-
-            if (liveMeetingsData[bestMIdx]) {
-                document.getElementById('meetingSelect').value = bestMIdx;
-                
-                let raceSelect = document.getElementById('raceSelect');
-                raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
-                liveMeetingsData[bestMIdx].courses.forEach((c, idx) => {
-                    let opt = document.createElement('option');
-                    opt.value = idx;
-                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
-                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
-                    raceSelect.appendChild(opt);
-                });
-
-                document.getElementById('raceSelect').value = bestCIdx;
-            }
-        }
-
         async function loadLivePmu() {
             let dateEl = document.getElementById('raceDate');
             if (!dateEl.value) {
@@ -1118,6 +1005,7 @@
 
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
+                if (!res.ok) throw new Error("API Locale indisponible");
                 const data = await res.json();
                 
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
@@ -1309,35 +1197,6 @@
             }
         }
 
-        function onMeetingChange(preventFetch = false) {
-            let mIdx = document.getElementById('meetingSelect').value;
-            let raceSelect = document.getElementById('raceSelect');
-            raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
-            document.getElementById('livePredictionBlock').classList.add('hidden');
-            document.getElementById('arrivalBlock').classList.add('hidden');
-            if (countdownInterval) clearInterval(countdownInterval);
-            autoTransitionDone = true; 
-            
-            if (mIdx !== "") {
-                liveMeetingsData[mIdx].courses.forEach((c, cIdx) => {
-                    let opt = document.createElement('option');
-                    opt.value = cIdx;
-                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
-                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (cIdx+1)} - ${c.libelle || c.nom}`;
-                    raceSelect.appendChild(opt);
-                });
-                raceSelect.value = 0;
-                if(!preventFetch) fetchRaceData(false);
-            }
-        }
-
-        function onRaceChange() { 
-            if (countdownInterval) clearInterval(countdownInterval);
-            autoTransitionDone = true; 
-            fetchRaceData(false); 
-        }
-
         async function calculateDailyStats(isAuto = false) {
             let dateInput = document.getElementById('raceDate').value;
             if (!dateInput || liveMeetingsData.length === 0) return;
@@ -1355,7 +1214,7 @@
                 let timeTag = mStart ? ` [${mStart}]` : '';
                 m.courses.forEach(c => {
                     let st = String(c.statut || '').toUpperCase();
-                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: m.numOfficiel, cNum: c.numOrdre, name: `R${m.numOfficiel}C${c.numOrdre}`, hipName: `${hipName}${timeTag}` });
+                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: m.numOfficiel, cNum: c.numOrdre, name: `R${m.numOfficiel}C${c.numOrdre}`, hipName: hipName });
                 });
             });
 
@@ -1374,6 +1233,7 @@
                     raceData = validatedRacesCache[cacheKey];
                 } else {
                     try {
+                        await sleep(200); 
                         const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
                         if (res.ok) {
                             const data = await res.json();
