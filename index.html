@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V99 Value Betting (Auto & Alertes)</title>
+    <title>Turf - V101 Value Betting (Auto & Alertes)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=37">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=37">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=39">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=39">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,13 +28,12 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V99 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V101 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
             
             <div class="flex items-center space-x-1.5 sm:space-x-2">
-                <!-- BOUTON SONNERIES -->
                 <button id="btnSoundToggle" onclick="toggleSound()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 w-8 h-8 rounded-lg border border-zinc-700 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Activer/Désactiver les alertes sonores">
                     <i class="fa-solid fa-bell-slash"></i>
                 </button>
@@ -228,11 +227,31 @@
             </select>
         </div>
 
+        <!-- BARRE D'ACTION & DIRECT EQUIDIA -->
+        <div class="flex flex-wrap justify-between items-center gap-2 bg-zinc-900/80 border border-zinc-800 rounded-xl px-3.5 py-2.5">
+            <span class="text-[11px] text-zinc-400 font-semibold flex items-center">
+                <i class="fa-solid fa-tv mr-1.5 text-red-400"></i> Suivi vidéo de la course
+            </span>
+            <div class="flex items-center space-x-2">
+                <button onclick="fetchRaceData(false)" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-[11px] px-2.5 py-1.5 rounded-lg border border-emerald-500/30 font-bold transition flex items-center shadow cursor-pointer" title="Actualiser la course">
+                    <i class="fa-solid fa-rotate mr-1"></i> Actualiser
+                </button>
+                <a href="https://www.equidia.fr/direct?utm_source=intern&utm_medium=header_menu&utm_campaign=Home" target="_blank" rel="noopener noreferrer" class="bg-red-600 hover:bg-red-500 text-white text-[11px] px-3 py-1.5 rounded-lg font-bold shadow transition flex items-center">
+                    <i class="fa-solid fa-video mr-1.5"></i> Direct 🎥
+                </a>
+            </div>
+        </div>
+
         <!-- SIGNAL EN DIRECT POUR LA COURSE SELECTIONNEE -->
         <div id="livePredictionBlock" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-emerald-900/20">
-            <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                <i class="fa-solid fa-crosshairs mr-1.5"></i> Ordre du Radar
-            </h2>
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
+                    <i class="fa-solid fa-crosshairs mr-1.5"></i> Ordre du Radar
+                </h2>
+                <span id="radarLockBadge" class="hidden text-[9px] font-black uppercase text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded">
+                    <i class="fa-solid fa-lock mr-1"></i> Cotes figées au départ
+                </span>
+            </div>
             <div id="livePredictionList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
                 <!-- Rempli par javascript -->
             </div>
@@ -273,7 +292,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v99_value"; 
+        const STATS_VERSION = "v101_value"; 
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
@@ -283,6 +302,7 @@
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
+        let frozenRaceSnapshots = {}; // Cotes & algo figés au démarrage de la course
         let isCalculatingStats = false;
         let isSyncingPeriod = false;
         let cancelSyncFlag = false;
@@ -309,6 +329,21 @@
                 return formatTime(courses[0].heureDepart);
             }
             return '';
+        }
+
+        function isRaceStarted(race, partants = []) {
+            let st = String(race?.statut || "").toUpperCase();
+            if (st.includes('EN_COUR') || st.includes('COURSE') || st.includes('PARTI') || st.includes('FIN') || st.includes('ARRIV')) {
+                return true;
+            }
+            if (race?.heureDepart) {
+                let dep = new Date(race.heureDepart).getTime();
+                if (!isNaN(dep) && Date.now() >= dep) return true;
+            }
+            if (partants.some(p => p.ordreArrivee && p.ordreArrivee > 0)) {
+                return true;
+            }
+            return false;
         }
 
         function toggleSound() {
@@ -502,6 +537,7 @@
                 if (k.startsWith(`valuebet_stats_${STATS_VERSION}_${currentDisciplineMode}_`)) localStorage.removeItem(k);
             });
 
+            frozenRaceSnapshots = {};
             updateStrategyLabelsUI();
             resetCountersUI();
             showToast(`Réglages enregistrés !`, "success");
@@ -541,6 +577,7 @@
 
         function resetAllCache() {
             validatedRacesCache = {};
+            frozenRaceSnapshots = {};
             showToast('Cache local vidé.', 'success');
             loadLivePmu();
         }
@@ -656,6 +693,54 @@
                                      .sort((a, b) => b.valueMargin - a.valueMargin)
                                      .slice(0, 2);
             return { processed, valueBets };
+        }
+
+        function getAlgoWithFreeze(partants, race, raceKey) {
+            let liveAlgo = computeAlgorithm(partants);
+            let started = isRaceStarted(race, partants);
+            let snapshotKey = `${raceKey}_${currentDisciplineMode}_${BET_TYPE}_${MIN_VALUE_MARGIN}_${MAX_ODD_FILTER}`;
+
+            if (!started) {
+                if (liveAlgo.processed.length > 0 && !frozenRaceSnapshots[snapshotKey]) {
+                    frozenRaceSnapshots[snapshotKey] = {
+                        processed: liveAlgo.processed.map(p => ({ ...p })),
+                        valueBets: liveAlgo.valueBets.map(v => ({ ...v }))
+                    };
+                }
+                return { algo: liveAlgo, isFrozen: false, isStarted: false };
+            }
+
+            if (!frozenRaceSnapshots[snapshotKey] && liveAlgo.processed.length > 0) {
+                frozenRaceSnapshots[snapshotKey] = {
+                    processed: liveAlgo.processed.map(p => ({ ...p })),
+                    valueBets: liveAlgo.valueBets.map(v => ({ ...v }))
+                };
+            }
+
+            if (frozenRaceSnapshots[snapshotKey]) {
+                let arrivalsMap = new Map();
+                partants.forEach(p => {
+                    let num = parseInt(p.numPmu || p.numOrdre, 10);
+                    let arr = p.ordreArrivee ? parseInt(p.ordreArrivee, 10) : 0;
+                    if (!isNaN(num) && arr > 0) arrivalsMap.set(num, arr);
+                });
+
+                let frozenProcessed = frozenRaceSnapshots[snapshotKey].processed.map(p => ({
+                    ...p,
+                    ordreArrivee: arrivalsMap.get(p.num) || p.ordreArrivee || 0
+                }));
+
+                return {
+                    algo: {
+                        processed: frozenProcessed,
+                        valueBets: frozenRaceSnapshots[snapshotKey].valueBets.map(v => ({ ...v }))
+                    },
+                    isFrozen: true,
+                    isStarted: true
+                };
+            }
+
+            return { algo: liveAlgo, isFrozen: false, isStarted: true };
         }
 
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
@@ -1046,6 +1131,7 @@
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
             let rNum = meeting.numOfficiel || (parseInt(mIdx, 10) + 1);
             let cNum = race.numOrdre || (parseInt(cIdx, 10) + 1);
+            let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
             
             if (!isBackground) {
                 document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar...</td></tr>`;
@@ -1061,22 +1147,24 @@
                 let hipName = meeting.hippodrome?.libelleLong || meeting.hippodrome?.libelleCourt || meeting.hippodrome?.nom || 'Hippodrome';
                 let mStart = getMeetingStartTime(meeting);
                 let timeTag = mStart ? ` <span class="text-zinc-400 font-mono text-[11px] ml-1">[${mStart}]</span>` : '';
-                document.getElementById('raceInfoDetails').innerHTML = `<div class="flex items-center flex-wrap"><span class="text-amber-400 font-bold">R${rNum}C${cNum} - ${hipName}</span>${timeTag}${getDisciplineBadge(race.discipline)}</div>`;
-                
-                let algo = computeAlgorithm(partants);
-                let tbody = document.getElementById('runnersTableBody');
-                
-                if (!isBackground) tbody.innerHTML = '';
 
-                let livePredBlock = document.getElementById('livePredictionBlock');
-                let livePredList = document.getElementById('livePredictionList');
-                
+                let { algo, isFrozen, isStarted } = getAlgoWithFreeze(partants, race, raceKey);
                 let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
                 let hasArrival = arrivees.length > 0;
+
+                let runningBadge = (isStarted && !hasArrival)
+                    ? '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ml-2 animate-pulse"><i class="fa-solid fa-horse-head mr-1"></i>EN COURSE</span>'
+                    : '';
+
+                document.getElementById('raceInfoDetails').innerHTML = `<div class="flex items-center flex-wrap"><span class="text-amber-400 font-bold">R${rNum}C${cNum} - ${hipName}</span>${timeTag}${getDisciplineBadge(race.discipline)}${runningBadge}</div>`;
+
+                let tbody = document.getElementById('runnersTableBody');
+                let livePredBlock = document.getElementById('livePredictionBlock');
+                let livePredList = document.getElementById('livePredictionList');
+                let lockBadge = document.getElementById('radarLockBadge');
                 let arrivalBlock = document.getElementById('arrivalBlock');
                 let arrivalList = document.getElementById('arrivalList');
                 let timerSpan = document.getElementById('nextRaceTimer');
-                let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
 
                 if (hasArrival) {
                     livePredBlock.classList.add('hidden'); 
@@ -1116,6 +1204,11 @@
                         return;
                     }
 
+                    if (lockBadge) {
+                        if (isFrozen) lockBadge.classList.remove('hidden');
+                        else lockBadge.classList.add('hidden');
+                    }
+
                     if (algo.valueBets.length > 0) {
                         livePredBlock.classList.remove('hidden');
                         livePredList.innerHTML = algo.valueBets.map(v => 
@@ -1132,7 +1225,8 @@
                     }
                 }
 
-                if (!isBackground) {
+                if (!isBackground || !isFrozen) {
+                    tbody.innerHTML = '';
                     algo.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
                         let tr = document.createElement('tr');
                         let isValue = algo.valueBets.some(v => v.num === p.num);
@@ -1140,6 +1234,7 @@
                         
                         let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
                         if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold animate-pulse shadow">VALUE</span>`;
+                        if (isFrozen && !hasArrival) tag += `<span class="ml-2 text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-lock mr-0.5"></i>Figé</span>`;
 
                         tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay !== null ? p.coteDisplay : '--'}</td><td class="p-3 text-zinc-400">${(BET_TYPE === 'GAGNANT' ? p.trueOddGag : p.trueOddPla).toFixed(1)}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
                         tbody.appendChild(tr);
