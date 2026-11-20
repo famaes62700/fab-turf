@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V63 Scanner Value Betting Pro</title>
+    <title>Turf - V64 Value Betting (Anti-Blocage)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Turf Pro">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=3">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=3">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=4">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=4">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,7 +27,7 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> <span class="text-[10px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V63</span>
+                    <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> <span class="text-[10px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V64</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -265,20 +265,20 @@
         </div>
     </main>
 
-    <!-- TICKET FLOTTANT DÉSACTIVÉ EN MODE SCANNER VALUE (On ne joue que le robot) -->
+    <!-- TICKET FLOTTANT DÉSACTIVÉ EN MODE SCANNER VALUE -->
     <div id="betSlipBar" class="hidden"></div>
 
     <script>
-        const CACHE_VERSION = "v55"; // On garde le même cache de courses PMU
-        const STATS_VERSION = "v63"; // Reset complet des stats et réglages
+        const CACHE_VERSION = "v55"; // On garde le même cache PMU pour éviter de tout retélécharger
+        const STATS_VERSION = "v64"; // Stats isolées
         
         let currentDisciplineMode = 'TROT';
 
         // PARAMÈTRES VALUE BETTING
         let FLAT_STAKE = 10.0;
-        let BET_TYPE = 'PLACE'; // 'PLACE' ou 'GAGNANT'
-        let MIN_VALUE_MARGIN = 15; // Pourcentage
-        let MAX_ODD_FILTER = 20.0; // Ne pas chercher de value sur des tocards à 50/1
+        let BET_TYPE = 'PLACE'; 
+        let MIN_VALUE_MARGIN = 15; 
+        let MAX_ODD_FILTER = 20.0; 
 
         let localProxyAvailable = null;
         let proxyCursor = 0;
@@ -504,7 +504,7 @@
             return { processed, valueBets, skipReason: '' };
         }
 
-        // PMU DATA FETCHING (Same logic as V62)
+        // PMU DATA FETCHING
         function classifySimpleGroup(group) {
             if (!group || typeof group !== 'object') return null;
             let pType = String(group.typePari || group.libellePari || group.codePari || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -533,7 +533,7 @@
                 ordreArrivee: p.ordreArrivee
             }));
             let slimR = (rapportsList || []).filter(g => isSimpleBetGroup(g));
-            return { partants: slimP, rapportsList: slimR, isComplete: Boolean(isComplete) };
+            return { partants: slimP, rapportsList: slimR.length > 0 ? slimR : (rapportsList || []).slice(0, 4), isComplete: Boolean(isComplete) };
         }
 
         async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
@@ -543,6 +543,7 @@
             finally { clearTimeout(timer); }
         }
 
+        // CORRECTION V64 : ORDRE DES PROXYS ET DÉLAI ALLONGÉ (anti-429)
         async function smartFetchPMU(path, allowEmpty = false, useCacheBuster = true) {
             const sep = path.includes('?') ? '&' : '?';
             const finalPath = useCacheBuster ? `${path}${sep}_t=${Date.now()}` : path;
@@ -560,10 +561,12 @@
                 } catch (e) { if (localProxyAvailable === null) localProxyAvailable = false; }
             }
 
+            // Ordre inversé pour prioriser corsproxy.io qui a souvent de meilleures limites
             const proxies = [
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(fullPmuUrl)}`,
                 `https://corsproxy.io/?${encodeURIComponent(fullPmuUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fullPmuUrl)}`
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(fullPmuUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fullPmuUrl)}`,
+                `https://api.allorigins.win/get?url=${encodeURIComponent(fullPmuUrl)}`
             ];
 
             const startIdx = proxyCursor % proxies.length;
@@ -584,7 +587,10 @@
                 let proxy = proxies[idx];
                 try {
                     let res = await fetchWithTimeout(proxy, { cache: useCacheBuster ? 'no-store' : 'default' }, 8000);
-                    if (res.status === 429 || res.status === 403 || res.status >= 500) { proxyCooldownUntil[idx] = Date.now() + 15000; continue; }
+                    if (res.status === 429 || res.status === 403 || res.status >= 500) { 
+                        proxyCooldownUntil[idx] = Date.now() + 20000; // Délai d'exclusion augmenté
+                        continue; 
+                    }
                     if (res.status === 204 || res.status === 404) { if (allowEmpty) return null; continue; }
                     if (res.ok) {
                         let text = await res.text();
@@ -597,7 +603,7 @@
                         }
                         if (json && typeof json === 'object') return json;
                     }
-                } catch(e) { proxyCooldownUntil[idx] = Date.now() + 10000; }
+                } catch(e) { proxyCooldownUntil[idx] = Date.now() + 12000; }
             }
             if (allowEmpty) return null;
             throw new Error("PMU bloqué");
@@ -960,8 +966,12 @@
                     await computeSingleDayStatsForSync(ddmmyyyy, yyyymmdd, !isToday);
                     showHistoryStats();
                 }
-                if (!cancelSyncFlag) showToast("Analyse R.O.I terminée !", "success");
-                else showToast("Analyse interrompue.", "info");
+                if (!cancelSyncFlag) {
+                    let lblPeriod = periodType === 'WEEK' ? 'Semaine' : (periodType === 'MONTH' ? 'Mois' : 'Année');
+                    showToast(`Cumul ${lblPeriod} synchronisé !`, "success");
+                } else {
+                    showToast("Calcul interrompu (les jours déjà calculés sont conservés)", "info");
+                }
             } catch (e) {}
 
             if (banner) banner.style.display = 'none';
@@ -1017,11 +1027,11 @@
                 }
 
                 if (!raceData) {
-                    await sleep(localProxyAvailable === true ? 60 : 250);
-                    let { partants, rapportsList } = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj, true, isPastDate);
-                    let isComplete = isRaceTrulyRunAndPayable(r.courseObj, partants, rapportsList, r.meetingObj);
-                    raceData = slimRaceCacheData(partants, rapportsList, isComplete);
-                    if (isComplete && partants.length > 0) safeSaveStatItem(cacheKey, raceData);
+                    await sleep(localProxyAvailable === true ? 60 : 600); // CORRECTION V64 : Délai allongé sur sync historiques
+                    let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj, true, isPastDate);
+                    let isComplete = isRaceTrulyRunAndPayable(r.courseObj, fetched.partants, fetched.rapportsList, r.meetingObj);
+                    raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, isComplete);
+                    if (isComplete && fetched.partants.length > 0) safeSaveStatItem(cacheKey, raceData);
                 }
 
                 if (!raceData || !raceData.partants || raceData.partants.length < 5) continue;
@@ -1116,7 +1126,7 @@
                     let fetchFailedNow = false;
                     if (!raceData) {
                         if (statsProgress) statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> (${i+1}/${pastRacesToday.length}) : ${r.name}`;
-                        await sleep(localProxyAvailable === true ? 60 : 250); 
+                        await sleep(localProxyAvailable === true ? 60 : 600); // CORRECTION V64 : Délai allongé 600ms
                         if (currentCalcId !== myCalcId) return;
                         
                         let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj, true, isPastDate);
