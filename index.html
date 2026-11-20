@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - Value Betting Pro (Signaux en Direct)</title>
+    <title>Turf - V97 Value Betting (Automatisé)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=34">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=34">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=35">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=35">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">API Locale</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V97 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -37,7 +37,7 @@
                 <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 w-8 h-8 rounded-lg border border-emerald-500/30 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Historique & R.O.I">
                     <i class="fa-solid fa-chart-line"></i>
                 </button>
-                <button onclick="resetAllCache()" class="bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white w-8 h-8 rounded-lg border border-red-500/40 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Vider le cache PMU et recalculer">
+                <button onclick="resetAllCache()" class="bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white w-8 h-8 rounded-lg border border-red-500/40 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Vider le cache">
                     <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
             </div>
@@ -85,7 +85,7 @@
                     <button id="btnSyncMonth" onclick="syncPeriodHistory('MONTH')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
                         <i class="fa-solid fa-calendar-check mr-1"></i> Mois
                     </button>
-                    <button id="btnSyncYear" onclick="syncPeriodHistory('YEAR')" class="bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
+                    <button id="btnSyncYear" onclick="syncPeriodHistory('YEAR')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
                         <i class="fa-solid fa-calendar mr-1"></i> Année
                     </button>
                     <button onclick="clearHistoryStats()" class="bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center" title="Vider les cumuls">
@@ -96,7 +96,7 @@
             </div>
 
             <div id="syncProgressBanner" style="display: none;" class="bg-zinc-950 border border-emerald-500/40 text-emerald-300 text-xs px-3 py-2 rounded-xl font-mono flex justify-between items-center">
-                <span id="syncProgressText"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse Value en cours...</span>
+                <span id="syncProgressText"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse en cours...</span>
                 <button onclick="cancelSyncPeriod()" class="text-[10px] bg-red-900/50 text-red-300 px-2 py-0.5 rounded border border-red-500/40 cursor-pointer">Stop</button>
             </div>
 
@@ -118,9 +118,9 @@
                 <div class="bg-zinc-800/80 p-3 rounded-xl border border-zinc-700">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-[11px] uppercase font-bold text-zinc-300">Cumul Année <span id="currentYearText"></span></h3>
-                        <span id="yearDaysCountLabel" class="text-[10px] text-indigo-300 font-mono">0 jour calculé</span>
+                        <span id="yearDaysCountLabel" class="text-[10px] text-zinc-400 font-mono">0 jour calculé</span>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-950/70 p-2.5 rounded-lg border border-indigo-500/30 mb-3 text-[11px]">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 mb-3 text-[11px]">
                         <div class="text-zinc-400">Total Joué : <span id="yearStakes" class="text-white font-bold block text-xs mt-0.5">0.00 €</span></div>
                         <div class="text-zinc-400">Réussite : <span id="yearHitRate" class="text-white font-bold block text-xs mt-0.5">0 %</span></div>
                         <div class="text-zinc-400">Bénéfice : <span id="yearNet" class="text-emerald-400 font-bold block text-xs mt-0.5">0.00 €</span></div>
@@ -155,7 +155,7 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col" title="Baisser à 10% pour le Trot si peu de résultats.">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="5" value="15" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="5" value="10" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
@@ -168,7 +168,7 @@
         <div class="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2">
                 <div>
-                    <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Bilan du Jour (Flat Betting Pro)</h2>
+                    <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Bilan du Jour (Value Betting)</h2>
                     <p id="bilanSubtitle" class="text-[10px] text-zinc-400">Recherche d'anomalies de cotes PMU</p>
                 </div>
                 <div class="flex items-center space-x-1.5">
@@ -227,13 +227,27 @@
         <!-- SIGNAL EN DIRECT POUR LA COURSE SELECTIONNEE -->
         <div id="livePredictionBlock" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-emerald-900/20">
             <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                <i class="fa-solid fa-crosshairs mr-1.5"></i> Radar de la course
+                <i class="fa-solid fa-crosshairs mr-1.5"></i> Ordre d'Algorithme
             </h2>
             <div id="livePredictionList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
                 <!-- Rempli par javascript -->
             </div>
         </div>
 
+        <!-- BLOC ARRIVÉE OFFICIELLE -->
+        <div id="arrivalBlock" class="hidden bg-blue-950/40 border border-blue-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-blue-900/20">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider flex items-center">
+                    <i class="fa-solid fa-flag-checkered mr-1.5"></i> Arrivée Officielle
+                </h2>
+                <span id="nextRaceTimer" class="text-[9px] text-blue-300 font-mono bg-blue-900/50 px-2 py-0.5 rounded border border-blue-500/30 hidden"></span>
+            </div>
+            <div id="arrivalList" class="flex flex-wrap gap-2 text-xs font-bold text-white">
+                <!-- Rempli dynamiquement -->
+            </div>
+        </div>
+
+        <!-- TABLEAU DES PARTANTS RADAR VALUE -->
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl mt-4">
             <div id="raceInfoDetails" class="p-3 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center"></div>
             <div class="overflow-x-auto">
@@ -255,12 +269,12 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v96_value"; 
+        const STATS_VERSION = "v97_value"; 
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 15;
+        let MIN_VALUE_MARGIN = 10;
         let MAX_ODD_FILTER = 20.0; 
 
         let liveMeetingsData = [];
@@ -268,8 +282,41 @@
         let isCalculatingStats = false;
         let isSyncingPeriod = false;
         let cancelSyncFlag = false;
+        
+        let autoTransitionDone = false;
+        let alertedRaces = new Set(); // Pour ne sonner qu'une fois par course
+        let pollingInterval = null;
 
         const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+        // --- SONNERIE ---
+        function playAlertSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Note La (A5)
+                gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.5);
+            } catch(e) { console.log("Audio non supporté"); }
+        }
+
+        // --- DÉMARRAGE DU POLLING AUTOMATIQUE ---
+        function startLivePolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(() => {
+                let mIdx = document.getElementById('meetingSelect').value;
+                let cIdx = document.getElementById('raceSelect').value;
+                if (mIdx !== "" && cIdx !== "") {
+                    fetchRaceData(true); // true = silent background fetch
+                }
+            }, 20000); // Toutes les 20 secondes
+        }
 
         function getLocalDateString(d = new Date()) {
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -361,6 +408,7 @@
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
             }));
 
+            // Effacer l'historique Value Betting
             Object.keys(localStorage).forEach(k => {
                 if (k.startsWith(`valuebet_stats_${STATS_VERSION}_${currentDisciplineMode}_`)) localStorage.removeItem(k);
             });
@@ -370,7 +418,7 @@
             showToast(`Réglages enregistrés !`, "success");
             
             if(liveMeetingsData.length > 0) calculateDailyStats();
-            if(document.getElementById('raceSelect').value !== "") fetchRaceData();
+            if(document.getElementById('raceSelect').value !== "") fetchRaceData(false);
         }
 
         function setDisciplineMode(mode) {
@@ -389,6 +437,7 @@
             loadStrategySettings();
             document.getElementById('meetingSelect').value = "";
             document.getElementById('livePredictionBlock').classList.add('hidden');
+            document.getElementById('arrivalBlock').classList.add('hidden');
             resetCountersUI();
             loadLivePmu();
         }
@@ -396,6 +445,7 @@
         function onDateChange() {
             document.getElementById('meetingSelect').value = "";
             document.getElementById('livePredictionBlock').classList.add('hidden');
+            document.getElementById('arrivalBlock').classList.add('hidden');
             resetCountersUI();
             loadLivePmu();
         }
@@ -520,6 +570,7 @@
             return { processed, valueBets };
         }
 
+        // --- MANIPULATION RAPPORTS ---
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -782,6 +833,52 @@
             calculateDailyStats(false);
         }
 
+        // --- NAVIGATION AUTOMATIQUE ENTRE COURSES ---
+        function getSortedRacesList() {
+            let list = [];
+            liveMeetingsData.forEach((m, mIdx) => {
+                let courses = m.courses || m.races || m.lesCourses || [];
+                courses.forEach((c, cIdx) => {
+                    if (c.heureDepart) {
+                        list.push({ mIdx, cIdx, time: new Date(c.heureDepart).getTime() });
+                    }
+                });
+            });
+            return list.sort((a, b) => a.time - b.time);
+        }
+
+        function goToNextRace() {
+            let mIdx = parseInt(document.getElementById('meetingSelect').value, 10);
+            let cIdx = parseInt(document.getElementById('raceSelect').value, 10);
+            if (isNaN(mIdx) || isNaN(cIdx)) return;
+
+            let sortedRaces = getSortedRacesList();
+            let currentIndex = sortedRaces.findIndex(r => r.mIdx === mIdx && r.cIdx === cIdx);
+
+            if (currentIndex !== -1 && currentIndex + 1 < sortedRaces.length) {
+                let nextRace = sortedRaces[currentIndex + 1];
+                document.getElementById('meetingSelect').value = nextRace.mIdx;
+                
+                // Remplir le select des courses pour cette nouvelle réunion
+                let meeting = liveMeetingsData[nextRace.mIdx];
+                let raceSelect = document.getElementById('raceSelect');
+                raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
+                meeting.courses.forEach((c, idx) => {
+                    let opt = document.createElement('option');
+                    opt.value = idx;
+                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
+                    opt.textContent = `${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
+                    raceSelect.appendChild(opt);
+                });
+
+                document.getElementById('raceSelect').value = nextRace.cIdx;
+                autoTransitionDone = false;
+                fetchRaceData(false);
+            } else {
+                showToast("Fin des courses de la journée !", "info");
+            }
+        }
+
         // --- PROGRAMME PRINCIPAL (API LOCALE) ---
         async function loadLivePmu() {
             let dateEl = document.getElementById('raceDate');
@@ -835,6 +932,7 @@
                     document.getElementById('meetingSelect').value = 0;
                     onMeetingChange();
                     calculateDailyStats();
+                    startLivePolling();
                 } else {
                     document.getElementById('meetingSelect').innerHTML = '<option value="">Aucune réunion</option>';
                     document.getElementById('raceSelect').innerHTML = '<option value="">-- Course --</option>';
@@ -848,7 +946,7 @@
             }
         }
 
-        async function fetchRaceData() {
+        async function fetchRaceData(isBackground = false) {
             let mIdx = document.getElementById('meetingSelect').value;
             let cIdx = document.getElementById('raceSelect').value;
             if (mIdx === "" || cIdx === "") return;
@@ -861,60 +959,112 @@
             let rNum = meeting.numOfficiel || (parseInt(mIdx, 10) + 1);
             let cNum = race.numOrdre || (parseInt(cIdx, 10) + 1);
             
-            document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar...</td></tr>`;
-            document.getElementById('livePredictionBlock').classList.add('hidden');
+            if (!isBackground) {
+                document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar...</td></tr>`;
+                document.getElementById('livePredictionBlock').classList.add('hidden');
+                document.getElementById('arrivalBlock').classList.add('hidden');
+            }
 
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
                 const data = await res.json();
                 let partants = data.participants || [];
                 
-                document.getElementById('raceInfoDetails').innerHTML = `<span class="text-amber-400 font-bold">R${rNum}C${cNum}</span> ${getDisciplineBadge(race.discipline)}`;
+                let hipName = meeting.hippodrome?.nom || 'Hippodrome';
+                document.getElementById('raceInfoDetails').innerHTML = `<span class="text-amber-400 font-bold">R${rNum}C${cNum} - ${hipName}</span> ${getDisciplineBadge(race.discipline)}`;
                 
                 let algo = computeAlgorithm(partants);
                 let tbody = document.getElementById('runnersTableBody');
-                tbody.innerHTML = '';
+                
+                if (!isBackground) tbody.innerHTML = '';
 
                 let livePredBlock = document.getElementById('livePredictionBlock');
                 let livePredList = document.getElementById('livePredictionList');
+                
+                // VERIFICATION ARRIVÉE OFFICIELLE
+                let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
+                let hasArrival = arrivees.length > 0;
+                let arrivalBlock = document.getElementById('arrivalBlock');
+                let arrivalList = document.getElementById('arrivalList');
+                let timerSpan = document.getElementById('nextRaceTimer');
 
-                if (algo.processed.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
-                    return;
-                }
-
-                // AFFICHAGE DU MESSAGE "CHEVAL A JOUER"
-                if (algo.valueBets.length > 0) {
-                    livePredBlock.classList.remove('hidden');
-                    livePredList.innerHTML = algo.valueBets.map(v => 
-                        `<div class="bg-emerald-600 px-3 py-1.5 rounded-lg shadow border border-emerald-400">Jouer le N°${v.num} ${v.nom}</div>`
+                if (hasArrival) {
+                    livePredBlock.classList.add('hidden'); // On cache le radar quand la course est finie
+                    arrivalBlock.classList.remove('hidden');
+                    arrivalList.innerHTML = arrivees.slice(0, 5).map(p => 
+                        `<div class="bg-blue-900/60 px-2.5 py-1 rounded-lg border border-blue-500/40"><span class="text-blue-300">${p.ordreArrivee}e:</span> N°${p.numPmu || p.numOrdre} ${p.nom}</div>`
                     ).join('');
+
+                    if (!autoTransitionDone) {
+                        autoTransitionDone = true;
+                        timerSpan.classList.remove('hidden');
+                        
+                        let timeLeft = 30;
+                        timerSpan.textContent = `Prochaine course dans ${timeLeft}s`;
+                        
+                        let countdown = setInterval(() => {
+                            timeLeft--;
+                            if(timerSpan) timerSpan.textContent = `Prochaine course dans ${timeLeft}s`;
+                            if (timeLeft <= 0) {
+                                clearInterval(countdown);
+                                if(timerSpan) timerSpan.classList.add('hidden');
+                                goToNextRace();
+                            }
+                        }, 1000);
+                    }
                 } else {
-                    livePredBlock.classList.remove('hidden');
-                    livePredList.innerHTML = `<span class="text-zinc-400 text-xs font-normal">Aucune anomalie détectée pour cette course. Ne rien jouer.</span>`;
+                    arrivalBlock.classList.add('hidden');
+                    if (timerSpan) timerSpan.classList.add('hidden');
+                    
+                    // AFFICHAGE DU MESSAGE "CHEVAL A JOUER" SI PAS ENCORE FINIE
+                    if (algo.valueBets.length > 0) {
+                        livePredBlock.classList.remove('hidden');
+                        livePredList.innerHTML = algo.valueBets.map(v => 
+                            `<div class="bg-emerald-600 px-3 py-1.5 rounded-lg shadow border border-emerald-400">Jouer le N°${v.num} ${v.nom}</div>`
+                        ).join('');
+                        
+                        // SONNERIE SI VALUE DETECTEE ET NON DEJA SONNEE
+                        let raceKey = `${ddmmyyyy}_${rNum}_${cNum}`;
+                        if (!alertedRaces.has(raceKey)) {
+                            playAlertSound();
+                            alertedRaces.add(raceKey);
+                        }
+                    } else {
+                        livePredBlock.classList.remove('hidden');
+                        livePredList.innerHTML = `<span class="text-zinc-400 text-xs font-normal">Aucune anomalie détectée pour cette course. Ne rien jouer.</span>`;
+                    }
                 }
 
-                algo.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
-                    let tr = document.createElement('tr');
-                    let isValue = algo.valueBets.some(v => v.num === p.num);
-                    tr.className = isValue ? "bg-emerald-900/20 border-l-4 border-emerald-500" : "border-b border-zinc-800/50";
-                    
-                    let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
-                    if (isValue) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">VALUE</span>`;
+                if (!isBackground) {
+                    if (algo.processed.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
+                        return;
+                    }
+                    algo.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
+                        let tr = document.createElement('tr');
+                        let isValue = algo.valueBets.some(v => v.num === p.num);
+                        tr.className = isValue ? "bg-emerald-900/20 border-l-4 border-emerald-500" : "border-b border-zinc-800/50";
+                        
+                        let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
+                        if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold animate-pulse">VALUE</span>`;
 
-                    tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay !== null ? p.coteDisplay : '--'}</td><td class="p-3 text-zinc-400">${(BET_TYPE === 'GAGNANT' ? p.trueOddGag : p.trueOddPla).toFixed(1)}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
-                    tbody.appendChild(tr);
-                });
+                        tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay !== null ? p.coteDisplay : '--'}</td><td class="p-3 text-zinc-400">${(BET_TYPE === 'GAGNANT' ? p.trueOddGag : p.trueOddPla).toFixed(1)}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+
             } catch(e) {
-                document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Échec de l'API locale.</td></tr>`;
+                if (!isBackground) document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Échec de l'API locale.</td></tr>`;
             }
         }
 
-        function onMeetingChange() {
+        function onMeetingChange(preventFetch = false) {
             let mIdx = document.getElementById('meetingSelect').value;
             let raceSelect = document.getElementById('raceSelect');
             raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
             document.getElementById('livePredictionBlock').classList.add('hidden');
+            document.getElementById('arrivalBlock').classList.add('hidden');
+            autoTransitionDone = false;
             
             if (mIdx !== "") {
                 liveMeetingsData[mIdx].courses.forEach((c, cIdx) => {
@@ -925,11 +1075,14 @@
                     raceSelect.appendChild(opt);
                 });
                 raceSelect.value = 0;
-                fetchRaceData();
+                if(!preventFetch) fetchRaceData(false);
             }
         }
 
-        function onRaceChange() { fetchRaceData(); }
+        function onRaceChange() { 
+            autoTransitionDone = false;
+            fetchRaceData(false); 
+        }
 
         // --- SCAN COMPLET DE LA JOURNEE (API LOCALE) ---
         async function calculateDailyStats() {
@@ -944,9 +1097,10 @@
             
             let racesToScan = [];
             liveMeetingsData.forEach(m => {
+                let hipName = m.hippodrome?.nom || 'Hippodrome';
                 m.courses.forEach(c => {
                     let st = String(c.statut || '').toUpperCase();
-                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: m.numOfficiel, cNum: c.numOrdre, name: `R${m.numOfficiel}C${c.numOrdre}` });
+                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: m.numOfficiel, cNum: c.numOrdre, name: `R${m.numOfficiel}C${c.numOrdre}`, hipName: hipName });
                 });
             });
 
@@ -993,10 +1147,10 @@
                         winsCount++;
                         let betNet = (gain1E * FLAT_STAKE) - FLAT_STAKE;
                         totalNet += betNet;
-                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name}</td><td class="py-1 pr-2"><span class="text-emerald-400">N°${vh.num}</span></td><td class="py-1 pr-2 text-center text-zinc-300">${gain1E.toFixed(2)}</td><td class="py-1 text-right text-emerald-400 font-bold">+${betNet.toFixed(2)}€</td></tr>`);
+                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2"><span class="text-emerald-400">N°${vh.num}</span></td><td class="py-1 pr-2 text-center text-zinc-300">${gain1E.toFixed(2)}</td><td class="py-1 text-right text-emerald-400 font-bold">+${betNet.toFixed(2)}€</td></tr>`);
                     } else {
                         totalNet -= FLAT_STAKE;
-                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name}</td><td class="py-1 pr-2">N°${vh.num}</td><td class="py-1 pr-2 text-center text-zinc-500">Perdu</td><td class="py-1 text-right text-red-400">-${FLAT_STAKE.toFixed(2)}€</td></tr>`);
+                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2">N°${vh.num}</td><td class="py-1 pr-2 text-center text-zinc-500">Perdu</td><td class="py-1 text-right text-red-400">-${FLAT_STAKE.toFixed(2)}€</td></tr>`);
                     }
                 });
 
