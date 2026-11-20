@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V81 Value Betting (Réseau Auto-Guérison)</title>
+    <title>Turf - V82 Value Betting (Réseau Basique & Ultra Rapide)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Turf Pro">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=16">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=16">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=17">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=17">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V81</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V82</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -164,7 +164,6 @@
             </div>
         </div>
 
-        <!-- DASHBOARD BILAN -->
         <div class="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2">
                 <div>
@@ -217,7 +216,6 @@
             </div>
         </div>
 
-        <!-- SELECTEURS DE COURSE -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select id="meetingSelect" onchange="onMeetingChange(false)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer">
                 <option value="">-- Réunion --</option>
@@ -227,7 +225,13 @@
             </select>
         </div>
 
-        <!-- HEADER COURSE SÉLECTIONNÉE -->
+        <div id="reportsBlock" style="display: none;" class="bg-zinc-900 border border-emerald-500/30 rounded-xl p-3.5 space-y-2 mt-4">
+            <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
+                <i class="fa-solid fa-euro-sign mr-1.5"></i> Rapports Définitifs
+            </h2>
+            <div id="reportsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+        </div>
+
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl mt-4">
             <div id="raceInfoDetails" class="p-3 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center"></div>
             <div class="overflow-x-auto">
@@ -235,7 +239,7 @@
                     <thead>
                         <tr class="bg-zinc-800/60 text-zinc-400 border-b border-zinc-800">
                             <th class="p-3">N° / Nom</th>
-                            <th class="p-3">Cote Actuelle</th>
+                            <th class="p-3">Cote PMU</th>
                             <th class="p-3">Notre Cote <span class="text-[9px] font-normal text-zinc-500">(Estimée)</span></th>
                             <th class="p-3">Marge Value</th>
                         </tr>
@@ -249,8 +253,8 @@
     </main>
 
     <script>
-        const CACHE_VERSION = "v81"; 
-        const STATS_VERSION = "v81";
+        const CACHE_VERSION = "v82"; 
+        const STATS_VERSION = "v82";
         
         let currentDisciplineMode = 'TROT';
 
@@ -261,11 +265,6 @@
         let MAX_ODD_FILTER = 20.0; 
 
         function loadStrategySettings() {
-            FLAT_STAKE = 10.0;
-            BET_TYPE = 'PLACE';
-            MIN_VALUE_MARGIN = 15;
-            MAX_ODD_FILTER = 20.0;
-
             try {
                 let modeKey = `fabturf_${STATS_VERSION}_settings_${currentDisciplineMode}`;
                 let raw = localStorage.getItem(modeKey);
@@ -541,78 +540,42 @@
             return { processed, valueBets, skipReason: '' };
         }
 
-        // --- NOUVEAU MOTEUR RÉSEAU AUTO-HEAL (100% FIABLE) ---
-        const sleep = ms => new Promise(res => setTimeout(res, ms));
-
-        async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), timeoutMs);
-            try { return await fetch(url, Object.assign({}, options, { signal: controller.signal })); }
-            finally { clearTimeout(timer); }
-        }
-
-        async function smartFetchPMU(path, allowEmpty = false, useCacheBuster = true) {
+        // --- MOTEUR RÉSEAU ULTRA-BASIQUE & ROBUSTE (V82) ---
+        // Seules les méthodes fiables sans complexité inutile.
+        
+        async function smartFetchPMU(path, allowEmpty = false) {
             const sep = path.includes('?') ? '&' : '?';
-            // Cache par tranche de minute
-            const timeCache = Math.floor(Date.now() / 60000); 
-            const finalPath = useCacheBuster ? `${path}${sep}_t=${timeCache}` : path;
-            const fullPmuUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${finalPath}`;
+            const finalPath = `${path}${sep}_t=${Date.now()}`;
+            const pmuUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${finalPath}`;
             
-            const proxies = [
-                `https://api.allorigins.win/raw?url=`,
-                `https://api.codetabs.com/v1/proxy?quest=`,
-                `https://corsproxy.io/?`,
-                `https://api.allorigins.win/get?url=`
-            ];
-
-            let maxAttempts = 10;
-            
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                let proxy = proxies[attempt % proxies.length];
-                let targetUrl = proxy + encodeURIComponent(fullPmuUrl);
-
-                try {
-                    const controller = new AbortController();
-                    const timer = setTimeout(() => controller.abort(), 6000);
-                    
-                    let res = await fetch(targetUrl, { signal: controller.signal });
-                    clearTimeout(timer);
-
-                    if (res.ok) {
-                        let text = await res.text();
-                        if (!text || text.trim() === "") {
-                            if (allowEmpty) return null;
-                            continue;
+            // 1. AllOrigins (GET JSON) - Historiquement le plus stable pour contourner CORS PMU
+            try {
+                let res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(pmuUrl)}`);
+                if (res.ok) {
+                    let data = await res.json();
+                    if (data.contents) {
+                        let parsed = JSON.parse(data.contents);
+                        if (parsed && !parsed.status?.http_code) {
+                            let st = document.getElementById('statusText');
+                            if (st && st.innerHTML.includes('Réessayer')) st.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-bolt mr-1"></i> Connecté</span>`;
+                            return parsed;
                         }
-                        
-                        let json = JSON.parse(text);
-                        if (json && json.contents !== undefined) {
-                            if (json.status && (json.status.http_code === 204 || json.status.http_code === 404)) {
-                                if (allowEmpty) return null;
-                                continue;
-                            }
-                            if (!json.contents) continue;
-                            json = typeof json.contents === 'string' ? JSON.parse(json.contents) : json.contents;
-                        }
-                        
-                        let st = document.getElementById('statusText');
-                        if (st && st.innerHTML.includes('Relance')) {
-                             st.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-bolt mr-1"></i> Connecté</span>`;
-                        }
-                        return json;
-                    } else if (res.status === 204 || res.status === 404) {
-                        if (allowEmpty) return null;
                     }
-                } catch(e) {}
-                
-                let st = document.getElementById('statusText');
-                if (st) {
-                    st.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-rotate fa-spin mr-1"></i> Relance réseau (${attempt + 1}/${maxAttempts})...</span>`;
                 }
-                
-                await sleep(800 + (attempt * 200)); 
-            }
-            
+            } catch (e) {}
+
+            // 2. CodeTabs (Proxy direct) - Backup de secours
+            try {
+                let res2 = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(pmuUrl)}`);
+                if (res2.ok) {
+                    let text = await res2.text();
+                    if (text && text.trim() !== "") {
+                        let parsed = JSON.parse(text);
+                        if (parsed) return parsed;
+                    }
+                }
+            } catch(e) {}
+
             if (allowEmpty) return null;
             throw new Error("PMU bloqué");
         }
@@ -730,7 +693,6 @@
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let targetNum = parseInt(horseNum, 10);
             if (!listeRapports || !Array.isArray(listeRapports) || isNaN(targetNum)) return 0;
-
             let bestPriority = 0, bestGain = 0;
             listeRapports.forEach(group => {
                 let cls = classifySimpleGroup(group);
@@ -807,11 +769,10 @@
             if (!courseObj && meetingObj && meetingObj.courses) courseObj = meetingObj.courses.find(c => (c.numOrdre || 0) == cNum);
             if (isCourseCanceled(courseObj, meetingObj)) return { partants: [], rapportsList: [], fetchFailed: false };
 
-            let useBuster = !isPastDate;
             let partantsFailed = false;
 
             try {
-                let pData = await smartFetchPMU(`${dateStr}/R${rNum}/C${cNum}/participants?specialisation=INTERNET`, false, useBuster);
+                let pData = await smartFetchPMU(`${dateStr}/R${rNum}/C${cNum}/participants?specialisation=INTERNET`, false);
                 if (pData) partants = pData.participants || (Array.isArray(pData) ? pData : []);
             } catch(e) { partantsFailed = true; }
 
@@ -834,7 +795,7 @@
 
             if (checkReports && partants.length > 0 && (hasArrival || hasStarted)) {
                 try {
-                    let rData = await smartFetchPMU(`${dateStr}/R${rNum}/C${cNum}/rapports-definitifs?specialisation=INTERNET`, true, useBuster);
+                    let rData = await smartFetchPMU(`${dateStr}/R${rNum}/C${cNum}/rapports-definitifs?specialisation=INTERNET`, true);
                     if (rData) rapportsList = Array.isArray(rData) ? rData : (rData.rapports || rData.lesRapports || rData.rapportsDefinitifs || []);
                 } catch(e) { reportsFailed = true; }
             }
@@ -1073,7 +1034,7 @@
             let now = Date.now();
             let reunions = [];
             try {
-                let data = await smartFetchPMU(`${ddmmyyyy}?specialisation=INTERNET`, false, !isPastDate);
+                let data = await smartFetchPMU(`${ddmmyyyy}?specialisation=INTERNET`, false);
                 let rawR = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                 rawR.forEach(r => {
                     if (isMeetingCanceled(r)) return;
@@ -1117,7 +1078,6 @@
                 }
 
                 if (!raceData) {
-                    await sleep(400); // Laisse le temps au PMU de respirer
                     let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj, true, isPastDate);
                     let isComplete = isRaceTrulyRunAndPayable(r.courseObj, fetched.partants, fetched.rapportsList, r.meetingObj);
                     raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, isComplete);
@@ -1165,11 +1125,9 @@
 
             const parts = dateInput.split('-');
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
-            const now = Date.now();
-            const isPastDate = dateInput < getLocalDateString();
 
             try {
-                const data = await smartFetchPMU(`${ddmmyyyy}?specialisation=INTERNET`, false, !isPastDate);
+                const data = await smartFetchPMU(`${ddmmyyyy}?specialisation=INTERNET`, false);
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                 
                 let filteredReunions = [];
@@ -1263,7 +1221,6 @@
                     raceSelect.appendChild(opt);
                 });
             }
-
             if (preserveTimer) {
                 if (currentRaceVal !== "" && courses[currentRaceVal]) raceSelect.value = currentRaceVal;
             } else if (courses.length > 0) {
@@ -1320,17 +1277,12 @@
             let mIdxStr = document.getElementById('meetingSelect').value;
             let rIdxStr = document.getElementById('raceSelect').value;
             if (mIdxStr === "" || rIdxStr === "") return;
-
             let mIdxNum = parseInt(mIdxStr, 10);
             let rIdxNum = parseInt(rIdxStr, 10);
-
             let meeting = liveMeetingsData[mIdxNum];
             if (!meeting) return;
             let race = (meeting.courses || [])[rIdxNum];
             if (!race) return;
-
-            let myFetchId = ++currentFetchRaceId;
-            isFetchingRace = true;
 
             let dateInput = document.getElementById('raceDate').value;
             let isPastDate = dateInput < getLocalDateString();
@@ -1367,8 +1319,6 @@
                     rapportsList = fetched.rapportsList;
                 }
 
-                if (myFetchId !== currentFetchRaceId) return;
-                
                 let isPayableComplete = isRaceTrulyRunAndPayable(race, partants, rapportsList, meeting);
                 if (isPayableComplete && partants.length > 0) {
                     let slimmed = slimRaceCacheData(partants, rapportsList, true);
@@ -1384,9 +1334,7 @@
                 if (!canceledRace) {
                     buildRaceDetails(currentRaceKey, rNum, cNum, partants, rapportsList);
                 }
-            } catch (e) { } finally {
-                if (myFetchId === currentFetchRaceId) isFetchingRace = false;
-            }
+            } catch (e) { }
         }
 
         let isCalculatingStats = false;
@@ -1412,11 +1360,8 @@
                 liveMeetingsData.forEach((m, mIdx) => {
                     if (isMeetingCanceled(m)) return;
                     (m.courses || []).forEach((c, cIdx) => {
-                        let departTime = getCourseTimeMs(c);
-                        let hasArr = Array.isArray(c.ordreArrivee) && c.ordreArrivee.length > 0;
-                        if (isPastDate || hasArr || (departTime > 0 && departTime < (Date.now() - 2 * 60 * 1000))) {
-                            pastRacesToday.push({ rNum: m.numOfficiel || (mIdx + 1), cNum: c.numOrdre || (cIdx + 1), name: `R${m.numOfficiel || (mIdx + 1)}C${c.numOrdre || (cIdx + 1)}`, time: departTime, courseObj: c, meetingObj: m });
-                        }
+                        if (isCourseCanceled(c, m)) return;
+                        pastRacesToday.push({ rNum: m.numOfficiel || (mIdx + 1), cNum: c.numOrdre || (cIdx + 1), name: `R${m.numOfficiel || (mIdx + 1)}C${c.numOrdre || (cIdx + 1)}`, time: getCourseTimeMs(c), courseObj: c, meetingObj: m });
                     });
                 });
                 pastRacesToday.sort((a, b) => (a.time - b.time) || (a.rNum - b.rNum) || (a.cNum - b.cNum));
@@ -1427,7 +1372,7 @@
                 }
 
                 let totalStakes = 0, totalNet = 0, betsCount = 0, winsCount = 0;
-                let coursesValidees = 0;
+                let coursesValidees = 0, networkFailedCount = 0;
                 let auditRows = [];
 
                 for (let i = 0; i < pastRacesToday.length; i++) {
@@ -1447,12 +1392,14 @@
                         } catch(e) { raceData = null; }
                     } 
                     
+                    let fetchFailedNow = false;
                     if (!raceData) {
                         if (statsProgress) statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> (${i+1}/${pastRacesToday.length}) : ${r.name}`;
-                        await sleep(400); // Laisse le temps au serveur
                         if (currentCalcId !== myCalcId) return;
                         
                         let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj, true, isPastDate);
+                        fetchFailedNow = fetched.fetchFailed;
+                        if (fetchFailedNow) networkFailedCount++;
                         let isComplete = isRaceTrulyRunAndPayable(r.courseObj, fetched.partants, fetched.rapportsList, r.meetingObj); 
                         
                         raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, isComplete);
@@ -1460,7 +1407,7 @@
                     }
 
                     if (!raceData || !raceData.partants || raceData.partants.length < 5) {
-                        auditRows.push({ name: r.name, horse: '-', status: '<span class="text-zinc-500">Ignorée (&lt;5 partants)</span>', result: '-' });
+                        auditRows.push({ name: r.name, horse: '-', status: fetchFailedNow ? '<span class="text-red-400">⚠️ Erreur proxy</span>' : '<span class="text-zinc-500">Ignorée (&lt;5 partants)</span>', result: '-' });
                         continue;
                     }
                     if (!isRaceTrulyRunAndPayable(r.courseObj, raceData.partants, raceData.rapportsList, r.meetingObj)) {
@@ -1509,7 +1456,14 @@
                 }
 
                 if (statsProgress) {
-                    statsProgress.textContent = `✅ ${coursesValidees}/${pastRacesToday.length} chargées`;
+                    if (networkFailedCount > 0) {
+                        statsProgress.innerHTML = `<span class="text-amber-400">⚠️ ${coursesValidees}/${pastRacesToday.length} (${networkFailedCount} bloquées)</span>`;
+                        if (btnRes) { 
+                            btnRes.style.display = 'inline-block'; 
+                        }
+                    } else {
+                        statsProgress.textContent = `✅ ${coursesValidees}/${pastRacesToday.length} chargées`;
+                    }
                 }
                 
                 if (coursesValidees > 0) {
