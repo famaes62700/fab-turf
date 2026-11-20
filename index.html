@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V121 Value Betting (100% Robuste)</title>
+    <title>Turf - V122 Value Betting (Bilan & Sauvegarde Fixes)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=59">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=59">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=60">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=60">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V121 Pro</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V122 Pro</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -53,10 +53,10 @@
         <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex items-center justify-between text-xs">
             <span class="text-zinc-400 font-bold ml-2"><i class="fa-solid fa-filter mr-1.5 text-emerald-500"></i> Filtre :</span>
             <div class="flex space-x-2">
-                <button id="btnFilterTrot" onclick="setDisciplineMode('TROT')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer">
+                <button id="btnFilterTrot" onclick="setDisciplineMode('TROT')" class="bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer">
                     100% Trot
                 </button>
-                <button id="btnFilterAll" onclick="setDisciplineMode('ALL')" class="bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer">
+                <button id="btnFilterAll" onclick="setDisciplineMode('ALL')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer">
                     Toutes Courses
                 </button>
             </div>
@@ -79,7 +79,7 @@
         <div id="historyBlock" style="display: none;" class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2.5">
                 <h2 class="text-xs font-bold uppercase text-zinc-200 tracking-wider flex items-center">
-                    <i class="fa-solid fa-chart-line mr-1.5 text-emerald-400"></i> Suivi R.O.I (<span id="histModeLabel" class="text-emerald-400 ml-1">100% Trot</span>)
+                    <i class="fa-solid fa-chart-line mr-1.5 text-emerald-400"></i> Suivi R.O.I (<span id="histModeLabel" class="text-emerald-400 ml-1">Toutes Courses</span>)
                 </h2>
                 <div class="flex flex-wrap items-center gap-1.5">
                     <button id="btnSyncWeek" onclick="syncPeriodHistory('WEEK')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
@@ -308,9 +308,10 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v121_value"; 
+        const STATS_VERSION = "v122_value"; 
         
-        let currentDisciplineMode = 'TROT'; 
+        // Mémorisation par défaut de TOUTES les courses pour ne plus rien rater
+        let currentDisciplineMode = localStorage.getItem('valuebet_discipline_mode') || 'ALL'; 
         let FLAT_STAKE = 10.0;
         let BET_TYPE = 'PLACE';
         let MIN_VALUE_MARGIN = 10; 
@@ -338,10 +339,9 @@
 
         const sleep = ms => new Promise(res => setTimeout(res, ms));
 
-        // FONCTION DE NETTOYAGE 100% ROBUSTE (Sans crash JavaScript)
+        // FONCTION DE NETTOYAGE 100% ROBUSTE (Sans .normalize qui fait planter certains navigateurs)
         function cleanStr(s) {
             if (!s) return "";
-            // Met en majuscule et remplace manuellement les accents les plus courants du PMU
             return String(s).toUpperCase()
                             .replace(/[ÉÈÊË]/g, "E")
                             .replace(/[ÀÂÄ]/g, "A")
@@ -602,6 +602,7 @@
 
         function setDisciplineMode(mode) {
             currentDisciplineMode = mode;
+            localStorage.setItem('valuebet_discipline_mode', mode); // Mémorisation
             loadStrategySettings();
             document.getElementById('meetingSelect').value = "";
             document.getElementById('livePredictionBlock').classList.add('hidden');
@@ -810,7 +811,7 @@
             return { algo: liveAlgo, isFrozen: false, isStarted: true };
         }
 
-        // LE MOTEUR DE GAIN ULTRA-ROBUSTE
+        // MOTEUR DE GAIN CORRIGÉ POUR LES NOMBRES À VIRGULES
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -849,17 +850,21 @@
 
                                 if (isMatch) {
                                     let val = 0;
-                                    if (item.dividendePourUnEuro !== undefined) val = item.dividendePourUnEuro / 100;
-                                    else if (item.dividendeEuro !== undefined) val = item.dividendeEuro;
-                                    else if (item.gainEuro !== undefined) val = item.gainEuro;
-                                    else {
-                                        let rawM = item.rapport || item.dividende || item.montant;
-                                        if (rawM !== undefined && rawM !== null) {
-                                            val = parseFloat(String(rawM).replace(',', '.'));
-                                            if (val > 100 && String(rawM).indexOf('.') === -1 && String(rawM).indexOf(',') === -1) val = val / 100; 
+                                    let rawM = item.dividendePourUnEuro !== undefined ? item.dividendePourUnEuro : 
+                                               (item.dividendeEuro !== undefined ? item.dividendeEuro : 
+                                               (item.gainEuro !== undefined ? item.gainEuro : 
+                                               (item.rapport || item.dividende || item.montant)));
+                                    
+                                    if (rawM !== undefined && rawM !== null) {
+                                        // Remplacement vital de la virgule par un point pour le calcul javascript
+                                        let strVal = String(rawM).replace(',', '.');
+                                        val = parseFloat(strVal);
+                                        // Si le montant est donné en centimes (ex: 150 pour 1.50€)
+                                        if (!isNaN(val) && strVal.indexOf('.') === -1 && val > 50) {
+                                            val = val / 100; 
                                         }
                                     }
-                                    if (val > 0 && val > foundGain) foundGain = val;
+                                    if (!isNaN(val) && val > 0 && val > foundGain) foundGain = val;
                                 }
                             }
                         });
@@ -1344,14 +1349,16 @@
                                 let lib = cleanStr(item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport);
                                 
                                 let val = 0;
-                                if (item.dividendePourUnEuro !== undefined) val = item.dividendePourUnEuro / 100;
-                                else if (item.dividendeEuro !== undefined) val = item.dividendeEuro;
-                                else if (item.gainEuro !== undefined) val = item.gainEuro;
-                                else {
-                                    let rawM = item.rapport || item.dividende || item.montant;
-                                    if (rawM !== undefined && rawM !== null) {
-                                        val = parseFloat(String(rawM).replace(',', '.'));
-                                        if (val > 100 && String(rawM).indexOf('.') === -1 && String(rawM).indexOf(',') === -1) val = val / 100; 
+                                let rawM = item.dividendePourUnEuro !== undefined ? item.dividendePourUnEuro : 
+                                           (item.dividendeEuro !== undefined ? item.dividendeEuro : 
+                                           (item.gainEuro !== undefined ? item.gainEuro : 
+                                           (item.rapport || item.dividende || item.montant)));
+                                
+                                if (rawM !== undefined && rawM !== null) {
+                                    let strVal = String(rawM).replace(',', '.');
+                                    val = parseFloat(strVal);
+                                    if (!isNaN(val) && strVal.indexOf('.') === -1 && val > 50) {
+                                        val = val / 100; 
                                     }
                                 }
 
