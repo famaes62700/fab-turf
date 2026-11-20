@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V64 Value Betting (Anti-Blocage)</title>
+    <title>Turf - V65 Scanner Value (Moteur Anti-Blocage 429)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Turf Pro">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=4">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=4">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=5">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=5">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,7 +27,7 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> <span class="text-[10px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V64</span>
+                    <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> <span class="text-[10px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V65</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -64,7 +64,7 @@
         </div>
 
         <div class="flex flex-wrap justify-between items-center gap-2 bg-zinc-950 border border-zinc-800 p-2 rounded-xl">
-            <div id="statusText" class="text-xs text-emerald-400 font-mono flex items-center">
+            <div id="statusText" class="text-xs text-amber-400 font-mono flex items-center">
                 <i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion PMU...
             </div>
             <div class="flex items-center space-x-2">
@@ -265,21 +265,22 @@
         </div>
     </main>
 
-    <!-- TICKET FLOTTANT DÉSACTIVÉ EN MODE SCANNER VALUE -->
+    <!-- TICKET FLOTTANT DÉSACTIVÉ EN MODE SCANNER VALUE (On ne joue que le robot) -->
     <div id="betSlipBar" class="hidden"></div>
 
     <script>
-        const CACHE_VERSION = "v55"; // On garde le même cache PMU pour éviter de tout retélécharger
-        const STATS_VERSION = "v64"; // Stats isolées
+        const CACHE_VERSION = "v64"; 
+        const STATS_VERSION = "v64"; 
         
         let currentDisciplineMode = 'TROT';
 
         // PARAMÈTRES VALUE BETTING
         let FLAT_STAKE = 10.0;
-        let BET_TYPE = 'PLACE'; 
-        let MIN_VALUE_MARGIN = 15; 
+        let BET_TYPE = 'PLACE'; // 'PLACE' ou 'GAGNANT'
+        let MIN_VALUE_MARGIN = 15; // Pourcentage
         let MAX_ODD_FILTER = 20.0; 
 
+        // ANTI-BLOCAGE 429
         let localProxyAvailable = null;
         let proxyCursor = 0;
         const proxyCooldownUntil = [0, 0, 0, 0];
@@ -504,7 +505,7 @@
             return { processed, valueBets, skipReason: '' };
         }
 
-        // PMU DATA FETCHING
+        // PMU DATA FETCHING (V64 Anti-429 Robust Engine)
         function classifySimpleGroup(group) {
             if (!group || typeof group !== 'object') return null;
             let pType = String(group.typePari || group.libellePari || group.codePari || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -533,7 +534,7 @@
                 ordreArrivee: p.ordreArrivee
             }));
             let slimR = (rapportsList || []).filter(g => isSimpleBetGroup(g));
-            return { partants: slimP, rapportsList: slimR.length > 0 ? slimR : (rapportsList || []).slice(0, 4), isComplete: Boolean(isComplete) };
+            return { partants: slimP, rapportsList: slimR, isComplete: Boolean(isComplete) };
         }
 
         async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
@@ -543,7 +544,7 @@
             finally { clearTimeout(timer); }
         }
 
-        // CORRECTION V64 : ORDRE DES PROXYS ET DÉLAI ALLONGÉ (anti-429)
+        // MOTEUR PMU ANTI-429 avec 3 tentatives globales
         async function smartFetchPMU(path, allowEmpty = false, useCacheBuster = true) {
             const sep = path.includes('?') ? '&' : '?';
             const finalPath = useCacheBuster ? `${path}${sep}_t=${Date.now()}` : path;
@@ -561,49 +562,60 @@
                 } catch (e) { if (localProxyAvailable === null) localProxyAvailable = false; }
             }
 
-            // Ordre inversé pour prioriser corsproxy.io qui a souvent de meilleures limites
             const proxies = [
-                `https://corsproxy.io/?${encodeURIComponent(fullPmuUrl)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(fullPmuUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fullPmuUrl)}`,
-                `https://api.allorigins.win/get?url=${encodeURIComponent(fullPmuUrl)}`
+                `https://api.allorigins.win/raw?url=`,
+                `https://api.codetabs.com/v1/proxy?quest=`,
+                `https://corsproxy.io/?`,
+                `https://api.allorigins.win/get?url=`
             ];
 
-            const startIdx = proxyCursor % proxies.length;
-            proxyCursor++;
-            const now = Date.now();
+            let maxRetries = 3;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                const startIdx = proxyCursor % proxies.length;
+                proxyCursor++;
+                const now = Date.now();
 
-            let order = [];
-            for (let k = 0; k < proxies.length; k++) {
-                let idx = (startIdx + k) % proxies.length;
-                if (proxyCooldownUntil[idx] <= now) order.push(idx);
-            }
-            for (let k = 0; k < proxies.length; k++) {
-                let idx = (startIdx + k) % proxies.length;
-                if (proxyCooldownUntil[idx] > now) order.push(idx);
-            }
+                let order = [];
+                for (let k = 0; k < proxies.length; k++) {
+                    let idx = (startIdx + k) % proxies.length;
+                    if (proxyCooldownUntil[idx] <= now) order.push(idx);
+                }
+                for (let k = 0; k < proxies.length; k++) {
+                    let idx = (startIdx + k) % proxies.length;
+                    if (proxyCooldownUntil[idx] > now) order.push(idx);
+                }
 
-            for (let idx of order) {
-                let proxy = proxies[idx];
-                try {
-                    let res = await fetchWithTimeout(proxy, { cache: useCacheBuster ? 'no-store' : 'default' }, 8000);
-                    if (res.status === 429 || res.status === 403 || res.status >= 500) { 
-                        proxyCooldownUntil[idx] = Date.now() + 20000; // Délai d'exclusion augmenté
-                        continue; 
-                    }
-                    if (res.status === 204 || res.status === 404) { if (allowEmpty) return null; continue; }
-                    if (res.ok) {
-                        let text = await res.text();
-                        if (!text || text.trim() === "") { if (allowEmpty) return null; continue; }
-                        let json = JSON.parse(text);
-                        if (json && json.contents !== undefined) {
-                            if (json.status && (json.status.http_code === 204 || json.status.http_code === 404)) { if (allowEmpty) return null; continue; }
-                            if (!json.contents || String(json.contents).trim() === "") { if (allowEmpty) return null; continue; }
-                            json = typeof json.contents === 'string' ? JSON.parse(json.contents) : json.contents;
+                for (let idx of order) {
+                    let proxy = proxies[idx];
+                    let proxyUrl = proxy + encodeURIComponent(fullPmuUrl);
+                    try {
+                        let res = await fetchWithTimeout(proxyUrl, { cache: useCacheBuster ? 'no-store' : 'default' }, 8000);
+                        if (res.status === 429 || res.status === 403 || res.status >= 500) { 
+                            proxyCooldownUntil[idx] = Date.now() + 15000; 
+                            continue; 
                         }
-                        if (json && typeof json === 'object') return json;
-                    }
-                } catch(e) { proxyCooldownUntil[idx] = Date.now() + 12000; }
+                        if (res.status === 204 || res.status === 404) { 
+                            if (allowEmpty) return null; 
+                            continue; 
+                        }
+                        if (res.ok) {
+                            let text = await res.text();
+                            if (!text || text.trim() === "") { if (allowEmpty) return null; continue; }
+                            let json = JSON.parse(text);
+                            if (json && json.contents !== undefined) {
+                                if (json.status && (json.status.http_code === 204 || json.status.http_code === 404)) { if (allowEmpty) return null; continue; }
+                                if (!json.contents || String(json.contents).trim() === "") { if (allowEmpty) return null; continue; }
+                                json = typeof json.contents === 'string' ? JSON.parse(json.contents) : json.contents;
+                            }
+                            if (json && typeof json === 'object') return json;
+                        }
+                    } catch(e) { proxyCooldownUntil[idx] = Date.now() + 10000; }
+                }
+                
+                // Si on arrive ici, tous les proxys ont échoué pour cette tentative. On fait une vraie pause.
+                let el = document.getElementById('statsProgress');
+                if (el) el.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-hourglass-half fa-spin"></i> Pause anti-blocage (3s)...</span>`;
+                await sleep(3000);
             }
             if (allowEmpty) return null;
             throw new Error("PMU bloqué");
@@ -1027,7 +1039,7 @@
                 }
 
                 if (!raceData) {
-                    await sleep(localProxyAvailable === true ? 60 : 600); // CORRECTION V64 : Délai allongé sur sync historiques
+                    await sleep(localProxyAvailable === true ? 60 : 1500); // CORRECTION V65 : Délai augmenté à 1.5s entre chaque course
                     let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj, true, isPastDate);
                     let isComplete = isRaceTrulyRunAndPayable(r.courseObj, fetched.partants, fetched.rapportsList, r.meetingObj);
                     raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, isComplete);
@@ -1126,7 +1138,7 @@
                     let fetchFailedNow = false;
                     if (!raceData) {
                         if (statsProgress) statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> (${i+1}/${pastRacesToday.length}) : ${r.name}`;
-                        await sleep(localProxyAvailable === true ? 60 : 600); // CORRECTION V64 : Délai allongé 600ms
+                        await sleep(localProxyAvailable === true ? 60 : 1500); // CORRECTION V65 : Délai augmenté à 1.5s
                         if (currentCalcId !== myCalcId) return;
                         
                         let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj, true, isPastDate);
@@ -1225,133 +1237,6 @@
                 console.error("Erreur de calcul : ", error);
             } finally {
                 if (currentCalcId === myCalcId) isCalculatingStats = false;
-            }
-        }
-
-        function buildRaceDetails(raceKey, rNum, cNum, partants, rapportsList, isPast, isLocked) {
-            let algoResult = computeAlgorithm(partants, raceKey);
-            let tbody = document.getElementById('runnersTableBody');
-            tbody.innerHTML = '';
-
-            if (algoResult.processed.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucun partant analysable pour R${rNum}C${cNum} (${algoResult.skipReason}).</td></tr>`;
-                return;
-            }
-
-            let sorted = algoResult.processed.sort((a, b) => b.valueMargin - a.valueMargin);
-            sorted.forEach(p => {
-                let tr = document.createElement('tr');
-                let isValue = algoResult.valueBets.some(v => v.num === p.num);
-                let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee === 1 ? '1er' : p.ordreArrivee+'e'}</span>` : '';
-                
-                if (isValue) {
-                    tr.className = "bg-emerald-900/20 border-l-4 border-emerald-500";
-                    tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold ml-1">🔥 VALUE</span>`;
-                } else {
-                    tr.className = "border-b border-zinc-800/50";
-                }
-
-                let estOddDisplay = (BET_TYPE === 'GAGNANT' ? p.trueOddGag : p.trueOddPla).toFixed(1);
-                let marginColor = p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : (p.valueMargin > 0 ? 'text-amber-400' : 'text-zinc-500');
-
-                tr.innerHTML = `
-                    <td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td>
-                    <td class="p-3 text-zinc-300 font-bold">${p.coteDisplay}</td>
-                    <td class="p-3 text-zinc-400">${estOddDisplay}</td>
-                    <td class="p-3 ${marginColor}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        async function fetchRaceData(isBackground = false) {
-            if (isBackground && isFetchingRace) return;
-
-            let mIdxStr = document.getElementById('meetingSelect').value;
-            let rIdxStr = document.getElementById('raceSelect').value;
-            if (mIdxStr === "" || rIdxStr === "") return;
-
-            let mIdxNum = parseInt(mIdxStr, 10);
-            let rIdxNum = parseInt(rIdxStr, 10);
-
-            let meeting = liveMeetingsData[mIdxNum];
-            if (!meeting) return;
-            let courses = meeting.courses || [];
-            let race = courses[rIdxNum];
-            if (!race) return;
-
-            let myFetchId = ++currentFetchRaceId;
-            isFetchingRace = true;
-
-            let dateInput = document.getElementById('raceDate').value;
-            let isPastDate = dateInput < getLocalDateString();
-            let parts = dateInput.split('-');
-            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
-            let rNum = meeting.numOfficiel || (mIdxNum + 1);
-            let cNum = race.numOrdre || (rIdxNum + 1);
-            let currentRaceKey = `${ddmmyyyy}_${rNum}_${cNum}`;
-            let now = Date.now();
-            let canceledRace = isCourseCanceled(race, meeting);
-
-            if (!isBackground) {
-                document.getElementById('runnersTableBody').innerHTML = canceledRace
-                    ? `<tr><td colspan="4" class="p-6 text-center text-red-400 font-bold">🚫 R${rNum}C${cNum} est annulée.</td></tr>`
-                    : `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar en cours...</td></tr>`;
-            }
-
-            try {
-                let cacheKey = `race_cache_${CACHE_VERSION}_${currentRaceKey}`;
-                let partants = [], rapportsList = [];
-                let savedData = localStorage.getItem(cacheKey);
-                if (savedData) {
-                    try {
-                        let parsed = JSON.parse(savedData);
-                        if (parsed && parsed.isComplete && parsed.partants && parsed.partants.length > 0) {
-                            partants = parsed.partants;
-                            rapportsList = parsed.rapportsList || [];
-                        }
-                    } catch(e) {}
-                }
-
-                if (partants.length === 0) {
-                    let fetched = await getFullRaceData(ddmmyyyy, rNum, cNum, race, true, isPastDate);
-                    partants = fetched.partants;
-                    rapportsList = fetched.rapportsList;
-                }
-
-                if (myFetchId !== currentFetchRaceId) return;
-                
-                let isPayableComplete = isRaceTrulyRunAndPayable(race, partants, rapportsList, meeting);
-                if (isPayableComplete && partants.length > 0) {
-                    let slimmed = slimRaceCacheData(partants, rapportsList, true);
-                    safeSaveStatItem(cacheKey, slimmed);
-                }
-
-                let raceStartTime = getCourseTimeMs(race);
-                let timeInfo = raceStartTime > 0 ? `[Départ : ${formatTime(raceStartTime)}] ` : '';
-                let discBadge = getDisciplineBadge(race);
-                
-                let arrivees = partants.filter(p => p.ordreArrivee && parseInt(p.ordreArrivee, 10) > 0);
-                let isLocked = canceledRace || isPastDate || isCourseStartedOrFinished(race, now) || arrivees.length > 0 || isPayableComplete;
-                let statusBadge = canceledRace ? `<span class="bg-red-900/80 text-red-200 border border-red-500/50 px-2 py-0.5 rounded text-[10px] uppercase font-bold ml-2">🚫 Annulée</span>`
-                    : (isLocked ? `<span class="bg-zinc-800 text-zinc-400 border border-zinc-600 px-2 py-0.5 rounded text-[10px] uppercase font-bold ml-2">🏁 Figée/Terminée</span>`
-                    : `<span class="bg-emerald-950/60 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded text-[10px] uppercase font-bold animate-pulse ml-2">🟢 Radar Actif</span>`);
-
-                document.getElementById('raceInfoDetails').innerHTML = `
-                    <div class="flex items-center flex-wrap gap-y-1">
-                        <span class="mr-2 text-amber-400 font-bold">R${rNum}C${cNum}</span>
-                        <span class="mr-2 text-zinc-300 font-mono">${timeInfo}</span>
-                        ${discBadge} ${statusBadge}
-                    </div>
-                `;
-
-                if (!canceledRace) {
-                    buildRaceDetails(currentRaceKey, rNum, cNum, partants, rapportsList, isPastDate, isLocked);
-                }
-
-            } catch (e) {
-            } finally {
-                if (myFetchId === currentFetchRaceId) isFetchingRace = false;
             }
         }
 
