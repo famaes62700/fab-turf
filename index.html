@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V111 Value Betting (Courses Corrigées)</title>
+    <title>Turf - V112 Value Betting (Filtres & Compteurs)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=49">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=49">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=50">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=50">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V111 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V112 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -53,10 +53,10 @@
         <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex items-center justify-between text-xs">
             <span class="text-zinc-400 font-bold ml-2"><i class="fa-solid fa-filter mr-1.5 text-emerald-500"></i> Filtre :</span>
             <div class="flex space-x-2">
-                <button id="btnFilterTrot" onclick="setDisciplineMode('TROT')" class="bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer">
+                <button id="btnFilterTrot" onclick="setDisciplineMode('TROT')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer">
                     100% Trot
                 </button>
-                <button id="btnFilterAll" onclick="setDisciplineMode('ALL')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer">
+                <button id="btnFilterAll" onclick="setDisciplineMode('ALL')" class="bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer">
                     Toutes Courses
                 </button>
             </div>
@@ -79,7 +79,7 @@
         <div id="historyBlock" style="display: none;" class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2.5">
                 <h2 class="text-xs font-bold uppercase text-zinc-200 tracking-wider flex items-center">
-                    <i class="fa-solid fa-chart-line mr-1.5 text-emerald-400"></i> Suivi R.O.I (<span id="histModeLabel" class="text-emerald-400 ml-1">Toutes Courses</span>)
+                    <i class="fa-solid fa-chart-line mr-1.5 text-emerald-400"></i> Suivi R.O.I (<span id="histModeLabel" class="text-emerald-400 ml-1">100% Trot</span>)
                 </h2>
                 <div class="flex flex-wrap items-center gap-1.5">
                     <button id="btnSyncWeek" onclick="syncPeriodHistory('WEEK')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
@@ -294,9 +294,9 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v111_value"; 
+        const STATS_VERSION = "v112_value"; 
         
-        let currentDisciplineMode = 'ALL'; // Par defaut : TOUTES LES COURSES !
+        let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 10.0;
         let BET_TYPE = 'PLACE';
         let MIN_VALUE_MARGIN = 10; 
@@ -524,7 +524,6 @@
             document.getElementById('inputMinMargin').value = MIN_VALUE_MARGIN;
             document.getElementById('inputMaxOdd').value = MAX_ODD_FILTER;
             
-            // MAJ Affichage Boutons Filtre
             let btnTrot = document.getElementById('btnFilterTrot');
             let btnAll = document.getElementById('btnFilterAll');
             if (currentDisciplineMode === 'TROT') {
@@ -967,12 +966,13 @@
                         for (let c of courses) {
                             if (cancelSyncFlag) break;
                             
-                            if (currentDisciplineMode === 'TROT') {
-                                let disciplineStr = String(c.discipline || '').toUpperCase();
-                                let specStr = String(c.specialite || '').toUpperCase();
-                                let isTrot = disciplineStr === '' || disciplineStr === 'UNDEFINED' || disciplineStr.includes('TROT') || disciplineStr.includes('ATTEL') || disciplineStr.includes('MONTE') || specStr.includes('TROT') || specStr.includes('ATTEL') || specStr.includes('MONTE');
-                                if (!isTrot) continue;
-                            }
+                            let targetCourses = [c].filter(course => {
+                                if (currentDisciplineMode === 'ALL') return true;
+                                let dStr = String(course.discipline || '').toUpperCase();
+                                let sStr = String(course.specialite || '').toUpperCase();
+                                return dStr === '' || dStr === 'UNDEFINED' || dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') || sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE');
+                            });
+                            if (targetCourses.length === 0) continue;
 
                             let rNum = m.numOfficiel || (rawR.indexOf(m) + 1);
                             let cNum = c.numOrdre || (courses.indexOf(c) + 1);
@@ -1138,38 +1138,54 @@
             document.getElementById('btnResumeMissing').style.display = 'none';
 
             try {
-                // Ajout cache-buster _t pour s'assurer que l'API locale donne le fichier frais
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`);
                 const data = await res.json();
                 
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                 
                 liveMeetingsData = [];
-                let totalCourses = 0;
 
-                rawReunions.forEach((r, rIdx) => {
-                    // On garde TOUTES les réunions qui ont des courses, sans les filtrer
-                    // pour ne plus perdre aucune course dans le menu déroulant
-                    if (r.courses && r.courses.length > 0) {
-                        liveMeetingsData.push(r);
+                // 1. Filtrer les réunions en fonction du mode (TROT ou ALL)
+                rawReunions.forEach(r => {
+                    let targetCourses = (r.courses || []).filter(c => {
+                        if (currentDisciplineMode === 'ALL') return true;
+                        let d = String(c.discipline || '').toUpperCase();
+                        let s = String(c.specialite || '').toUpperCase();
+                        // Tolère les champs vides pour ne pas rater des courses non labellisées par l'API
+                        return d === '' || d === 'UNDEFINED' || d.includes('TROT') || d.includes('ATTEL') || d.includes('MONTE') || s.includes('TROT') || s.includes('ATTEL') || s.includes('MONTE');
+                    });
+                    
+                    if (targetCourses.length > 0) {
+                        let rCopy = { ...r, courses: targetCourses };
+                        liveMeetingsData.push(rCopy);
                     }
                 });
                 
                 if (liveMeetingsData.length > 0) {
                     let select = document.getElementById('meetingSelect');
                     select.innerHTML = '<option value="">-- Choisissez un hippodrome --</option>';
+                    let totalCourses = 0;
+                    let completedCourses = 0;
 
+                    // 2. Construire l'affichage du menu
                     liveMeetingsData.forEach((r, idx) => {
+                        let finishedCount = r.courses.filter(c => isRaceFinished(c)).length;
+                        completedCourses += finishedCount;
                         totalCourses += r.courses.length;
+                        
                         let opt = document.createElement('option');
                         opt.value = idx;
                         let hipName = r.hippodrome?.libelleLong || r.hippodrome?.libelleCourt || r.hippodrome?.nom || 'Hippodrome';
-                        let rNum = r.numOfficiel || (idx+1);
-                        opt.textContent = `R${rNum} - ${hipName} (${r.courses.length} courses)`;
+                        let mStart = getMeetingStartTime(r);
+                        let timeTag = mStart ? ` [${mStart}]` : '';
+                        
+                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${hipName}${timeTag} (${r.courses.length} courses)`;
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${liveMeetingsData.length} réunions | ${totalCourses} courses)</span>`;
+                    // 3. Calculer les courses restantes globales
+                    let remainingGlobal = totalCourses - completedCourses;
+                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${liveMeetingsData.length} réunions | ${remainingGlobal}/${totalCourses} rest.)</span>`;
                     document.getElementById('btnResumeMissing').style.display = 'inline-block';
                     
                     autoSelectCurrentRace();
@@ -1179,7 +1195,7 @@
                 } else {
                     document.getElementById('meetingSelect').innerHTML = '<option value="">Aucune réunion</option>';
                     document.getElementById('raceSelect').innerHTML = '<option value="">-- Course --</option>';
-                    document.getElementById('runnersTableBody').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucune course pour cette date.</td></tr>';
+                    document.getElementById('runnersTableBody').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucune course pour ce filtre à cette date.</td></tr>';
                     statusText.innerHTML = `<span class="text-zinc-400">Aucune réunion au programme.</span>`;
                 }
             } catch (e) {
@@ -1200,8 +1216,6 @@
             let dateInput = document.getElementById('raceDate').value;
             let parts = dateInput.split('-');
             let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
-            
-            // Securisation des numeros (fallback propre)
             let rNum = meeting.numOfficiel || (parseInt(mIdx, 10) + 1);
             let cNum = race.numOrdre || (parseInt(cIdx, 10) + 1);
             let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
@@ -1391,7 +1405,7 @@
                     raceData = validatedRacesCache[cacheKey];
                 } else {
                     try {
-                        await sleep(200); // Évite de saturer l'API locale
+                        await sleep(200); 
                         const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
                         if (res.ok) {
                             const data = await res.json();
@@ -1406,22 +1420,6 @@
 
                 if (!raceData || !raceData.partants || raceData.partants.length < 5 || !raceData.isComplete) {
                     continue;
-                }
-                
-                // Si on a activé le mode Trot, on filtre à la volée pendant le scan
-                if (currentDisciplineMode === 'TROT') {
-                    // On récupère la course de base depuis liveMeetingsData pour connaitre sa discipline
-                    let originalMeeting = liveMeetingsData.find(m => m.numOfficiel == r.rNum);
-                    if (originalMeeting) {
-                        let originalCourse = originalMeeting.courses.find(c => c.numOrdre == r.cNum);
-                        if (originalCourse) {
-                            let dStr = String(originalCourse.discipline || '').toUpperCase();
-                            let sStr = String(originalCourse.specialite || '').toUpperCase();
-                            // Tolère les chaines vides si API incomplète, pour ne pas rater des gains
-                            let isTrot = dStr === '' || dStr === 'UNDEFINED' || dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') || sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE');
-                            if (!isTrot) continue;
-                        }
-                    }
                 }
 
                 let algo = computeAlgorithm(raceData.partants);
