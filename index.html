@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V87 Value Betting (API Bornes Physiques PMU)</title>
+    <title>Turf - V88 Value Betting (Réseau Diagnostic)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Turf Pro">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=22">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=22">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=23">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=23">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V87</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V88</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -62,7 +62,7 @@
         <!-- STATUT CONNEXION -->
         <div class="flex flex-wrap justify-between items-center gap-2 bg-zinc-950 border border-zinc-800 p-2 rounded-xl">
             <div id="statusText" class="text-xs text-emerald-400 font-mono flex items-center">
-                <i class="fa-solid fa-spinner fa-spin mr-2"></i>Démarrage du système...
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>Démarrage...
             </div>
             <div class="flex items-center space-x-2">
                 <button id="btnResumeMissing" onclick="calculateDailyStats(false)" style="display: none;" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded cursor-pointer shadow">
@@ -135,7 +135,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (Mise Fixe)
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider Réglages
@@ -158,7 +158,7 @@
                     <input type="number" id="inputMinMargin" min="1" max="200" step="5" value="15" onchange="applyStrategySettings()" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col" title="Ne pas jouer les chevaux dont la cote dépasse ce seuil (trop de hasard).">
-                    <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
+                    <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Maximale</span>
                     <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="20" onchange="applyStrategySettings()" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
@@ -245,15 +245,15 @@
     </main>
 
     <script>
-        const CACHE_VERSION = "v87"; 
-        const STATS_VERSION = "v87";
+        const CACHE_VERSION = "v88"; 
+        const STATS_VERSION = "v88";
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
         let BET_TYPE = 'PLACE';
         let MIN_VALUE_MARGIN = 15;
         let MAX_ODD_FILTER = 20.0; 
-
+        
         let liveMeetingsData = [];
         let currentCalcId = 0;
         let isCalculatingStats = false;
@@ -495,42 +495,63 @@
             return { processed, valueBets, skipReason: '' };
         }
 
-        // --- MOTEUR RÉSEAU SUR L'API DES BORNES PMU (OFFLINE) ---
-        // Les bornes physiques (bars tabacs) n'ont PAS le système anti-bot Datadome. Ça passe tout seul !
+        // --- NOUVEAU MOTEUR RÉSEAU DIAGNOSTIC (V88) ---
+        // Ultra-basique, teste 6 chemins différents, et affiche VISUELLEMENT les erreurs.
         async function smartFetchPMU(path) {
-            let offlinePath = path.replace('specialisation=INTERNET', 'specialisation=OFFLINE');
-            const sep = offlinePath.includes('?') ? '&' : '?';
-            const timeCache = Math.floor(Date.now() / 120000); 
-            const pmuUrl = `https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${offlinePath}${sep}_t=${timeCache}`;
-
-            const proxies = [
-                `https://api.allorigins.win/get?url=${encodeURIComponent(pmuUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(pmuUrl)}`,
-                `https://corsproxy.io/?${encodeURIComponent(pmuUrl)}`
+            let statusEl = document.getElementById('statusText');
+            let pathOffline = path.replace('specialisation=INTERNET', 'specialisation=OFFLINE');
+            
+            let urlsToTest = [
+                `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${path}`,
+                `https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${pathOffline}`
             ];
 
-            for (let proxy of proxies) {
-                try {
-                    let res = await fetch(proxy, { cache: 'no-store' });
-                    if (res.ok) {
-                        let text = await res.text();
-                        if (!text || text.trim() === "") continue;
-                        
-                        let json;
-                        if (proxy.includes('allorigins')) {
-                            let wrapper = JSON.parse(text);
-                            if (wrapper.contents) json = JSON.parse(wrapper.contents);
+            let proxyGenerators = [
+                { name: 'CodeTabs', fn: url => `https://api.codetabs.com/v1/proxy?quest=${url}` },
+                { name: 'AllOrigins', fn: url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+                { name: 'CorsProxy', fn: url => `https://corsproxy.io/?${encodeURIComponent(url)}` }
+            ];
+
+            let lastErrorMsg = "";
+
+            for (let targetUrl of urlsToTest) {
+                for (let proxy of proxyGenerators) {
+                    let testUrl = proxy.fn(targetUrl);
+                    let modeName = targetUrl.includes('offline') ? ' (Borne)' : ' (Web)';
+                    
+                    if (statusEl) statusEl.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Test ${proxy.name}${modeName}...</span>`;
+                    
+                    try {
+                        let res = await fetch(testUrl, { cache: 'no-store' });
+                        if (res.ok) {
+                            let text = await res.text();
+                            if (text && text.trim() !== '') {
+                                try {
+                                    let json = JSON.parse(text);
+                                    if (json && !json.status?.http_code) {
+                                        if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> PMU Connecté</span>`;
+                                        return json;
+                                    } else {
+                                        lastErrorMsg = "Bloqué par Datadome (PMU)";
+                                    }
+                                } catch(e) {
+                                    lastErrorMsg = "Réponse illisible (Erreur Serveur)";
+                                }
+                            }
                         } else {
-                            json = JSON.parse(text);
+                            lastErrorMsg = `Erreur ${res.status}`;
                         }
-                        
-                        if (json && !json.status?.http_code) return json;
+                    } catch(err) {
+                        lastErrorMsg = `Inaccessible`;
                     }
-                } catch(e) {}
+                }
             }
-            throw new Error("PMU injoignable");
+            
+            if (statusEl) statusEl.innerHTML = `<span class="text-red-400 font-bold"><i class="fa-solid fa-xmark mr-1"></i> Échec : ${lastErrorMsg}</span>`;
+            throw new Error("Impossible de se connecter aux relais.");
         }
 
+        // --- MANIPULATION DES DONNÉES PMU ---
         function classifySimpleGroup(group) {
             if (!group || typeof group !== 'object') return null;
             let pType = String(group.typePari || group.libellePari || group.codePari || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -539,6 +560,19 @@
             if (pType.includes('SIMPLE') && pType.includes('GAGN')) return { kind: 'GAGNANT', priority: pType.startsWith('E') ? 2 : 1 };
             if (pType === 'E_SG' || pType === 'SG') return { kind: 'GAGNANT', priority: pType.startsWith('E') ? 2 : 1 };
             return null;
+        }
+
+        function isSimpleBetGroup(group) { return classifySimpleGroup(group) !== null; }
+
+        function slimRaceCacheData(partants, rapportsList, isComplete) {
+            let slimP = (partants || []).map(p => ({
+                numPmu: p.numPmu || p.numOrdre, nom: p.nom, statut: p.statut, musique: p.musique || p.form,
+                dernierRapportDirect: p.dernierRapportDirect ? { rapport: p.dernierRapportDirect.rapport } : undefined,
+                dernierRapportReference: p.dernierRapportReference ? { rapport: p.dernierRapportReference.rapport } : undefined,
+                probabiliteEvolution: p.probabiliteEvolution, ordreArrivee: p.ordreArrivee
+            }));
+            let slimR = (rapportsList || []).filter(g => isSimpleBetGroup(g));
+            return { partants: slimP, rapportsList: slimR, isComplete: Boolean(isComplete) };
         }
 
         function getHorseNumFromReportItem(item) {
@@ -620,6 +654,7 @@
             return { partants, rapportsList, isComplete: isRaceTrulyRunAndPayable(courseObj, partants, rapportsList) };
         }
 
+        // --- DASHBOARD SUIVI R.O.I ---
         function getStatForDateObj(d) {
             let ddmmyyyy = `${String(d.getDate()).padStart(2, '0')}${String(d.getMonth()+1).padStart(2, '0')}${d.getFullYear()}`;
             let key = `pmu_stats_unified_${STATS_VERSION}_${currentDisciplineMode}_${ddmmyyyy}`;
@@ -813,13 +848,14 @@
                 }
 
                 if (!raceData) {
-                    await sleep(350); 
+                    await sleep(300); // Pause minimale pour éviter le rejet PMU
                     let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj);
                     raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, fetched.isComplete);
                     if (raceData.isComplete) localStorage.setItem(cacheKey, JSON.stringify(raceData));
                 }
 
-                if (!raceData || !raceData.partants || raceData.partants.length < 5 || !raceData.isComplete) continue;
+                if (!raceData || !raceData.partants || raceData.partants.length < 5) continue;
+                if (!isRaceTrulyRunAndPayable(r.courseObj, raceData.partants, raceData.rapportsList, r.meetingObj)) continue;
 
                 let algoResult = computeAlgorithm(raceData.partants, rKey);
                 if (algoResult.valueBets.length === 0) continue;
@@ -853,8 +889,6 @@
             const parts = dateInput.split('-');
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
             
-            const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Récupération du Programme...';
             document.getElementById('btnResumeMissing').style.display = 'none';
 
             try {
@@ -877,16 +911,12 @@
                 if (liveMeetingsData.length > 0) {
                     let select = document.getElementById('meetingSelect');
                     select.innerHTML = '<option value="">-- Choisissez un hippodrome --</option>';
-                    let totalCourses = 0;
                     liveMeetingsData.forEach((r, idx) => {
                         let opt = document.createElement('option');
                         opt.value = idx;
-                        totalCourses += r.courses.length;
                         opt.textContent = `R${r.numOfficiel || (idx+1)} - ${r.hippodrome?.nom || 'Hippodrome'} (${r.courses.length} courses)`;
                         select.appendChild(opt);
                     });
-                    
-                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-bolt mr-1"></i> Connecté (${totalCourses} courses)</span>`;
                     document.getElementById('btnResumeMissing').style.display = 'inline-block';
                     
                     document.getElementById('meetingSelect').value = 0;
@@ -895,11 +925,11 @@
                 } else {
                     document.getElementById('meetingSelect').innerHTML = '<option value="">Aucune réunion</option>';
                     document.getElementById('raceSelect').innerHTML = '<option value="">-- Course --</option>';
-                    document.getElementById('runnersTableBody').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucune course pour ce filtre à cette date.</td></tr>';
-                    statusText.innerHTML = `<span class="text-zinc-400">Aucune réunion au programme.</span>`;
+                    document.getElementById('runnersTableBody').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucune course pour ce filtre.</td></tr>';
+                    let st = document.getElementById('statusText');
+                    if (st) st.innerHTML = `<span class="text-zinc-400">Aucune réunion au programme.</span>`;
                 }
             } catch (e) {
-                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> PMU injoignable (API Bloquée)</span>';
                 document.getElementById('btnResumeMissing').style.display = 'inline-block';
             }
         }
@@ -917,29 +947,32 @@
             
             document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar...</td></tr>`;
 
-            let fetched = await getFullRaceData(ddmmyyyy, meeting.numOfficiel, race.numOrdre, race);
-            document.getElementById('raceInfoDetails').innerHTML = `<span class="text-amber-400 font-bold">R${meeting.numOfficiel}C${race.numOrdre}</span> ${getDisciplineBadge(race)}`;
-            
-            let algoResult = computeAlgorithm(fetched.partants, `${ddmmyyyy}_${meeting.numOfficiel}_${race.numOrdre}`);
-            let tbody = document.getElementById('runnersTableBody');
-            tbody.innerHTML = '';
-
-            if (algoResult.processed.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
-                return;
-            }
-
-            algoResult.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
-                let tr = document.createElement('tr');
-                let isValue = algoResult.valueBets.some(v => v.num === p.num);
-                tr.className = isValue ? "bg-emerald-900/20 border-l-4 border-emerald-500" : "border-b border-zinc-800/50";
+            try {
+                let fetched = await getFullRaceData(ddmmyyyy, meeting.numOfficiel, race.numOrdre, race);
+                let algoResult = computeAlgorithm(fetched.partants, `${ddmmyyyy}_${meeting.numOfficiel}_${race.numOrdre}`);
                 
-                let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
-                if (isValue) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">VALUE</span>`;
+                let tbody = document.getElementById('runnersTableBody');
+                tbody.innerHTML = '';
 
-                tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay}</td><td class="p-3 text-zinc-400">${(BET_TYPE === 'GAGNANT' ? p.trueOddGag : p.trueOddPla).toFixed(1)}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
-                tbody.appendChild(tr);
-            });
+                if (algoResult.processed.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
+                    return;
+                }
+
+                algoResult.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
+                    let tr = document.createElement('tr');
+                    let isValue = algoResult.valueBets.some(v => v.num === p.num);
+                    tr.className = isValue ? "bg-emerald-900/20 border-l-4 border-emerald-500" : "border-b border-zinc-800/50";
+                    
+                    let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
+                    if (isValue) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">VALUE</span>`;
+
+                    tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay}</td><td class="p-3 text-zinc-400">${(BET_TYPE === 'GAGNANT' ? p.trueOddGag : p.trueOddPla).toFixed(1)}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch(e) {
+                document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Échec du téléchargement PMU.</td></tr>`;
+            }
         }
 
         function onMeetingChange() {
@@ -995,13 +1028,14 @@
                 }
 
                 if (!raceData) {
-                    await sleep(350); 
-                    let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj);
-                    
-                    if (fetched.fetchFailed && fetched.partants.length === 0) continue;
-
-                    raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, fetched.isComplete);
-                    if (raceData.isComplete) localStorage.setItem(cacheKey, JSON.stringify(raceData));
+                    await sleep(300); // Laisse le temps au PMU de respirer
+                    try {
+                        let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj);
+                        raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, fetched.isComplete);
+                        if (raceData.isComplete) localStorage.setItem(cacheKey, JSON.stringify(raceData));
+                    } catch(e) {
+                        continue;
+                    }
                 }
 
                 if (!raceData || !raceData.partants || raceData.partants.length < 5 || !raceData.isComplete) continue;
@@ -1043,7 +1077,14 @@
             localStorage.setItem(`pmu_stats_unified_${STATS_VERSION}_${currentDisciplineMode}_${ddmmyyyy}`, JSON.stringify({ stakes: totalStakes, net: totalNet, bets: betsCount, wins: winsCount, updatedAt: Date.now() }));
         }
 
-        window.onload = () => { loadLivePmu(); };
+        window.onload = () => { 
+            let dateEl = document.getElementById('raceDate');
+            if (!dateEl.value) {
+                dateEl.value = getLocalDateString();
+            }
+            loadStrategySettings(); 
+            loadLivePmu(); 
+        };
     </script>
 </body>
 </html>
