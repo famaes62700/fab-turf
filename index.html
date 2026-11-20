@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V123 Value Betting</title>
+    <title>Turf - V124 Value Betting</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=61">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=61">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=62">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=62">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,19 +28,19 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V123</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V124</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
             
             <div class="flex items-center space-x-1.5 sm:space-x-2">
-                <button id="btnSoundToggle" onclick="toggleSound()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 w-8 h-8 rounded-lg border border-zinc-700 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Activer/Désactiver les alertes sonores">
+                <button id="btnSoundToggle" type="button" onclick="toggleSound()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 w-8 h-8 rounded-lg border border-zinc-700 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Activer/Désactiver les alertes sonores">
                     <i class="fa-solid fa-bell-slash"></i>
                 </button>
-                <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 w-8 h-8 rounded-lg border border-emerald-500/30 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Historique & R.O.I">
+                <button type="button" onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 w-8 h-8 rounded-lg border border-emerald-500/30 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Historique & R.O.I">
                     <i class="fa-solid fa-chart-line"></i>
                 </button>
-                <button onclick="resetAllCache()" class="bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white w-8 h-8 rounded-lg border border-red-500/40 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Vider le cache">
+                <button type="button" onclick="resetAllCache()" class="bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white w-8 h-8 rounded-lg border border-red-500/40 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Vider le cache">
                     <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
             </div>
@@ -298,7 +298,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v123_value"; 
+        const STATS_VERSION = "v124_value"; 
         
         let currentDisciplineMode = localStorage.getItem('valuebet_discipline_mode') || 'ALL';
         if (currentDisciplineMode !== 'TROT' && currentDisciplineMode !== 'ALL') {
@@ -352,6 +352,11 @@
                    sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE') ||
                    lStr.includes('ATTEL') || lStr.includes('MONTE') ||
                    hip.includes('VINCENNES') || hip.includes('ENGHIEN') || hip.includes('CABOURG') || hip.includes('CAEN') || hip.includes('MAUQUENCHY');
+        }
+
+        function shouldIncludeCourse(course, meeting) {
+            if (currentDisciplineMode === 'ALL') return true;
+            return isTrotCourse(course, meeting);
         }
 
         function isRaceFinished(c) {
@@ -945,7 +950,7 @@
                 if (k.startsWith(`valuebet_stats_${STATS_VERSION}_${currentDisciplineMode}_`)) localStorage.removeItem(k);
             });
             showHistoryStats();
-            showToast(`Historique vidé.`, "info");
+            showToast("Historique vidé.", "info");
         }
 
         async function syncPeriodHistory(periodType) {
@@ -1014,7 +1019,7 @@
                         let courses = m.courses || m.races || m.lesCourses || [];
                         for (let c of courses) {
                             if (cancelSyncFlag) break;
-                            if (currentDisciplineMode === 'TROT' && !isTrotCourse(c, m)) continue;
+                            if (!shouldIncludeCourse(c, m)) continue;
 
                             let rNum = m.numOfficiel || (rawR.indexOf(m) + 1);
                             let cNum = c.numOrdre || (courses.indexOf(c) + 1);
@@ -1177,11 +1182,7 @@
                 let totalCourses = 0;
 
                 rawReunions.forEach(r => {
-                    let targetCourses = (r.courses || []).filter(c => {
-                        if (currentDisciplineMode === 'ALL') return true;
-                        return isTrotCourse(c, r);
-                    });
-                    
+                    let targetCourses = (r.courses || []).filter(c => shouldIncludeCourse(c, r));
                     if (targetCourses.length > 0) {
                         liveMeetingsData.push({ ...r, courses: targetCourses });
                     }
@@ -1483,7 +1484,7 @@
                     continue;
                 }
                 
-                if (currentDisciplineMode === 'TROT' && !isTrotCourse(r.courseObj, r.meetingObj)) {
+                if (!shouldIncludeCourse(r.courseObj, r.meetingObj)) {
                     continue;
                 }
 
