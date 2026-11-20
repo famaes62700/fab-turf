@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V120 Value Betting (Gains & Filtres OK)</title>
+    <title>Turf - V121 Value Betting (100% Robuste)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=58">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=58">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=59">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=59">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V120 Pro</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V121 Pro</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -308,7 +308,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v120_value"; 
+        const STATS_VERSION = "v121_value"; 
         
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 10.0;
@@ -338,20 +338,26 @@
 
         const sleep = ms => new Promise(res => setTimeout(res, ms));
 
-        // Fonction magique pour retirer les accents et passer en majuscule proprement 
-        // Permet de reconnaitre "PLACÉ" comme "PLACE"
-        function normStr(str) {
-            if (!str) return "";
-            return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        // FONCTION DE NETTOYAGE 100% ROBUSTE (Sans crash JavaScript)
+        function cleanStr(s) {
+            if (!s) return "";
+            // Met en majuscule et remplace manuellement les accents les plus courants du PMU
+            return String(s).toUpperCase()
+                            .replace(/[ÉÈÊË]/g, "E")
+                            .replace(/[ÀÂÄ]/g, "A")
+                            .replace(/[ÎÏ]/g, "I")
+                            .replace(/[ÔÖ]/g, "O")
+                            .replace(/[ÛÜ]/g, "U")
+                            .replace(/[Ç]/g, "C");
         }
 
         function isRaceFinished(c) {
-            let st = normStr(c.statut);
+            let st = cleanStr(c.statut);
             return st.includes('FIN') || st.includes('ARRIV') || st.includes('ANNUL');
         }
 
         function isRaceStarted(race, partants = []) {
-            let st = normStr(race?.statut);
+            let st = cleanStr(race?.statut);
             if (st.includes('EN_COUR') || st.includes('COURSE') || st.includes('PARTI') || st.includes('FIN') || st.includes('ARRIV')) {
                 return true;
             }
@@ -489,7 +495,7 @@
         }
 
         function getDisciplineBadge(discipline) {
-            let d = normStr(discipline);
+            let d = cleanStr(discipline);
             if (d.includes('TROT') || d.includes('ATTEL') || d.includes('MONTE')) {
                 return '<span class="bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ml-2">TROT</span>';
             }
@@ -655,7 +661,7 @@
         // --- MOTEUR D'ALGORITHME EXPERT ---
         function evaluateMusique(musique) {
             if (!musique) return 50; 
-            let clean = normStr(musique).replace(/\(\d+\)/g, '');
+            let clean = cleanStr(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([A-Z]+)/g);
             if (!tokens || tokens.length === 0) return 50;
             
@@ -683,7 +689,7 @@
 
         function countRecentDAI(musique) {
             if (!musique) return 0;
-            let clean = normStr(musique).replace(/\(\d+\)/g, '');
+            let clean = cleanStr(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([A-Z]+)/g);
             if (!tokens || tokens.length === 0) return 0;
             let dai = 0;
@@ -695,7 +701,7 @@
         }
 
         function computeAlgorithm(partants) {
-            let validPartants = partants.filter(p => !normStr(p.statut || "PARTANT").includes("NON_PARTANT"));
+            let validPartants = partants.filter(p => !cleanStr(p.statut || "PARTANT").includes("NON_PARTANT"));
             if (validPartants.length < 5) return { processed: [], valueBets: [] };
 
             let hasAnyRealOdd = false;
@@ -804,32 +810,37 @@
             return { algo: liveAlgo, isFrozen: false, isStarted: true };
         }
 
+        // LE MOTEUR DE GAIN ULTRA-ROBUSTE
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
 
             listeRapports.forEach(group => {
-                let pType = normStr(group.typePari || group.libellePari || group.codePari);
-                let famille = normStr(group.famillePari);
+                let pType = cleanStr(group.typePari || group.libellePari || group.codePari);
+                let famille = cleanStr(group.famillePari);
                 let details = group.rapports || group.dividendes || group.lesRapports || [];
 
                 if (pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || pType.includes('INTER') || famille.includes('SIMPLE') || pType === 'PARI') {
                     if (Array.isArray(details)) {
                         details.forEach(item => {
-                            let combo = normStr(item.combinaison || item.cheval || item.numeroCheval || item.partant).trim();
-                            let lib = normStr(item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport);
+                            let combo = cleanStr(item.combinaison || item.cheval || item.numeroCheval || item.partant).trim();
+                            let lib = cleanStr(item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport);
 
                             if (combo === String(horseNum).trim()) {
                                 let isMatch = false;
 
                                 if (targetType === 'GAGNANT') {
-                                    if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || lib === 'DIRECT' || pType.includes('GAGNANT') || pType === 'SG') {
+                                    if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || lib === 'DIRECT') {
                                         if (!lib.includes('PLACE') && !lib.includes('SHOW')) isMatch = true;
+                                    } else if (pType.includes('GAGNANT') || pType === 'SG') {
+                                        isMatch = true;
                                     } else if (lib === '' && !pType.includes('PLACE')) { 
                                         isMatch = true;
                                     }
                                 } else if (targetType === 'PLACE') {
-                                    if (lib.includes('PLACE') || lib === 'P' || lib.includes('SP') || lib.includes('2EM') || lib.includes('3EM') || lib.includes('SHOW') || pType.includes('PLACE') || pType === 'SP') {
+                                    if (lib.includes('PLACE') || lib === 'P' || lib.includes('SP') || lib.includes('2EM') || lib.includes('3EM') || lib.includes('SHOW')) {
+                                        isMatch = true;
+                                    } else if (pType.includes('PLACE') || pType === 'SP') {
                                         isMatch = true;
                                     } else if (lib === '' && pType.includes('PLACE')) {
                                         isMatch = true;
@@ -1003,17 +1014,17 @@
                     let totalStakes = 0, totalNet = 0, betsCount = 0, winsCount = 0, coursesValidees = 0;
 
                     for (let m of rawR) {
-                        if (normStr(m.statut).includes('ANNUL')) continue;
+                        if (cleanStr(m.statut).includes('ANNUL')) continue;
                         let courses = m.courses || m.races || m.lesCourses || [];
                         for (let c of courses) {
                             if (cancelSyncFlag) break;
                             
                             let targetCourses = [c].filter(course => {
                                 if (currentDisciplineMode === 'ALL') return true;
-                                let dStr = normStr(course.discipline);
-                                let sStr = normStr(course.specialite);
-                                let lStr = normStr(course.libelle || course.nom);
-                                let hipName = normStr(m.hippodrome?.libelleLong || m.hippodrome?.nom || m.hippodrome?.libelleCourt);
+                                let dStr = cleanStr(course.discipline);
+                                let sStr = cleanStr(course.specialite);
+                                let lStr = cleanStr(course.libelle || course.nom);
+                                let hipName = cleanStr(m.hippodrome?.libelleLong || m.hippodrome?.nom || m.hippodrome?.libelleCourt);
                                 
                                 return dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') ||
                                        sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE') ||
@@ -1186,6 +1197,7 @@
             document.getElementById('btnResumeMissing').style.display = 'none';
 
             try {
+                // AUCUNE MODIFICATION D'URL - 100% origine
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
                 const data = await res.json();
                 
@@ -1199,10 +1211,10 @@
                     let targetCourses = (r.courses || []).filter(c => {
                         if (currentDisciplineMode === 'ALL') return true;
                         
-                        let dStr = normStr(c.discipline);
-                        let sStr = normStr(c.specialite);
-                        let lStr = normStr(c.libelle || c.nom);
-                        let hipName = normStr(r.hippodrome?.libelleLong || r.hippodrome?.nom || r.hippodrome?.libelleCourt);
+                        let dStr = cleanStr(c.discipline);
+                        let sStr = cleanStr(c.specialite);
+                        let lStr = cleanStr(c.libelle || c.nom);
+                        let hipName = cleanStr(r.hippodrome?.libelleLong || r.hippodrome?.nom || r.hippodrome?.libelleCourt);
                         
                         return dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') ||
                                sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE') ||
@@ -1278,6 +1290,7 @@
             }
 
             try {
+                // AUCUNE MODIFICATION D'URL - 100% origine
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
                 const data = await res.json();
                 let partants = data.participants || [];
@@ -1321,14 +1334,14 @@
                     let reportsHTML = "";
                     
                     listeRapports.forEach(group => {
-                        let pType = normStr(group.typePari || group.libellePari || group.codePari);
-                        let famille = normStr(group.famillePari);
+                        let pType = cleanStr(group.typePari || group.libellePari || group.codePari);
+                        let famille = cleanStr(group.famillePari);
                         
                         if (pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || famille.includes('SIMPLE')) {
                             let details = group.rapports || group.dividendes || group.lesRapports || [];
                             details.forEach(item => {
-                                let combo = normStr(item.combinaison || item.cheval || item.numeroCheval || item.partant).trim();
-                                let lib = normStr(item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport);
+                                let combo = cleanStr(item.combinaison || item.cheval || item.numeroCheval || item.partant).trim();
+                                let lib = cleanStr(item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport);
                                 
                                 let val = 0;
                                 if (item.dividendePourUnEuro !== undefined) val = item.dividendePourUnEuro / 100;
@@ -1487,7 +1500,7 @@
                 let hipName = m.hippodrome?.libelleLong || m.hippodrome?.libelleCourt || m.hippodrome?.nom || 'Hippodrome';
                 let rNum = m.numOfficiel || (mIdx + 1);
                 m.courses.forEach((c, cIdx) => {
-                    let st = normStr(c.statut);
+                    let st = cleanStr(c.statut);
                     let cNum = c.numOrdre || (cIdx + 1);
                     if (!st.includes('ANNUL')) racesToScan.push({ rNum: rNum, cNum: cNum, name: `R${rNum}C${cNum}`, hipName: hipName, courseObj: c });
                 });
@@ -1509,6 +1522,7 @@
                 } else {
                     try {
                         await sleep(200); 
+                        // AUCUNE MODIFICATION D'URL - 100% origine
                         const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
                         if (res.ok) {
                             const data = await res.json();
@@ -1526,10 +1540,10 @@
                 }
                 
                 if (currentDisciplineMode === 'TROT') {
-                    let dStr = normStr(r.courseObj.discipline);
-                    let sStr = normStr(r.courseObj.specialite);
-                    let lStr = normStr(r.courseObj.libelle || r.courseObj.nom);
-                    let hip = normStr(r.hipName);
+                    let dStr = cleanStr(r.courseObj.discipline);
+                    let sStr = cleanStr(r.courseObj.specialite);
+                    let lStr = cleanStr(r.courseObj.libelle || r.courseObj.nom);
+                    let hip = cleanStr(r.hipName);
                     
                     let isTrot = dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') ||
                                  sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE') ||
