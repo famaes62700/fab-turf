@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - Value Betting Pro (API Locale Intégrée)</title>
+    <title>Turf - Value Betting Pro (Signaux en Direct)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=33">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=33">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=34">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=34">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -65,7 +65,7 @@
                 <i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au serveur local...
             </div>
             <div class="flex items-center space-x-2">
-                <button id="btnResumeMissing" onclick="calculateDailyStats()" style="display: none;" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded cursor-pointer shadow">
+                <button id="btnResumeMissing" onclick="calculateDailyStats(false)" style="display: none;" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded cursor-pointer shadow">
                     <i class="fa-solid fa-play mr-1"></i>Scanner le jour
                 </button>
                 <div id="statsProgress" class="text-[10px] text-zinc-300 font-mono text-right bg-zinc-900 px-2 py-1 rounded border border-zinc-800">Prêt</div>
@@ -153,11 +153,11 @@
                         <option value="GAGNANT">Simple Gagnant (Risqué)</option>
                     </select>
                 </label>
-                <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col" title="Marge minimale entre l'estimation du robot et la cote PMU.">
+                <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col" title="Baisser à 10% pour le Trot si peu de résultats.">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
                     <input type="number" id="inputMinMargin" min="1" max="200" step="5" value="15" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
-                <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col" title="Ne pas jouer les chevaux dont la cote dépasse ce seuil.">
+                <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
                     <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="20" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
@@ -168,7 +168,7 @@
         <div class="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2">
                 <div>
-                    <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Bilan du Jour (Value Betting)</h2>
+                    <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Bilan du Jour (Flat Betting Pro)</h2>
                     <p id="bilanSubtitle" class="text-[10px] text-zinc-400">Recherche d'anomalies de cotes PMU</p>
                 </div>
                 <div class="flex items-center space-x-1.5">
@@ -224,7 +224,16 @@
             </select>
         </div>
 
-        <!-- TABLEAU DES PARTANTS RADAR VALUE -->
+        <!-- SIGNAL EN DIRECT POUR LA COURSE SELECTIONNEE -->
+        <div id="livePredictionBlock" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-emerald-900/20">
+            <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
+                <i class="fa-solid fa-crosshairs mr-1.5"></i> Radar de la course
+            </h2>
+            <div id="livePredictionList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
+                <!-- Rempli par javascript -->
+            </div>
+        </div>
+
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl mt-4">
             <div id="raceInfoDetails" class="p-3 border-b border-zinc-800 font-bold text-zinc-300 flex justify-between items-center"></div>
             <div class="overflow-x-auto">
@@ -246,7 +255,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v95_value"; // Clé unique pour éviter les conflits avec vos autres applis
+        const STATS_VERSION = "v96_value"; 
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
@@ -255,7 +264,7 @@
         let MAX_ODD_FILTER = 20.0; 
 
         let liveMeetingsData = [];
-        let validatedRacesCache = {}; // Cache local de session pour éviter de spammer le serveur
+        let validatedRacesCache = {}; 
         let isCalculatingStats = false;
         let isSyncingPeriod = false;
         let cancelSyncFlag = false;
@@ -321,7 +330,6 @@
             setTimeout(() => toast.remove(), 3500);
         }
 
-        // --- GESTION DES PARAMÈTRES VALUE BETTING ---
         function loadStrategySettings() {
             try {
                 let saved = JSON.parse(localStorage.getItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`) || '{}');
@@ -353,7 +361,6 @@
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
             }));
 
-            // Effacer l'historique Value Betting
             Object.keys(localStorage).forEach(k => {
                 if (k.startsWith(`valuebet_stats_${STATS_VERSION}_${currentDisciplineMode}_`)) localStorage.removeItem(k);
             });
@@ -361,7 +368,9 @@
             updateStrategyLabelsUI();
             resetCountersUI();
             showToast(`Réglages enregistrés !`, "success");
-            calculateDailyStats();
+            
+            if(liveMeetingsData.length > 0) calculateDailyStats();
+            if(document.getElementById('raceSelect').value !== "") fetchRaceData();
         }
 
         function setDisciplineMode(mode) {
@@ -372,18 +381,21 @@
             if (mode === 'TROT') {
                 btnTrot.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black shadow cursor-pointer";
                 btnAll.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer";
+                document.getElementById('inputMinMargin').value = "10"; 
             } else {
                 btnAll.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black shadow cursor-pointer";
                 btnTrot.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer";
             }
             loadStrategySettings();
             document.getElementById('meetingSelect').value = "";
+            document.getElementById('livePredictionBlock').classList.add('hidden');
             resetCountersUI();
             loadLivePmu();
         }
 
         function onDateChange() {
             document.getElementById('meetingSelect').value = "";
+            document.getElementById('livePredictionBlock').classList.add('hidden');
             resetCountersUI();
             loadLivePmu();
         }
@@ -439,7 +451,7 @@
                 else if (res === '4') pts = 55;
                 else if (res === '5') pts = 40;
                 else if (res === '6' || res === '7') pts = 20;
-                else if (res.includes('D') || res.includes('A')) pts = -15;
+                else if (res.includes('D') || res.includes('A')) pts = -15; // Pénalité pour le Trot
                 totalPts += pts * w;
                 totalWeight += w;
             }
@@ -502,11 +514,12 @@
 
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
             
-            let valueBets = processed.filter(p => p.valueMargin >= MIN_VALUE_MARGIN && p.coteDir <= MAX_ODD_FILTER && p.coteDir < 900).sort((a, b) => b.valueMargin - a.valueMargin).slice(0, 2);
+            let valueBets = processed.filter(p => p.valueMargin >= MIN_VALUE_MARGIN && p.coteDir <= MAX_ODD_FILTER && p.coteDir < 900)
+                                     .sort((a, b) => b.valueMargin - a.valueMargin)
+                                     .slice(0, 2);
             return { processed, valueBets };
         }
 
-        // --- MANIPULATION RAPPORTS ---
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let foundGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
@@ -766,7 +779,7 @@
 
             if (banner) banner.style.display = 'none';
             isSyncingPeriod = false;
-            calculateDailyStats();
+            calculateDailyStats(false);
         }
 
         // --- PROGRAMME PRINCIPAL (API LOCALE) ---
@@ -816,7 +829,7 @@
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-bolt mr-1"></i> Connecté (${totalCourses} courses)</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${totalCourses} courses)</span>`;
                     document.getElementById('btnResumeMissing').style.display = 'inline-block';
                     
                     document.getElementById('meetingSelect').value = 0;
@@ -849,6 +862,7 @@
             let cNum = race.numOrdre || (parseInt(cIdx, 10) + 1);
             
             document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar...</td></tr>`;
+            document.getElementById('livePredictionBlock').classList.add('hidden');
 
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}`);
@@ -861,9 +875,23 @@
                 let tbody = document.getElementById('runnersTableBody');
                 tbody.innerHTML = '';
 
+                let livePredBlock = document.getElementById('livePredictionBlock');
+                let livePredList = document.getElementById('livePredictionList');
+
                 if (algo.processed.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
                     return;
+                }
+
+                // AFFICHAGE DU MESSAGE "CHEVAL A JOUER"
+                if (algo.valueBets.length > 0) {
+                    livePredBlock.classList.remove('hidden');
+                    livePredList.innerHTML = algo.valueBets.map(v => 
+                        `<div class="bg-emerald-600 px-3 py-1.5 rounded-lg shadow border border-emerald-400">Jouer le N°${v.num} ${v.nom}</div>`
+                    ).join('');
+                } else {
+                    livePredBlock.classList.remove('hidden');
+                    livePredList.innerHTML = `<span class="text-zinc-400 text-xs font-normal">Aucune anomalie détectée pour cette course. Ne rien jouer.</span>`;
                 }
 
                 algo.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
@@ -886,6 +914,8 @@
             let mIdx = document.getElementById('meetingSelect').value;
             let raceSelect = document.getElementById('raceSelect');
             raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
+            document.getElementById('livePredictionBlock').classList.add('hidden');
+            
             if (mIdx !== "") {
                 liveMeetingsData[mIdx].courses.forEach((c, cIdx) => {
                     let opt = document.createElement('option');
