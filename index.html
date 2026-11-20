@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V102 Value Betting (Auto & Alertes)</title>
+    <title>Turf - V103 Value Betting (Transitions Parfaites)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=40">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=40">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=41">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=41">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V102 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V103 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -263,7 +263,7 @@
                 <h2 class="text-xs font-bold uppercase text-blue-400 tracking-wider flex items-center">
                     <i class="fa-solid fa-flag-checkered mr-1.5"></i> Arrivée Officielle
                 </h2>
-                <span id="nextRaceTimer" class="text-[9px] text-blue-300 font-mono bg-blue-900/50 px-2 py-0.5 rounded border border-blue-500/30 hidden"></span>
+                <span id="nextRaceTimer" class="text-[10px] text-white font-bold bg-blue-600 px-2 py-0.5 rounded border border-blue-400 hidden shadow"></span>
             </div>
             <div id="arrivalList" class="flex flex-wrap gap-2 text-xs font-bold text-white">
                 <!-- Rempli dynamiquement -->
@@ -279,7 +279,7 @@
                         <tr class="bg-zinc-800/60 text-zinc-400 border-b border-zinc-800">
                             <th class="p-3">N° / Nom</th>
                             <th class="p-3">Cote Actuelle</th>
-                            <th class="p-3">Notre Cote <span class="text-[9px] font-normal text-zinc-500">(Estimée)</span></th>
+                            <th class="p-3">Notre Cote <span class="text-[9px] font-normal text-zinc-500">(Est.)</span></th>
                             <th class="p-3">Marge Value</th>
                         </tr>
                     </thead>
@@ -292,7 +292,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v102_value"; 
+        const STATS_VERSION = "v103_value"; 
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
@@ -307,10 +307,13 @@
         let isSyncingPeriod = false;
         let cancelSyncFlag = false;
         
+        // Zapping / Timer variables
         let autoTransitionDone = false;
+        let countdownInterval = null; 
         let pollingInterval = null;
         let checkAlarmInterval = null;
         
+        // Sound variables
         let isSoundEnabled = false;
         let audioCtx = null;
         let alertedValues = new Set();
@@ -318,6 +321,11 @@
         let alertedArrivals = new Set();
 
         const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+        function isRaceFinished(c) {
+            let st = String(c.statut || "").toUpperCase();
+            return st.includes('FIN') || st.includes('ARRIV') || st.includes('ANNUL');
+        }
 
         function getMeetingStartTime(meeting) {
             if (!meeting) return '';
@@ -563,6 +571,7 @@
             document.getElementById('meetingSelect').value = "";
             document.getElementById('livePredictionBlock').classList.add('hidden');
             document.getElementById('arrivalBlock').classList.add('hidden');
+            if (countdownInterval) clearInterval(countdownInterval);
             resetCountersUI();
             loadLivePmu();
         }
@@ -571,6 +580,7 @@
             document.getElementById('meetingSelect').value = "";
             document.getElementById('livePredictionBlock').classList.add('hidden');
             document.getElementById('arrivalBlock').classList.add('hidden');
+            if (countdownInterval) clearInterval(countdownInterval);
             resetCountersUI();
             loadLivePmu();
         }
@@ -578,6 +588,7 @@
         function resetAllCache() {
             validatedRacesCache = {};
             frozenRaceSnapshots = {};
+            if (countdownInterval) clearInterval(countdownInterval);
             showToast('Cache local vidé.', 'success');
             loadLivePmu();
         }
@@ -1009,7 +1020,7 @@
                 let courses = m.courses || m.races || m.lesCourses || [];
                 courses.forEach((c, cIdx) => {
                     if (c.heureDepart) {
-                        list.push({ mIdx, cIdx, time: new Date(c.heureDepart).getTime() });
+                        list.push({ mIdx, cIdx, time: new Date(c.heureDepart).getTime(), courseObj: c });
                     }
                 });
             });
@@ -1035,15 +1046,55 @@
                     let opt = document.createElement('option');
                     opt.value = idx;
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                    opt.textContent = `${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
+                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
+                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
                     raceSelect.appendChild(opt);
                 });
 
                 document.getElementById('raceSelect').value = nextRace.cIdx;
-                autoTransitionDone = false;
+                autoTransitionDone = false; // Reset car on arrive sur une nouvelle course
+                if (countdownInterval) clearInterval(countdownInterval);
                 fetchRaceData(false);
             } else {
                 showToast("Fin des courses de la journée !", "info");
+            }
+        }
+
+        function autoSelectCurrentRace() {
+            let now = Date.now();
+            let bestMIdx = 0, bestCIdx = 0;
+            let minDiff = Infinity;
+            let lastFinishedMIdx = 0, lastFinishedCIdx = 0;
+
+            for (let mIdx = 0; mIdx < liveMeetingsData.length; mIdx++) {
+                let m = liveMeetingsData[mIdx];
+                for (let cIdx = 0; cIdx < m.courses.length; cIdx++) {
+                    let c = m.courses[cIdx];
+                    if (c.heureDepart) {
+                        let diff = c.heureDepart - now;
+                        // Course qui part dans le futur ou qui a commencé il y a moins de 5 min
+                        if (diff > -300000 && diff < minDiff) {
+                            minDiff = diff;
+                            bestMIdx = mIdx;
+                            bestCIdx = cIdx;
+                        }
+                        if (isRaceFinished(c)) {
+                            lastFinishedMIdx = mIdx;
+                            lastFinishedCIdx = cIdx;
+                        }
+                    }
+                }
+            }
+
+            if (minDiff === Infinity) {
+                bestMIdx = lastFinishedMIdx;
+                bestCIdx = lastFinishedCIdx;
+            }
+
+            if (liveMeetingsData[bestMIdx]) {
+                document.getElementById('meetingSelect').value = bestMIdx;
+                onMeetingChange(true);
+                document.getElementById('raceSelect').value = bestCIdx;
             }
         }
 
@@ -1069,6 +1120,8 @@
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                 
                 liveMeetingsData = [];
+                let totalRemainingGlobal = 0;
+
                 rawReunions.forEach(r => {
                     let targetCourses = (r.courses || []).filter(c => {
                         let d = String(c.discipline || '').toUpperCase();
@@ -1085,24 +1138,28 @@
                     let select = document.getElementById('meetingSelect');
                     select.innerHTML = '<option value="">-- Choisissez un hippodrome --</option>';
                     let totalCourses = 0;
+
                     liveMeetingsData.forEach((r, idx) => {
+                        let remainingInMeeting = r.courses.filter(c => !isRaceFinished(c)).length;
+                        totalRemainingGlobal += remainingInMeeting;
+                        totalCourses += r.courses.length;
+                        
                         let opt = document.createElement('option');
                         opt.value = idx;
-                        totalCourses += r.courses.length;
                         let hipName = r.hippodrome?.libelleLong || r.hippodrome?.libelleCourt || r.hippodrome?.nom || 'Hippodrome';
                         let mStart = getMeetingStartTime(r);
                         let timeTag = mStart ? ` [${mStart}]` : '';
-                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${hipName}${timeTag} (${r.courses.length} courses)`;
+                        let remText = remainingInMeeting > 0 ? `, ${remainingInMeeting} à courir` : `, Terminée`;
+                        
+                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${hipName}${timeTag} (${r.courses.length} courses${remText})`;
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${totalCourses} courses)</span>`;
+                    let globalRemText = totalRemainingGlobal > 0 ? `, ${totalRemainingGlobal} à courir` : `, Journée terminée`;
+                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${totalCourses} courses${globalRemText})</span>`;
                     document.getElementById('btnResumeMissing').style.display = 'inline-block';
                     
-                    document.getElementById('meetingSelect').value = 0;
-                    onMeetingChange(true);
-                    
-                    document.getElementById('raceSelect').value = 0;
+                    autoSelectCurrentRace();
                     fetchRaceData(false);
                     calculateDailyStats(false);
                     startLivePolling();
@@ -1189,13 +1246,14 @@
                         timerSpan.classList.remove('hidden');
                         
                         let timeLeft = 30;
-                        timerSpan.textContent = `Prochaine course dans ${timeLeft}s`;
+                        timerSpan.textContent = `Bascule dans ${timeLeft}s`;
                         
-                        let countdown = setInterval(() => {
+                        if (countdownInterval) clearInterval(countdownInterval);
+                        countdownInterval = setInterval(() => {
                             timeLeft--;
-                            if(timerSpan) timerSpan.textContent = `Prochaine course dans ${timeLeft}s`;
+                            if(timerSpan) timerSpan.textContent = `Bascule dans ${timeLeft}s`;
                             if (timeLeft <= 0) {
-                                clearInterval(countdown);
+                                clearInterval(countdownInterval);
                                 if(timerSpan) timerSpan.classList.add('hidden');
                                 goToNextRace();
                             }
@@ -1258,14 +1316,16 @@
             raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
             document.getElementById('livePredictionBlock').classList.add('hidden');
             document.getElementById('arrivalBlock').classList.add('hidden');
-            autoTransitionDone = false;
+            if (countdownInterval) clearInterval(countdownInterval);
+            autoTransitionDone = true; 
             
             if (mIdx !== "") {
                 liveMeetingsData[mIdx].courses.forEach((c, cIdx) => {
                     let opt = document.createElement('option');
                     opt.value = cIdx;
                     let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                    opt.textContent = `${courseTime}C${c.numOrdre || (cIdx+1)} - ${c.libelle || c.nom}`;
+                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
+                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (cIdx+1)} - ${c.libelle || c.nom}`;
                     raceSelect.appendChild(opt);
                 });
                 raceSelect.value = 0;
@@ -1274,7 +1334,8 @@
         }
 
         function onRaceChange() { 
-            autoTransitionDone = false;
+            if (countdownInterval) clearInterval(countdownInterval);
+            autoTransitionDone = true; 
             fetchRaceData(false); 
         }
 
