@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V97 Value Betting (Automatisé)</title>
+    <title>Turf - V98 Value Betting (Auto & Alertes)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=35">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=35">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=36">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=36">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,12 +28,16 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V97 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">API Locale</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
             
             <div class="flex items-center space-x-1.5 sm:space-x-2">
+                <!-- BOUTON SONNERIES -->
+                <button id="btnSoundToggle" onclick="toggleSound()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 w-8 h-8 rounded-lg border border-zinc-700 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Activer/Désactiver les alertes sonores">
+                    <i class="fa-solid fa-bell-slash"></i>
+                </button>
                 <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 w-8 h-8 rounded-lg border border-emerald-500/30 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Historique & R.O.I">
                     <i class="fa-solid fa-chart-line"></i>
                 </button>
@@ -227,7 +231,7 @@
         <!-- SIGNAL EN DIRECT POUR LA COURSE SELECTIONNEE -->
         <div id="livePredictionBlock" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-emerald-900/20">
             <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                <i class="fa-solid fa-crosshairs mr-1.5"></i> Ordre d'Algorithme
+                <i class="fa-solid fa-crosshairs mr-1.5"></i> Ordre du Radar
             </h2>
             <div id="livePredictionList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
                 <!-- Rempli par javascript -->
@@ -274,7 +278,7 @@
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 10;
+        let MIN_VALUE_MARGIN = 10; // 10 par defaut pour le trot
         let MAX_ODD_FILTER = 20.0; 
 
         let liveMeetingsData = [];
@@ -282,40 +286,124 @@
         let isCalculatingStats = false;
         let isSyncingPeriod = false;
         let cancelSyncFlag = false;
-        
+
+        // Variables pour l'automatisation
         let autoTransitionDone = false;
-        let alertedRaces = new Set(); // Pour ne sonner qu'une fois par course
         let pollingInterval = null;
+        let checkAlarmInterval = null;
+        
+        // Variables Sonneries
+        let isSoundEnabled = false;
+        let audioCtx = null;
+        let alertedValues = new Set();
+        let alertedStarts = new Set();
+        let alertedArrivals = new Set();
 
         const sleep = ms => new Promise(res => setTimeout(res, ms));
 
-        // --- SONNERIE ---
-        function playAlertSound() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Note La (A5)
-                gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.5);
-            } catch(e) { console.log("Audio non supporté"); }
+        // --- GESTION DES SONNERIES ---
+        function toggleSound() {
+            isSoundEnabled = !isSoundEnabled;
+            let btn = document.getElementById('btnSoundToggle');
+            if (isSoundEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-bell text-amber-400"></i>';
+                btn.className = "bg-amber-900/40 hover:bg-amber-600 text-amber-400 w-8 h-8 rounded-lg border border-amber-500/40 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer";
+                
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                showToast("Alertes sonores activées", "success");
+                playTone('test');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-bell-slash text-zinc-400"></i>';
+                btn.className = "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 w-8 h-8 rounded-lg border border-zinc-700 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer";
+                showToast("Alertes sonores désactivées", "info");
+            }
+        }
+
+        function playTone(type) {
+            if (!isSoundEnabled) return;
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'test') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'value') {
+                // Gong Grave (Cheval à jouer)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                gain.gain.setValueAtTime(1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 1.5);
+            } else if (type === 'start') {
+                // Bip Bip (Course dans 2 min)
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0, audioCtx.currentTime + 0.3);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'arrival') {
+                // Jingle (Arrivée officielle)
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 1);
+            }
         }
 
         // --- DÉMARRAGE DU POLLING AUTOMATIQUE ---
         function startLivePolling() {
             if (pollingInterval) clearInterval(pollingInterval);
+            if (checkAlarmInterval) clearInterval(checkAlarmInterval);
+            
+            // Rechargement des données toutes les 20 secondes
             pollingInterval = setInterval(() => {
                 let mIdx = document.getElementById('meetingSelect').value;
                 let cIdx = document.getElementById('raceSelect').value;
                 if (mIdx !== "" && cIdx !== "") {
-                    fetchRaceData(true); // true = silent background fetch
+                    fetchRaceData(true); // true = invisible (sans effacer le tableau)
                 }
-            }, 20000); // Toutes les 20 secondes
+            }, 20000);
+
+            // Vérification de la cloche de départ toutes les 5 secondes
+            checkAlarmInterval = setInterval(() => {
+                let mIdx = document.getElementById('meetingSelect').value;
+                let cIdx = document.getElementById('raceSelect').value;
+                if (mIdx !== "" && cIdx !== "" && liveMeetingsData[mIdx]) {
+                    let race = liveMeetingsData[mIdx].courses[cIdx];
+                    if (race && race.heureDepart) {
+                        let diff = race.heureDepart - Date.now();
+                        let dateInput = document.getElementById('raceDate').value;
+                        let raceKey = `${dateInput}_R${liveMeetingsData[mIdx].numOfficiel}C${race.numOrdre}`;
+                        
+                        // Si on est entre 0 et 2 minutes avant le départ et pas encore sonné
+                        if (diff > 0 && diff <= 120000 && !alertedStarts.has(raceKey)) {
+                            alertedStarts.add(raceKey);
+                            playTone('start');
+                            showToast(`Le départ approche ! (R${liveMeetingsData[mIdx].numOfficiel}C${race.numOrdre})`, 'info');
+                        }
+                    }
+                }
+            }, 5000); 
         }
 
         function getLocalDateString(d = new Date()) {
@@ -364,17 +452,6 @@
                 return `${h}h${m}`;
             }
             return String(timeValue);
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
-            const toast = document.createElement('div');
-            let bgClass = type === 'success' ? 'bg-emerald-900/90 border-emerald-500/50 text-emerald-200' : (type === 'error' ? 'bg-red-900/90 border-red-500/50 text-red-200' : 'bg-zinc-800 border-zinc-700 text-white');
-            toast.className = `px-5 py-3 rounded-xl border shadow-2xl text-sm font-bold transition duration-300 mb-2 ${bgClass}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3500);
         }
 
         function loadStrategySettings() {
@@ -812,7 +889,8 @@
                                 totalStakes += FLAT_STAKE;
                                 if (g >= 1.0) {
                                     winsCount++;
-                                    totalNet += (g * FLAT_STAKE) - FLAT_STAKE;
+                                    let betNet = (g * FLAT_STAKE) - FLAT_STAKE;
+                                    totalNet += betNet;
                                 } else {
                                     totalNet -= FLAT_STAKE;
                                 }
@@ -859,7 +937,6 @@
                 let nextRace = sortedRaces[currentIndex + 1];
                 document.getElementById('meetingSelect').value = nextRace.mIdx;
                 
-                // Remplir le select des courses pour cette nouvelle réunion
                 let meeting = liveMeetingsData[nextRace.mIdx];
                 let raceSelect = document.getElementById('raceSelect');
                 raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
@@ -922,7 +999,8 @@
                         let opt = document.createElement('option');
                         opt.value = idx;
                         totalCourses += r.courses.length;
-                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${r.hippodrome?.nom || 'Hippodrome'} (${r.courses.length} courses)`;
+                        let hipName = r.hippodrome?.libelleLong || r.hippodrome?.libelleCourt || r.hippodrome?.nom || 'Hippodrome';
+                        opt.textContent = `R${r.numOfficiel || (idx+1)} - ${hipName} (${r.courses.length} courses)`;
                         select.appendChild(opt);
                     });
                     
@@ -930,8 +1008,12 @@
                     document.getElementById('btnResumeMissing').style.display = 'inline-block';
                     
                     document.getElementById('meetingSelect').value = 0;
-                    onMeetingChange();
-                    calculateDailyStats();
+                    onMeetingChange(true);
+                    
+                    // On choisit la première course par défaut ou on fait un "auto-focus" 
+                    document.getElementById('raceSelect').value = 0;
+                    fetchRaceData(false);
+                    calculateDailyStats(false);
                     startLivePolling();
                 } else {
                     document.getElementById('meetingSelect').innerHTML = '<option value="">Aucune réunion</option>';
@@ -970,7 +1052,7 @@
                 const data = await res.json();
                 let partants = data.participants || [];
                 
-                let hipName = meeting.hippodrome?.nom || 'Hippodrome';
+                let hipName = meeting.hippodrome?.libelleLong || meeting.hippodrome?.libelleCourt || meeting.hippodrome?.nom || 'Hippodrome';
                 document.getElementById('raceInfoDetails').innerHTML = `<span class="text-amber-400 font-bold">R${rNum}C${cNum} - ${hipName}</span> ${getDisciplineBadge(race.discipline)}`;
                 
                 let algo = computeAlgorithm(partants);
@@ -987,6 +1069,7 @@
                 let arrivalBlock = document.getElementById('arrivalBlock');
                 let arrivalList = document.getElementById('arrivalList');
                 let timerSpan = document.getElementById('nextRaceTimer');
+                let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
 
                 if (hasArrival) {
                     livePredBlock.classList.add('hidden'); // On cache le radar quand la course est finie
@@ -994,6 +1077,11 @@
                     arrivalList.innerHTML = arrivees.slice(0, 5).map(p => 
                         `<div class="bg-blue-900/60 px-2.5 py-1 rounded-lg border border-blue-500/40"><span class="text-blue-300">${p.ordreArrivee}e:</span> N°${p.numPmu || p.numOrdre} ${p.nom}</div>`
                     ).join('');
+
+                    if (!alertedArrivals.has(raceKey)) {
+                        alertedArrivals.add(raceKey);
+                        playTone('arrival');
+                    }
 
                     if (!autoTransitionDone) {
                         autoTransitionDone = true;
@@ -1016,18 +1104,21 @@
                     arrivalBlock.classList.add('hidden');
                     if (timerSpan) timerSpan.classList.add('hidden');
                     
-                    // AFFICHAGE DU MESSAGE "CHEVAL A JOUER" SI PAS ENCORE FINIE
+                    if (algo.processed.length === 0) {
+                        if (!isBackground) tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
+                        return;
+                    }
+
+                    // AFFICHAGE DU MESSAGE "CHEVAL A JOUER"
                     if (algo.valueBets.length > 0) {
                         livePredBlock.classList.remove('hidden');
                         livePredList.innerHTML = algo.valueBets.map(v => 
-                            `<div class="bg-emerald-600 px-3 py-1.5 rounded-lg shadow border border-emerald-400">Jouer le N°${v.num} ${v.nom}</div>`
+                            `<div class="bg-emerald-600 px-3 py-1.5 rounded-lg shadow border border-emerald-400 text-white">Jouer le N°${v.num} ${v.nom}</div>`
                         ).join('');
                         
-                        // SONNERIE SI VALUE DETECTEE ET NON DEJA SONNEE
-                        let raceKey = `${ddmmyyyy}_${rNum}_${cNum}`;
-                        if (!alertedRaces.has(raceKey)) {
-                            playAlertSound();
-                            alertedRaces.add(raceKey);
+                        if (!alertedValues.has(raceKey)) {
+                            playTone('value');
+                            alertedValues.add(raceKey);
                         }
                     } else {
                         livePredBlock.classList.remove('hidden');
@@ -1036,17 +1127,13 @@
                 }
 
                 if (!isBackground) {
-                    if (algo.processed.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
-                        return;
-                    }
                     algo.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
                         let tr = document.createElement('tr');
                         let isValue = algo.valueBets.some(v => v.num === p.num);
                         tr.className = isValue ? "bg-emerald-900/20 border-l-4 border-emerald-500" : "border-b border-zinc-800/50";
                         
                         let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
-                        if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold animate-pulse">VALUE</span>`;
+                        if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold animate-pulse shadow">VALUE</span>`;
 
                         tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay !== null ? p.coteDisplay : '--'}</td><td class="p-3 text-zinc-400">${(BET_TYPE === 'GAGNANT' ? p.trueOddGag : p.trueOddPla).toFixed(1)}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
                         tbody.appendChild(tr);
@@ -1085,7 +1172,7 @@
         }
 
         // --- SCAN COMPLET DE LA JOURNEE (API LOCALE) ---
-        async function calculateDailyStats() {
+        async function calculateDailyStats(isAuto = false) {
             let dateInput = document.getElementById('raceDate').value;
             if (!dateInput || liveMeetingsData.length === 0) return;
 
@@ -1097,7 +1184,7 @@
             
             let racesToScan = [];
             liveMeetingsData.forEach(m => {
-                let hipName = m.hippodrome?.nom || 'Hippodrome';
+                let hipName = m.hippodrome?.libelleLong || m.hippodrome?.libelleCourt || m.hippodrome?.nom || 'Hippodrome';
                 m.courses.forEach(c => {
                     let st = String(c.statut || '').toUpperCase();
                     if (!st.includes('ANNUL')) racesToScan.push({ rNum: m.numOfficiel, cNum: c.numOrdre, name: `R${m.numOfficiel}C${c.numOrdre}`, hipName: hipName });
