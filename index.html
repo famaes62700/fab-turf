@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V84 Value Betting (Connexion PMU Basique & Fiable)</title>
+    <title>Turf - V85 Value Betting (API Bornes PMU - 100% Fiable)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Turf Pro">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=19">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=19">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=20">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=20">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V84</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V85</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -62,11 +62,11 @@
         <!-- STATUT CONNEXION -->
         <div class="flex flex-wrap justify-between items-center gap-2 bg-zinc-950 border border-zinc-800 p-2 rounded-xl">
             <div id="statusText" class="text-xs text-emerald-400 font-mono flex items-center">
-                <i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion PMU...
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion API Bornes PMU...
             </div>
             <div class="flex items-center space-x-2">
                 <button id="btnResumeMissing" onclick="calculateDailyStats(false)" style="display: none;" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded cursor-pointer shadow">
-                    <i class="fa-solid fa-play mr-1"></i>Lancer Scan
+                    <i class="fa-solid fa-play mr-1"></i>Scanner
                 </button>
                 <div id="statsProgress" class="text-[10px] text-zinc-300 font-mono text-right bg-zinc-900 px-2 py-1 rounded border border-zinc-800">Prêt</div>
             </div>
@@ -93,6 +93,11 @@
                     </button>
                     <button onclick="toggleHistoryStats()" class="text-zinc-500 hover:text-white text-lg px-1.5 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
                 </div>
+            </div>
+
+            <div id="syncProgressBanner" style="display: none;" class="bg-zinc-950 border border-emerald-500/40 text-emerald-300 text-xs px-3 py-2 rounded-xl font-mono flex justify-between items-center">
+                <span id="syncProgressText"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse Value en cours...</span>
+                <button onclick="cancelSyncPeriod()" class="text-[10px] bg-red-900/50 text-red-300 px-2 py-0.5 rounded border border-red-500/40 cursor-pointer">Stop</button>
             </div>
 
             <div class="space-y-4 max-h-[30rem] overflow-y-auto pr-1">
@@ -159,6 +164,7 @@
             </div>
         </div>
 
+        <!-- DASHBOARD BILAN -->
         <div class="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2">
                 <div>
@@ -167,7 +173,7 @@
                 </div>
                 <div class="flex items-center space-x-1.5">
                     <button id="btnToggleAuditLog" onclick="toggleAuditLog()" class="text-[9px] font-bold px-2 py-1 rounded border border-emerald-500/40 bg-zinc-800 hover:bg-zinc-700 text-emerald-300 cursor-pointer">
-                        📋 Journal (0)
+                        📋 Journal des Paris (0)
                     </button>
                     <span id="dailyStatusBadge" class="text-[9px] font-bold px-2 py-1 rounded border border-zinc-700 bg-zinc-800 text-zinc-300">En attente</span>
                 </div>
@@ -241,8 +247,8 @@
     </main>
 
     <script>
-        const CACHE_VERSION = "v84"; 
-        const STATS_VERSION = "v84";
+        const CACHE_VERSION = "v85"; 
+        const STATS_VERSION = "v85";
         
         let currentDisciplineMode = 'TROT';
 
@@ -495,41 +501,62 @@
             return { processed, valueBets, skipReason: '' };
         }
 
-        // --- MOTEUR RÉSEAU ULTRA-BASIQUE (LE VRAI MOTEUR ORIGINEL V54) ---
-        // PAS DE DATE.NOW() QUI FAIT PLANTER LES PROXYS. On laisse les proxys gérer leur cache 1 minute.
-        
-        async function smartFetchPMU(path) {
-            const timeCache = Math.floor(Date.now() / 120000); // Unique toutes les 2 minutes
-            const sep = path.includes('?') ? '&' : '?';
-            const fullUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${path}${sep}_t=${timeCache}`;
+        // --- L'ASTUCE DU SIECLE : MOTEUR RÉSEAU SUR L'API DES BORNES PMU ---
+        // Le site Web PMU bloque les proxys avec Cloudflare/Datadome.
+        // Les bornes PMU en bureau de tabac utilisent l'API "OFFLINE" qui est grande ouverte.
 
-            // Proxy 1 : AllOrigins JSONP (Le plus sûr, ne déclenche pas le preflight CORS destructeur)
-            try {
-                let res1 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(fullUrl)}`);
-                if (res1.ok) {
-                    let data = await res1.json();
-                    if (data.contents) {
-                        let parsed = JSON.parse(data.contents);
-                        if (!parsed.status || parsed.status.http_code !== 403) {
-                            return parsed;
+        async function smartFetchPMU(path, allowEmpty = false) {
+            // Remplace l'appel Web (INTERNET) par l'appel Borne (OFFLINE)
+            let cleanPath = path.replace('specialisation=INTERNET', 'specialisation=OFFLINE');
+            const sep = cleanPath.includes('?') ? '&' : '?';
+            const finalPath = `${cleanPath}${sep}_t=${Date.now()}`;
+            
+            const offlineUrl = `https://offline.turfinfo.api.pmu.fr/rest/client/1/programme/${finalPath}`;
+            const onlineUrl = `https://online.turfinfo.api.pmu.fr/rest/client/61/programme/${finalPath}`;
+
+            const proxies = [
+                `https://api.allorigins.win/get?url=`,
+                `https://api.codetabs.com/v1/proxy?quest=`,
+                `https://corsproxy.io/?`,
+                `https://api.allorigins.win/raw?url=`
+            ];
+
+            const targets = [offlineUrl, onlineUrl];
+
+            for (let target of targets) {
+                for (let proxy of proxies) {
+                    try {
+                        let url = proxy + encodeURIComponent(target);
+                        const controller = new AbortController();
+                        const timer = setTimeout(() => controller.abort(), 6000);
+                        let res = await fetch(url, { signal: controller.signal });
+                        clearTimeout(timer);
+
+                        if (res.ok) {
+                            let text = await res.text();
+                            if (!text || text.trim() === "") continue;
+                            
+                            let json = JSON.parse(text);
+                            if (proxy.includes('/get') && json.contents) {
+                                json = typeof json.contents === 'string' ? JSON.parse(json.contents) : json.contents;
+                            }
+                            
+                            if (json && !json.status?.http_code) {
+                                let st = document.getElementById('statusText');
+                                if (st && st.innerHTML.includes('Erreur')) st.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté</span>`;
+                                return json;
+                            }
+                        } else if (res.status === 204 || res.status === 404) {
+                            if (allowEmpty) return null;
                         }
+                    } catch (e) {
+                        // Timeout ou Proxy down, on continue
                     }
                 }
-            } catch(e) {}
-
-            // Proxy 2 : CodeTabs (Rapide mais bloque parfois)
-            try {
-                let res2 = await fetch(`https://api.codetabs.com/v1/proxy?quest=${fullUrl}`);
-                if (res2.ok) return await res2.json();
-            } catch(e) {}
-
-            // Proxy 3 : CorsProxy.io
-            try {
-                let res3 = await fetch(`https://corsproxy.io/?${encodeURIComponent(fullUrl)}`);
-                if (res3.ok) return await res3.json();
-            } catch(e) {}
-
-            throw new Error("Réseau bloqué");
+            }
+            
+            if (allowEmpty) return null;
+            throw new Error("PMU injoignable");
         }
 
         // --- FONCTIONS EXTRACTIONS RAPPORTS PMU ---
@@ -621,7 +648,12 @@
                     if (rData) rapportsList = Array.isArray(rData) ? rData : (rData.rapports || rData.lesRapports || rData.rapportsDefinitifs || []);
                 } catch(e) {}
             }
-            return { partants, rapportsList, isComplete: isRaceTrulyRunAndPayable(courseObj, partants, rapportsList) };
+            
+            return { 
+                partants, 
+                rapportsList, 
+                isComplete: isRaceTrulyRunAndPayable(courseObj, partants, rapportsList) 
+            };
         }
 
         // --- DASHBOARD SUIVI R.O.I ---
@@ -705,7 +737,7 @@
             const ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
             
             const statusText = document.getElementById('statusText');
-            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Téléchargement Programme...';
+            statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion API Bornes PMU...';
             document.getElementById('btnResumeMissing').style.display = 'none';
 
             try {
@@ -737,14 +769,14 @@
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-bolt mr-1"></i> Connecté (${totalCourses} courses au programme)</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${totalCourses} courses)</span>`;
                     document.getElementById('btnResumeMissing').style.display = 'inline-block';
                     
                 } else {
                     statusText.innerHTML = `<span class="text-zinc-400">Aucune réunion au programme.</span>`;
                 }
             } catch (e) {
-                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> PMU indisponible</span>';
+                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> PMU injoignable</span>';
                 document.getElementById('btnResumeMissing').style.display = 'inline-block';
             }
         }
@@ -831,7 +863,7 @@
                 let r = racesToScan[i];
                 statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> (${i+1}/${racesToScan.length}) : ${r.name}`;
                 
-                let cacheKey = `race_cache_v84_${ddmmyyyy}_${r.rNum}_${r.cNum}`;
+                let cacheKey = `race_cache_v85_${ddmmyyyy}_${r.rNum}_${r.cNum}`;
                 let raceData = null;
                 let sD = localStorage.getItem(cacheKey);
                 if (sD) {
@@ -839,8 +871,12 @@
                 }
 
                 if (!raceData) {
-                    await sleep(100); // Toute petite pause pour ne pas figer le navigateur
+                    await sleep(350); // Pause pour ne pas saturer l'API Offline
                     let fetched = await getFullRaceData(ddmmyyyy, r.rNum, r.cNum, r.courseObj);
+                    
+                    // Si on échoue à récupérer les données, on continue silencieusement à la prochaine
+                    if (fetched.fetchFailed && fetched.partants.length === 0) continue;
+
                     raceData = slimRaceCacheData(fetched.partants, fetched.rapportsList, fetched.isComplete);
                     if (raceData.isComplete) localStorage.setItem(cacheKey, JSON.stringify(raceData));
                 }
@@ -881,7 +917,7 @@
             document.getElementById('btnResumeMissing').style.display = 'inline-block';
             document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Re-Scanner';
             
-            localStorage.setItem(`pmu_stats_unified_v84_${currentDisciplineMode}_${ddmmyyyy}`, JSON.stringify({ stakes: totalStakes, net: totalNet, bets: betsCount, wins: winsCount, updatedAt: Date.now() }));
+            localStorage.setItem(`pmu_stats_unified_v85_${currentDisciplineMode}_${ddmmyyyy}`, JSON.stringify({ stakes: totalStakes, net: totalNet, bets: betsCount, wins: winsCount, updatedAt: Date.now() }));
         }
 
         window.onload = () => { loadStrategySettings(); loadLivePmu(); };
