@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V103 Value Betting (Transitions Parfaites)</title>
+    <title>Turf - V104 Value Betting (Transitions Corrigées)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=41">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=41">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=42">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=42">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V103 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V104 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -292,7 +292,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v103_value"; 
+        const STATS_VERSION = "v104_value"; 
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
@@ -303,6 +303,7 @@
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
         let frozenRaceSnapshots = {}; 
+        
         let isCalculatingStats = false;
         let isSyncingPeriod = false;
         let cancelSyncFlag = false;
@@ -348,6 +349,7 @@
                 let dep = new Date(race.heureDepart).getTime();
                 if (!isNaN(dep) && Date.now() >= dep) return true;
             }
+            // Ignore les disqualifiés d'avant-course qui ont parfois l'ordre '99'
             if (partants.some(p => p.ordreArrivee && p.ordreArrivee > 0 && p.ordreArrivee < 20)) {
                 return true;
             }
@@ -1052,7 +1054,6 @@
                 });
 
                 document.getElementById('raceSelect').value = nextRace.cIdx;
-                autoTransitionDone = false; // Reset car on arrive sur une nouvelle course
                 if (countdownInterval) clearInterval(countdownInterval);
                 fetchRaceData(false);
             } else {
@@ -1072,7 +1073,7 @@
                     let c = m.courses[cIdx];
                     if (c.heureDepart) {
                         let diff = c.heureDepart - now;
-                        // Course qui part dans le futur ou qui a commencé il y a moins de 5 min
+                        // On prend la course la plus proche dans le futur, ou partie depuis moins de 5 min
                         if (diff > -300000 && diff < minDiff) {
                             minDiff = diff;
                             bestMIdx = mIdx;
@@ -1086,6 +1087,7 @@
                 }
             }
 
+            // Si aucune course n'est à venir, on se cale sur la dernière course terminée
             if (minDiff === Infinity) {
                 bestMIdx = lastFinishedMIdx;
                 bestCIdx = lastFinishedCIdx;
@@ -1093,7 +1095,18 @@
 
             if (liveMeetingsData[bestMIdx]) {
                 document.getElementById('meetingSelect').value = bestMIdx;
-                onMeetingChange(true);
+                
+                let raceSelect = document.getElementById('raceSelect');
+                raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
+                liveMeetingsData[bestMIdx].courses.forEach((c, idx) => {
+                    let opt = document.createElement('option');
+                    opt.value = idx;
+                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
+                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
+                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
+                    raceSelect.appendChild(opt);
+                });
+
                 document.getElementById('raceSelect').value = bestCIdx;
             }
         }
@@ -1210,9 +1223,12 @@
                 let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0 && p.ordreArrivee < 20).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
                 let hasArrival = arrivees.length > 0;
 
-                // Empeche de zapper si l'utilisateur clique MANUELLEMENT sur une course passée pour regarder les résultats
-                if (!isBackground && hasArrival) {
-                    autoTransitionDone = true;
+                if (!isBackground) {
+                    if (hasArrival) {
+                        autoTransitionDone = true; 
+                    } else {
+                        autoTransitionDone = false; 
+                    }
                 }
 
                 let runningBadge = (isStarted && !hasArrival)
@@ -1308,35 +1324,6 @@
             } catch(e) {
                 if (!isBackground) document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Échec de l'API locale.</td></tr>`;
             }
-        }
-
-        function onMeetingChange(preventFetch = false) {
-            let mIdx = document.getElementById('meetingSelect').value;
-            let raceSelect = document.getElementById('raceSelect');
-            raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
-            document.getElementById('livePredictionBlock').classList.add('hidden');
-            document.getElementById('arrivalBlock').classList.add('hidden');
-            if (countdownInterval) clearInterval(countdownInterval);
-            autoTransitionDone = true; 
-            
-            if (mIdx !== "") {
-                liveMeetingsData[mIdx].courses.forEach((c, cIdx) => {
-                    let opt = document.createElement('option');
-                    opt.value = cIdx;
-                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
-                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (cIdx+1)} - ${c.libelle || c.nom}`;
-                    raceSelect.appendChild(opt);
-                });
-                raceSelect.value = 0;
-                if(!preventFetch) fetchRaceData(false);
-            }
-        }
-
-        function onRaceChange() { 
-            if (countdownInterval) clearInterval(countdownInterval);
-            autoTransitionDone = true; 
-            fetchRaceData(false); 
         }
 
         async function calculateDailyStats(isAuto = false) {
