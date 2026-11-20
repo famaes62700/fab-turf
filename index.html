@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V105 Value Betting (UI Épurée)</title>
+    <title>Turf - V106 Value Betting (API Locale Corrigée)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=43">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=43">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=44">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=44">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V105 Auto</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V106 Auto</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -294,7 +294,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v105_value"; 
+        const STATS_VERSION = "v106_value"; 
         
         let currentDisciplineMode = 'TROT';
         let FLAT_STAKE = 10.0;
@@ -938,7 +938,8 @@
 
                     if (bannerText) bannerText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Calcul du ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} (${idx+1}/${datesToSync.length})...`;
                     
-                    let data = await fetch(`/api/courses?date=${ddmmyyyy}`).then(r => r.json()).catch(() => null);
+                    let res = await fetch(`/api/courses?date=${ddmmyyyy}`);
+                    let data = await res.json();
                     if (!data) continue;
 
                     let rawR = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
@@ -962,7 +963,8 @@
                                 raceData = validatedRacesCache[cacheKey];
                             } else {
                                 try {
-                                    const rData = await fetch(`/api/courses?date=${ddmmyyyy}&r=${m.numOfficiel}&c=${c.numOrdre}`).then(r => r.json());
+                                    const rRes = await fetch(`/api/courses?date=${ddmmyyyy}&r=${m.numOfficiel}&c=${c.numOrdre}`);
+                                    const rData = await rRes.json();
                                     let partants = rData.participants || [];
                                     let rapportsList = Array.isArray(rData.rapports) ? rData.rapports : (rData.rapports?.lesRapports || rData.rapports?.rapports || []);
                                     raceData = { partants, rapportsList, isComplete: rapportsList.length > 0 };
@@ -982,7 +984,8 @@
                                 totalStakes += FLAT_STAKE;
                                 if (g >= 1.0) {
                                     winsCount++;
-                                    totalNet += (g * FLAT_STAKE) - FLAT_STAKE;
+                                    let betNet = (g * FLAT_STAKE) - FLAT_STAKE;
+                                    totalNet += betNet;
                                 } else {
                                     totalNet -= FLAT_STAKE;
                                 }
@@ -996,11 +999,107 @@
                     showHistoryStats();
                 }
                 if (!cancelSyncFlag) showToast(`Cumul ${periodType} synchronisé !`, "success");
-            } catch (e) {}
+            } catch (e) {
+                console.error("Erreur Sync", e);
+            }
 
             if (banner) banner.style.display = 'none';
             isSyncingPeriod = false;
             calculateDailyStats(false);
+        }
+
+        function getSortedRacesList() {
+            let list = [];
+            liveMeetingsData.forEach((m, mIdx) => {
+                let courses = m.courses || m.races || m.lesCourses || [];
+                courses.forEach((c, cIdx) => {
+                    if (c.heureDepart) {
+                        list.push({ mIdx, cIdx, time: new Date(c.heureDepart).getTime(), courseObj: c });
+                    }
+                });
+            });
+            return list.sort((a, b) => a.time - b.time);
+        }
+
+        function goToNextRace() {
+            let mIdx = parseInt(document.getElementById('meetingSelect').value, 10);
+            let cIdx = parseInt(document.getElementById('raceSelect').value, 10);
+            if (isNaN(mIdx) || isNaN(cIdx)) return;
+
+            let sortedRaces = getSortedRacesList();
+            let currentIndex = sortedRaces.findIndex(r => r.mIdx === mIdx && r.cIdx === cIdx);
+
+            if (currentIndex !== -1 && currentIndex + 1 < sortedRaces.length) {
+                let nextRace = sortedRaces[currentIndex + 1];
+                document.getElementById('meetingSelect').value = nextRace.mIdx;
+                
+                let meeting = liveMeetingsData[nextRace.mIdx];
+                let raceSelect = document.getElementById('raceSelect');
+                raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
+                meeting.courses.forEach((c, idx) => {
+                    let opt = document.createElement('option');
+                    opt.value = idx;
+                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
+                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
+                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
+                    raceSelect.appendChild(opt);
+                });
+
+                document.getElementById('raceSelect').value = nextRace.cIdx;
+                autoTransitionDone = false;
+                if (countdownInterval) clearInterval(countdownInterval);
+                fetchRaceData(false);
+            } else {
+                showToast("Fin des courses de la journée !", "info");
+            }
+        }
+
+        function autoSelectCurrentRace() {
+            let now = Date.now();
+            let bestMIdx = 0, bestCIdx = 0;
+            let minDiff = Infinity;
+            let lastFinishedMIdx = 0, lastFinishedCIdx = 0;
+
+            for (let mIdx = 0; mIdx < liveMeetingsData.length; mIdx++) {
+                let m = liveMeetingsData[mIdx];
+                for (let cIdx = 0; cIdx < m.courses.length; cIdx++) {
+                    let c = m.courses[cIdx];
+                    if (c.heureDepart) {
+                        let diff = c.heureDepart - now;
+                        if (diff > -300000 && diff < minDiff) {
+                            minDiff = diff;
+                            bestMIdx = mIdx;
+                            bestCIdx = cIdx;
+                        }
+                        if (isRaceFinished(c)) {
+                            lastFinishedMIdx = mIdx;
+                            lastFinishedCIdx = cIdx;
+                        }
+                    }
+                }
+            }
+
+            if (minDiff === Infinity) {
+                bestMIdx = lastFinishedMIdx;
+                bestCIdx = lastFinishedCIdx;
+            }
+
+            if (liveMeetingsData[bestMIdx]) {
+                document.getElementById('meetingSelect').value = bestMIdx;
+                
+                let raceSelect = document.getElementById('raceSelect');
+                raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
+                liveMeetingsData[bestMIdx].courses.forEach((c, idx) => {
+                    let opt = document.createElement('option');
+                    opt.value = idx;
+                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
+                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
+                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (idx+1)} - ${c.libelle || c.nom}`;
+                    raceSelect.appendChild(opt);
+                });
+
+                document.getElementById('raceSelect').value = bestCIdx;
+            }
         }
 
         async function loadLivePmu() {
@@ -1019,7 +1118,6 @@
 
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}`);
-                if (!res.ok) throw new Error("API Locale indisponible");
                 const data = await res.json();
                 
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
@@ -1071,6 +1169,7 @@
                     statusText.innerHTML = `<span class="text-zinc-400">Aucune réunion au programme.</span>`;
                 }
             } catch (e) {
+                console.error("Détail erreur:", e);
                 statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Erreur API Locale</span>';
                 document.getElementById('btnResumeMissing').style.display = 'inline-block';
                 document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Réessayer';
@@ -1210,6 +1309,35 @@
             }
         }
 
+        function onMeetingChange(preventFetch = false) {
+            let mIdx = document.getElementById('meetingSelect').value;
+            let raceSelect = document.getElementById('raceSelect');
+            raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
+            document.getElementById('livePredictionBlock').classList.add('hidden');
+            document.getElementById('arrivalBlock').classList.add('hidden');
+            if (countdownInterval) clearInterval(countdownInterval);
+            autoTransitionDone = true; 
+            
+            if (mIdx !== "") {
+                liveMeetingsData[mIdx].courses.forEach((c, cIdx) => {
+                    let opt = document.createElement('option');
+                    opt.value = cIdx;
+                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
+                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
+                    opt.textContent = `${statusMarker}${courseTime}C${c.numOrdre || (cIdx+1)} - ${c.libelle || c.nom}`;
+                    raceSelect.appendChild(opt);
+                });
+                raceSelect.value = 0;
+                if(!preventFetch) fetchRaceData(false);
+            }
+        }
+
+        function onRaceChange() { 
+            if (countdownInterval) clearInterval(countdownInterval);
+            autoTransitionDone = true; 
+            fetchRaceData(false); 
+        }
+
         async function calculateDailyStats(isAuto = false) {
             let dateInput = document.getElementById('raceDate').value;
             if (!dateInput || liveMeetingsData.length === 0) return;
@@ -1223,9 +1351,11 @@
             let racesToScan = [];
             liveMeetingsData.forEach(m => {
                 let hipName = m.hippodrome?.libelleLong || m.hippodrome?.libelleCourt || m.hippodrome?.nom || 'Hippodrome';
+                let mStart = getMeetingStartTime(m);
+                let timeTag = mStart ? ` [${mStart}]` : '';
                 m.courses.forEach(c => {
                     let st = String(c.statut || '').toUpperCase();
-                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: m.numOfficiel, cNum: c.numOrdre, name: `R${m.numOfficiel}C${c.numOrdre}`, hipName: hipName });
+                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: m.numOfficiel, cNum: c.numOrdre, name: `R${m.numOfficiel}C${c.numOrdre}`, hipName: `${hipName}${timeTag}` });
                 });
             });
 
