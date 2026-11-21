@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V10 Modèle Relatif Pro)</title>
+    <title>Turf - V115 Value Betting (V11 Braquage Gagnant)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,8 +27,8 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-network-wired mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V10 RELATIF</span>
+                    <i class="fa-solid fa-sack-dollar mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V11 GAGNANT</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -138,7 +138,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V10 Relatif)
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V11 Gagnant)
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
@@ -149,16 +149,16 @@
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Mise Fixe / Pari (€)</span>
                     <input type="number" id="inputFlatStake" min="1" max="1000" step="1" value="30" class="bg-transparent text-emerald-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
-                <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
-                    <span class="text-[9px] text-zinc-400 uppercase font-bold">Pari Recherché</span>
+                <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/50 flex flex-col">
+                    <span class="text-[9px] text-amber-400 uppercase font-bold">Pari Recherché</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
-                        <option value="PLACE" selected>Simple Placé (Sécurisé)</option>
-                        <option value="GAGNANT">Simple Gagnant (Risqué)</option>
+                        <option value="GAGNANT" selected>Simple Gagnant (Max ROI)</option>
+                        <option value="PLACE">Simple Placé (Désactivé)</option>
                     </select>
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="20" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="25" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
@@ -308,14 +308,14 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v10_relative"; 
+        const STATS_VERSION = "v115_v11_gagnant"; 
         
-        // --- PARAMETRES PAR DEFAUT "MODE V10 RELATIF - LA METHODE BOOKMAKER" ---
+        // --- PARAMETRES PAR DEFAUT "MODE V11 GAGNANT - LE BRAQUAGE" ---
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 30.0;
-        let BET_TYPE = 'PLACE'; 
-        let MIN_VALUE_MARGIN = 20; // 20% d'erreur du PMU exigée
-        let MAX_ODD_FILTER = 12.0; // Fenêtre Placé idéale (4.5 à 12.0)
+        let BET_TYPE = 'GAGNANT'; // OBLIGATOIRE POUR CE MODE
+        let MIN_VALUE_MARGIN = 25; // Exigence élevée pour absorber les écarts du simple gagnant
+        let MAX_ODD_FILTER = 12.0; // Au-delà de 12, les séries de pertes sont trop longues
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -564,7 +564,7 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 30;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 25;
             MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 12;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
@@ -639,7 +639,7 @@
         }
 
         // ==========================================
-        //  NOUVEAU BLOC V10 - CALCUL RELATIF (MÉTHODE BOOKMAKER)
+        //  NOUVEAU BLOC V11 - LE BRAQUAGE GAGNANT
         // ==========================================
 
         function getCoteSafely(p) {
@@ -648,101 +648,142 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        // 1. Calcul du score INTRINSÈQUE du cheval
-        function getHorseScore(musique) {
-            if (!musique) return 10; // Inédit = score très faible de base
+        // 1. Musique V11 : Mémoire très courte, Podium exigé
+        function evaluateMusiqueV11(musique) {
+            if (!musique) return 0.5;
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
-            
-            let score = 50; // Base de départ
-            let weight = 1.0;
-            
-            // On analyse les 5 dernières courses
-            for (let i = 0; i < Math.min(tokens.length, 5); i++) {
+            if (tokens.length === 0) return 0.5;
+
+            let score = 0;
+            // On note sur 3 courses max
+            for (let i = 0; i < Math.min(tokens.length, 3); i++) {
                 let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
-                if (res === '1') score += 40 * weight;
-                else if (res === '2') score += 25 * weight;
-                else if (res === '3') score += 15 * weight;
-                else if (res === '4') score += 10 * weight;
-                else if (res === '5') score += 5 * weight;
-                else if (res.includes('D') || res.includes('A')) score -= 20 * weight; // Lourde pénalité pour les fautes
+                let weight = (3 - i); // La dernière course vaut x3
                 
-                weight -= 0.15; // Le passé lointain compte moins
+                if (res === '1') score += 10 * weight;
+                else if (res === '2') score += 7 * weight;
+                else if (res === '3') score += 5 * weight;
             }
-            return Math.max(5, score); // Plancher à 5 points
+            
+            // Score max ~ 22. 
+            // Si le cheval n'a fait aucun podium, score = 0 -> multiplicateur 0.8
+            return 0.8 + (score / 22) * 0.5; // Multiplicateur max = 1.3
         }
 
-        // 2. Le Moteur de Calcul Global
+        // 2. Pénalité DAI : Intransigeance totale
+        function penaltyDAIV11(musique) {
+            if (!musique) return 0.8;
+            let clean = String(musique).replace(/\(\d+\)/g, '');
+            let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
+            if (tokens.length === 0) return 0.8;
+
+            // Une SEULE disqualification dans les 3 dernières courses = On ne le joue pas Gagnant.
+            for (let i = 0; i < Math.min(tokens.length, 3); i++) {
+                let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
+                if (res.includes('D') || res.includes('A')) return 0.1; // Effondrement de la proba
+            }
+            
+            return 1.1; // Bonus de sécurité
+        }
+
+        // 3. Algorithme V11 - Gagnant Strict
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
-            // Filtres de terrain absolus : pas de courses poubelles
-            if (validPartants.length < 8) return { processed: [], valueBets: [] }; // Pas assez de places payées
-            if (validPartants.length > 15) return { processed: [], valueBets: [] }; // Trop de trafic (boucherie)
+            // Les courses avec trop peu de partants (moins de 10) sont souvent des pièges tactiques
+            if (validPartants.length < 10) return { processed: [], valueBets: [] };
 
-            // Étape 1 : Calculer la force totale de la course
-            let totalRaceScore = 0;
-            let processedRaw = validPartants.map(p => {
-                let score = getHorseScore(p.musique || p.form);
-                totalRaceScore += score;
-                return { ...p, rawScore: score };
-            });
+            // LA REGLE D'OR DU GAGNANT : S'il y a un cheval qui écrase la course (cote < 2.5),
+            // il gagne plus de 45% du temps. Ce n'est pas rentable d'essayer de le battre. On saute la course.
+            let minCoteInRace = Math.min(...validPartants.map(p => getCoteSafely(p)));
+            if (minCoteInRace < 2.5) return { processed: [], valueBets: [] }; 
 
             let hasAnyRealOdd = false;
             
-            let processed = processedRaw.map(p => {
+            let processed = validPartants.map(p => {
                 let num = parseInt(p.numPmu || p.numOrdre, 10);
+                let musique = p.musique || p.form || "0a";
                 let coteDir = getCoteSafely(p);
+
+                let rawMatin = p.dernierRapportReference?.rapport || coteDir;
+                let coteMatin = parseFloat(String(rawMatin).replace(',', '.')) || coteDir;
+
                 if (coteDir < 900) hasAnyRealOdd = true;
 
-                // --- LE SECRET DE LA V10 ---
-                // Si le cheval a 150 points sur un total de 1000 points dans la course,
-                // sa "Vraie Probabilité" mathématique est de 15%.
-                let trueProbGag = p.rawScore / totalRaceScore;
-                
-                // La Probabilité estimée par le public (avec taxe PMU de 15%)
-                let pmuProbGag = 0.85 / coteDir;
-                
-                // Calcul de l'avantage (Edge) du pari
-                let edge = (trueProbGag / pmuProbGag) - 1;
-                let valueMargin = edge * 100;
+                // SMART MONEY : Le vrai indicateur
+                let dropRatio = coteMatin / coteDir;
 
-                // Estimations des cotes pour affichage
-                let divisor = validPartants.length >= 12 ? 3.5 : 3.0;
-                let estPlace = 1 + ((coteDir - 1) / divisor);
+                let baseProb = 0.85 / coteDir; // En Simple Gagnant, le taux de retour PMU est d'environ 85%
+
+                // Modificateurs
+                let formMult = evaluateMusiqueV11(musique);
+                let daiMult = penaltyDAIV11(musique);
                 
-                // Pour l'affichage, on reconvertit la vraie proba en "Vraie Cote"
+                // On applique le Smart Money directement (S'il a baissé de 20%, dropRatio = 1.2)
+                let marketMult = 1.0;
+                if (dropRatio >= 1.15) {
+                    marketMult = dropRatio; // L'argent est intelligent, on suit aveuglément la baisse
+                } else {
+                    marketMult = 0.70; // Pas de baisse = Pas d'info favorable de l'entourage
+                }
+
+                // Vraie Probabilité
+                let trueProbGag = baseProb * formMult * daiMult * marketMult;
+                trueProbGag = Math.max(0.01, Math.min(0.70, trueProbGag));
+                
+                // Marge Value mathématique
                 let trueOddGag = 1 / trueProbGag;
-                let trueOddPla = 1 + ((trueOddGag - 1) / divisor);
+                let margin = ((coteDir / trueOddGag) - 1) * 100;
+
+                // (On garde le code Placé pour que l'interface ne plante pas, mais on ne l'utilise plus)
+                let estPlace = 1 + ((coteDir - 1) / 4);
+                let trueOddPla = 1 + ((trueOddGag - 1) / 4);
+
+                // Analyse podium récent (pour le filtre final)
+                let cleanMusique = String(musique).replace(/\(\d+\)/g, '');
+                let tokens = cleanMusique.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
+                let hasRecentPodium = false;
+                for (let i = 0; i < Math.min(tokens.length, 3); i++) {
+                    let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
+                    if (['1', '2', '3'].includes(res)) hasRecentPodium = true;
+                }
 
                 return {
                     num, nom: p.nom || "Cheval", musique: p.musique,
                     coteDisplay: coteDir < 900 ? coteDir.toFixed(1) : "--",
                     coteDir, estPlace, trueOddGag, trueOddPla,
-                    valueMargin: valueMargin, 
+                    valueMargin: margin, 
                     ordreArrivee: p.ordreArrivee ? parseInt(p.ordreArrivee, 10) : 0,
-                    trueProb: trueProbGag
+                    trueProb: trueProbGag, dropRatio, hasRecentPodium
                 };
             });
 
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
             
             let valueBets = processed.filter(p => {
-                // Règle N°1 : La cote parfaite
-                if (p.coteDir < 4.5 || p.coteDir > 12.0) return false; 
+                // Règle 1 : La Fenêtre d'Or. 
+                // En dessous de 5.0, un gagnant ne couvre pas les séries de pertes inévitables.
+                // Au dessus de 12.0, le cheval gagne trop rarement.
+                if (p.coteDir < 5.0 || p.coteDir > 12.0) return false; 
                 if (p.coteDir > MAX_ODD_FILTER) return false;
                 
-                // Règle N°2 : La Marge de sécurité
+                // Règle 2 : L'obligation d'argent
+                if (p.dropRatio < 1.15) return false; // Minimum 15% de baisse de cote exigée
+                
+                // Règle 3 : Le cheval doit avoir prouvé sa forme
+                if (!p.hasRecentPodium) return false;
+                
+                // Règle 4 : Marge Value requise
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
                 
-                // Règle N°3 : Le cheval doit avoir mathématiquement au moins 8% de chances pures
-                // Ça élimine les chevaux à 12/1 dans des courses où un Crack truste 50% des points de la course.
-                if (p.trueProb < 0.08) return false;
+                // Règle 5 : Exigence mathématique absolue (Au moins 12% de chance pure de gagner)
+                if (p.trueProb < 0.12) return false;
                 
                 return true;
             })
             .sort((a, b) => b.valueMargin - a.valueMargin)
-            .slice(0, 1);
+            .slice(0, 1); // Toujours 1 seul cheval max par course
 
             return { processed, valueBets };
         }
@@ -1381,7 +1422,7 @@
                     if (timerSpan) timerSpan.classList.add('hidden');
                     
                     if (algo.processed.length === 0) {
-                        if (!isBackground) tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes.</td></tr>`;
+                        if (!isBackground) tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes ou Ultra-Favori présent.</td></tr>`;
                         return;
                     }
 
@@ -1537,10 +1578,16 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
-            // Sécurité V10
-            if (document.getElementById('selectBetType').value !== 'PLACE') {
-                 document.getElementById('selectBetType').value = 'PLACE';
-                 BET_TYPE = 'PLACE';
+            // Sécurité V11 - Forcer les bons paramètres
+            if (document.getElementById('selectBetType').value !== 'GAGNANT') {
+                 document.getElementById('selectBetType').value = 'GAGNANT';
+                 BET_TYPE = 'GAGNANT';
+            }
+            if (document.getElementById('inputMaxOdd').value > 12) {
+                 document.getElementById('inputMaxOdd').value = 12;
+            }
+            if (document.getElementById('inputMinMargin').value < 25) {
+                 document.getElementById('inputMinMargin').value = 25;
             }
             loadLivePmu(); 
         };
