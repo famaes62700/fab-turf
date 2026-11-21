@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V13 Placé Objectif 500€)</title>
+    <title>Turf - V115 Value Betting (V14 Matrice 45%)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,8 +27,8 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-crosshairs mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V13 PLACÉ 500€</span>
+                    <i class="fa-solid fa-bullseye mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V14 PLACÉ 45%</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -138,7 +138,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V13 Placé Sécurisé)
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V14 Matrice 45%)
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
@@ -158,7 +158,7 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="15" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="20" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
@@ -295,7 +295,7 @@
                         <tr class="bg-zinc-800/60 text-zinc-400 border-b border-zinc-800">
                             <th class="p-3">N° / Nom</th>
                             <th class="p-3">Cote Actuelle</th>
-                            <th class="p-3">Notre Est. Placé <span class="text-[9px] font-normal text-zinc-500">(Moyenne)</span></th>
+                            <th class="p-3">Notre Probabilité <span class="text-[9px] font-normal text-zinc-500">(Math.)</span></th>
                             <th class="p-3">Marge Value</th>
                         </tr>
                     </thead>
@@ -308,14 +308,14 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v13_place500"; 
+        const STATS_VERSION = "v115_v14_place45"; 
         
-        // --- PARAMETRES PAR DEFAUT "MODE V13 - PLACE SECURISE 500€" ---
+        // --- PARAMETRES PAR DEFAUT "MODE V14 - MATRICE 45% PLACE" ---
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 30.0;
-        let BET_TYPE = 'PLACE'; // On repasse en Simple Placé
-        let MIN_VALUE_MARGIN = 15; // 15% suffit sur du placé si les cotes sont bien encadrées
-        let MAX_ODD_FILTER = 14.0; // Fenêtre Placé : 6.0 à 14.0
+        let BET_TYPE = 'PLACE'; // Placé exclusif
+        let MIN_VALUE_MARGIN = 20; 
+        let MAX_ODD_FILTER = 14.0; // Borne haute stricte
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -554,7 +554,7 @@
 
         function updateStrategyLabelsUI() {
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en Simple Placé (Cible 500€/mois)`;
+            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en Simple Placé (Cible 45% Réussite)`;
             
             let lbl = document.getElementById('histModeLabel');
             if(lbl) lbl.textContent = currentDisciplineMode === 'TROT' ? '100% Trot' : 'Toutes Courses';
@@ -563,7 +563,7 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 30;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 15;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
             MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 14;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
@@ -638,7 +638,7 @@
         }
 
         // ==========================================
-        //  NOUVEAU BLOC V13 - LE PLACÉ MAITRISÉ
+        //  NOUVEAU BLOC V14 - LA MATRICE 45% (PLACÉ)
         // ==========================================
 
         function getCoteSafely(p) {
@@ -647,57 +647,60 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        // 1. Musique V13 : Régularité "Métrronome" (Top 5 exigé)
-        function evaluateMusiqueV13(musique) {
+        // 1. Musique V14 : Constante absolue exigée
+        function evaluateMusiqueV14(musique) {
             if (!musique) return 0.5;
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
             if (tokens.length === 0) return 0.5;
 
+            let placeCount = 0;
             let score = 0;
-            let hasTop5 = false;
             
-            // Analyse des 4 dernières courses (Régularité)
+            // On vérifie les 4 dernières courses
             for (let i = 0; i < Math.min(tokens.length, 4); i++) {
                 let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
-                let weight = (4 - i); // Dégressif
+                let w = (4 - i); 
                 
-                if (['1','2','3','4','5'].includes(res)) hasTop5 = true;
-
-                if (res === '1') score += 10 * weight;
-                else if (res === '2') score += 8 * weight;
-                else if (res === '3') score += 6 * weight;
-                else if (res === '4') score += 4 * weight;
-                else if (res === '5') score += 2 * weight;
+                if (['1','2','3','4','5'].includes(res)) placeCount++;
+                
+                if (res === '1') score += 10 * w;
+                else if (res === '2') score += 8 * w;
+                else if (res === '3') score += 6 * w;
+                else if (res === '4') score += 4 * w;
+                else if (res === '5') score += 2 * w;
             }
             
-            if (!hasTop5) return 0.2; // Eliminatoire : Cheval hors de forme
-            
-            return 0.7 + (score / 100); // Oscille entre 0.7 et ~1.4
+            // FILTRE CRITIQUE : S'il n'a pas été dans les 5 premiers au moins 2 fois sur ses 4 dernières courses,
+            // il est impossible de garantir 45% de réussite. On effondre la note.
+            if (placeCount < 2) return 0.3; 
+
+            return 0.8 + (score / 100);
         }
 
-        // 2. Pénalité DAI V13 : Zéro tolérance sur les 4 dernières courses
-        function penaltyDAIV13(musique) {
+        // 2. Pénalité DAI V14 : Anti-faute
+        function penaltyDAIV14(musique) {
             if (!musique) return 0.8;
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
             
+            let daiCount = 0;
             for (let i = 0; i < Math.min(tokens.length, 4); i++) {
                 let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
-                // S'il a fait la faute une fois, il ne mérite pas nos 30€ en Placé.
-                if (res.includes('D') || res.includes('A')) return 0.1; 
+                if (res.includes('D') || res.includes('A')) daiCount++;
             }
-            return 1.1; // Bonus de stabilité
+            
+            if (daiCount >= 2) return 0.1; // Éliminatoire direct
+            if (daiCount === 1) return 0.7; // Forte pénalité (très dur à remonter)
+            return 1.15; // Bonus de trot parfait
         }
 
-        // 3. Algorithme V13 - Placé Sécurisé
+        // 3. Algorithme V14 - Placé 45%
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
-            // REGLE 1 : LE FILTRE DE PELOTON (12 à 16 partants)
-            // Moins de 12 : Les rapports placés sont ridicules.
-            // Plus de 16 : Trop de bouchons, probabilité de mauvaise course trop élevée.
-            if (validPartants.length < 12 || validPartants.length > 16) return { processed: [], valueBets: [] };
+            // Les courses avec moins de 10 partants ou plus de 15 sont trop volatiles.
+            if (validPartants.length < 10 || validPartants.length > 15) return { processed: [], valueBets: [] };
 
             let hasAnyRealOdd = false;
             
@@ -712,31 +715,33 @@
                 if (coteDir < 900) hasAnyRealOdd = true;
 
                 let dropRatio = coteMatin / coteDir;
-                
-                // On estime la Vraie Probabilité Placé directement (environ 3x la proba gagnant)
-                let pmuProbPla = (0.75 / coteDir) * 3; // TRJ placé ~75%, 3 places
 
-                let formMult = evaluateMusiqueV13(musique);
-                let daiMult = penaltyDAIV13(musique);
+                // Probabilité mathématique PMU Placé estimée
+                let pmuProbPla = (0.75 / coteDir) * 3;
+
+                // Modificateurs de fiabilité
+                let formMult = evaluateMusiqueV14(musique);
+                let daiMult = penaltyDAIV14(musique);
                 
+                // Smart Money : on veut un léger soutien du marché, sans exiger un effondrement
                 let marketMult = 1.0;
-                if (dropRatio >= 1.15) marketMult = 1.20; // Baisse significative
-                else if (dropRatio < 0.90) marketMult = 0.80; // Cheval abandonné
+                if (dropRatio >= 1.10) marketMult = 1.25; 
+                else if (dropRatio < 0.90) marketMult = 0.70;
                 
-                // Vraie Probabilité de se placer (max 85%)
+                // Vraie probabilité mathématique (Hard cap à 85%)
                 let trueProbPla = pmuProbPla * formMult * daiMult * marketMult;
                 trueProbPla = Math.max(0.05, Math.min(0.85, trueProbPla));
                 let trueOddPla = 1 / trueProbPla;
 
-                // Estimation prudente du rapport Placé final du PMU
-                let estPlace = 1 + ((coteDir - 1) / 3.5);
+                // Estimation prudente du PMU : 1.10€ de base + le rapport de la cote.
+                let estPlace = 1.10 + (coteDir / 4.5);
 
                 let margin = ((estPlace / trueOddPla) - 1) * 100;
 
                 return {
                     num, nom: p.nom || "Cheval", musique: p.musique,
                     coteDisplay: coteDir < 900 ? coteDir.toFixed(1) : "--",
-                    coteDir, estPlace, trueOddGag: 0, trueOddPla, // On ignore trueOddGag ici
+                    coteDir, estPlace, trueOddGag: 0, trueOddPla, 
                     valueMargin: margin, 
                     ordreArrivee: p.ordreArrivee ? parseInt(p.ordreArrivee, 10) : 0,
                     trueProb: trueProbPla
@@ -746,15 +751,16 @@
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
             
             let valueBets = processed.filter(p => {
-                // Règle 2 : La Fenêtre Placé 6.0 à 14.0
+                // Règle 1 : La Fenêtre Mathématique de 45% (6.0 à 14.0)
                 if (p.coteDir < 6.0 || p.coteDir > 14.0) return false; 
                 if (p.coteDir > MAX_ODD_FILTER) return false;
                 
-                // Règle 3 : Marge Value requise
+                // Règle 2 : La Marge Value
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
                 
-                // Règle 4 : Le cheval doit avoir mathématiquement au moins 35% de chance de faire Podium
-                if (p.trueProb < 0.35) return false;
+                // Règle 3 : LA CIBLE DE REUSSITE
+                // L'algo doit estimer mathématiquement que ce cheval a au minimum 40% de chance d'être placé.
+                if (p.trueProb < 0.40) return false;
                 
                 return true;
             })
@@ -1554,7 +1560,7 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
-            // Sécurité V13 pour le reset des UI par défaut
+            // Sécurité V14 pour forcer les nouveaux paramètres au premier chargement
             if (document.getElementById('selectBetType').value !== 'PLACE') {
                  document.getElementById('selectBetType').value = 'PLACE';
                  BET_TYPE = 'PLACE';
@@ -1562,8 +1568,8 @@
             if (document.getElementById('inputMaxOdd').value > 14) {
                  document.getElementById('inputMaxOdd').value = 14;
             }
-            if (document.getElementById('inputMinMargin').value < 15) {
-                 document.getElementById('inputMinMargin').value = 15;
+            if (document.getElementById('inputMinMargin').value < 20) {
+                 document.getElementById('inputMinMargin').value = 20;
             }
             loadLivePmu(); 
         };
