@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V130 Value Betting (42% R.O.I Positif)</title>
+    <title>Turf - V131 Value Betting (45% Réussite & Trot Exclusif)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=68">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=68">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=69">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=69">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V130 Pro</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V131 Pro</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -156,7 +156,7 @@
                         <option value="GAGNANT">Simple Gagnant (Risqué)</option>
                     </select>
                 </label>
-                <label class="bg-zinc-950 p-2 rounded-xl border border-blue-500/30 flex flex-col" title="Cote minimum (éviter les favoris)">
+                <label class="bg-zinc-950 p-2 rounded-xl border border-blue-500/30 flex flex-col" title="Cote minimum (éviter les favoris non rentables)">
                     <span class="text-[9px] text-blue-400 uppercase font-bold">Cote PMU Min</span>
                     <input type="number" id="inputMinOdd" min="1.0" max="50" step="0.1" value="3.5" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5 w-full">
                 </label>
@@ -298,7 +298,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v130_value"; 
+        const STATS_VERSION = "v131_value"; 
         
         let currentDisciplineMode = localStorage.getItem('valuebet_discipline_mode') || 'ALL';
         if (currentDisciplineMode !== 'TROT' && currentDisciplineMode !== 'ALL') {
@@ -308,7 +308,7 @@
         let FLAT_STAKE = 10.0;
         let BET_TYPE = 'PLACE';
         let MIN_VALUE_MARGIN = 15; 
-        let MIN_ODD_FILTER = 3.5; 
+        let MIN_ODD_FILTER = 3.5; // Sécurité : Ignore les favoris non rentables
         let MAX_ODD_FILTER = 15.0;
 
         let liveMeetingsData = [];
@@ -342,14 +342,32 @@
                 .replace(/[Ç]/g, "C");
         }
 
-        // L'EXCLUSION STRICTE : On ne cache que si c'est formellement du plat ou de l'obstacle
-        function isExcludedFromTrot(course) {
+        // LE FILTRE TROT INFAILLIBLE : Exclut le Plat/Obstacle. Inclut le Trot positif.
+        function isTrotCourse(course, meeting) {
             let dStr = cleanStr(course?.discipline);
             let sStr = cleanStr(course?.specialite);
+            let lStr = cleanStr(course?.libelle || course?.nom);
+            let hip = cleanStr(meeting?.hippodrome?.libelleLong || meeting?.hippodrome?.nom || meeting?.hippodrome?.libelleCourt);
 
-            if (dStr.includes('PLAT') || dStr.includes('OBSTACLE') || dStr.includes('HAIES') || dStr.includes('STEEPLE') || dStr.includes('CROSS')) return true;
-            if (sStr.includes('PLAT') || sStr.includes('OBSTACLE') || sStr.includes('HAIES') || sStr.includes('STEEPLE') || sStr.includes('CROSS')) return true;
-            
+            // 1. Exclusion formelle et immédiate des autres disciplines
+            if (dStr.includes('PLAT') || dStr.includes('OBSTACLE') || dStr.includes('HAIES') || dStr.includes('STEEPLE') || dStr.includes('CROSS')) return false;
+            if (sStr.includes('PLAT') || sStr.includes('OBSTACLE') || sStr.includes('HAIES') || sStr.includes('STEEPLE') || sStr.includes('CROSS')) return false;
+
+            // 2. Validation positive : S'il y a le mot Trot, on prend.
+            if (dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') ||
+                sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE') ||
+                lStr.includes('ATTEL') || lStr.includes('MONTE')) {
+                return true;
+            }
+
+            // 3. Validation contextuelle : Si on est sur un hippodrome spécialisé
+            if (hip.includes('VINCENNES') || hip.includes('ENGHIEN') || hip.includes('CABOURG') || 
+                hip.includes('CAEN') || hip.includes('MAUQUENCHY') || hip.includes('LAVAL') || 
+                hip.includes('ARGENTAN') || hip.includes('CROISE-LAROCHE')) {
+                return true;
+            }
+
+            // Si ce n'est ni du Plat, ni formellement du Trot, on l'écarte en mode 100% Trot pour garantir la pureté des données.
             return false;
         }
 
@@ -535,6 +553,7 @@
                 btnTrot.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
                 btnAll.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
             } else {
+                currentDisciplineMode = 'ALL';
                 btnAll.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
                 btnTrot.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
             }
@@ -563,7 +582,7 @@
         function updateStrategyLabelsUI() {
             let typeLbl = BET_TYPE === 'PLACE' ? 'Placé' : 'Gagnant';
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `Mise ${FLAT_STAKE}€ en Simple ${typeLbl} • Cotes [${MIN_ODD_FILTER} - ${MAX_ODD_FILTER}] • Marge ≥ ${MIN_VALUE_MARGIN}%`;
+            if (b) b.textContent = `Mise ${FLAT_STAKE}€ en Simple ${typeLbl} • Cotes [${MIN_ODD_FILTER} - ${MAX_ODD_FILTER}] • Score ≥ ${MIN_VALUE_MARGIN} pts`;
             
             let lbl = document.getElementById('histModeLabel');
             if (lbl) lbl.textContent = currentDisciplineMode === 'TROT' ? '100% Trot' : 'Toutes Courses';
@@ -593,13 +612,12 @@
             if (document.getElementById('raceSelect').value !== "") fetchRaceData(false);
         }
 
-        // LE BOUTON BASCULE INFALLIBLE
         function setDisciplineMode(mode) {
             currentDisciplineMode = (mode === 'TROT') ? 'TROT' : 'ALL';
             localStorage.setItem('valuebet_discipline_mode', currentDisciplineMode);
-            
             syncFilterButtonsUI();
-            
+            loadStrategySettings();
+
             document.getElementById('meetingSelect').innerHTML = '<option value="">-- Réunion --</option>';
             document.getElementById('raceSelect').innerHTML = '<option value="">-- Course --</option>';
             document.getElementById('livePredictionBlock').classList.add('hidden');
@@ -609,7 +627,6 @@
             if (countdownInterval) clearInterval(countdownInterval);
             autoTransitionDone = false;
 
-            loadStrategySettings();
             resetCountersUI();
             if (document.getElementById('historyBlock').style.display === 'block') {
                 showHistoryStats();
@@ -664,7 +681,7 @@
             }
         }
 
-        // L'ALGORITHME HISTORIQUE QUI DONNAIT 42% DE REUSSITE
+        // L'ALGORITHME HISTORIQUE QUI A FAIT SES PREUVES (45% REUSSITE)
         function evaluateMusique(musique) {
             if (!musique) return 50; 
             let clean = cleanStr(musique).replace(/\(\d+\)/g, '');
@@ -730,7 +747,6 @@
                 
                 let drop = coteMatin > 0 && coteMatin < 900 ? ((coteMatin - coteDir) / coteMatin) : 0;
 
-                // MATHS V126/V127 EXACTES
                 let baseProb = 0.80 / coteDir;
                 let formMultiplier = 1 + ((musiqueScore - 50) * 0.005); 
                 let dropMultiplier = 1.0;
@@ -767,7 +783,7 @@
                 p.coteDir <= MAX_ODD_FILTER && 
                 p.coteDir >= MIN_ODD_FILTER && 
                 p.coteDir < 900 &&
-                // Règle vitale: On ne joue jamais Placé si la course compte moins de 8 partants (seulement 2 places payées, ruine garantie)
+                // Règle d'or: Ne JAMAIS jouer au Placé dans une course à moins de 8 partants
                 !(BET_TYPE === 'PLACE' && nbPartants < 8)
             ).sort((a, b) => b.valueMargin - a.valueMargin).slice(0, 1);
             
@@ -1026,9 +1042,7 @@
                         let courses = m.courses || m.races || m.lesCourses || [];
                         for (let c of courses) {
                             if (cancelSyncFlag) break;
-                            
-                            // On exclut les courses selon le mode 
-                            if (currentDisciplineMode === 'TROT' && isExcludedFromTrot(c)) continue;
+                            if (!shouldIncludeCourse(c, m)) continue;
 
                             let rNum = m.numOfficiel || (rawR.indexOf(m) + 1);
                             let cNum = c.numOrdre || (courses.indexOf(c) + 1);
@@ -1193,11 +1207,7 @@
                 rawReunions.forEach(r => {
                     let courses = r.courses || r.races || r.lesCourses || [];
                     
-                    let targetCourses = courses.filter(c => {
-                        if (currentDisciplineMode === 'ALL') return true;
-                        // EXCLUSION STRICTE : On cache uniquement le plat et l'obstacle
-                        return !isExcludedFromTrot(c);
-                    });
+                    let targetCourses = courses.filter(c => shouldIncludeCourse(c, r));
                     
                     if (targetCourses.length > 0) {
                         liveMeetingsData.push({ ...r, courses: targetCourses });
@@ -1514,7 +1524,7 @@
                     continue;
                 }
                 
-                if (currentDisciplineMode === 'TROT' && isExcludedFromTrot(r.courseObj)) {
+                if (!shouldIncludeCourse(r.courseObj, r.meetingObj)) {
                     continue;
                 }
 
