@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V28 Auto-Screener)</title>
+    <title>Turf - V115 Value Betting (V29 Auto-Screener Corrigé)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-robot mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V28 AUTO</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V29 AUTO</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -161,7 +161,7 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="25" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="20" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
@@ -286,12 +286,12 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v28_autoscreener"; 
+        const STATS_VERSION = "v115_v29_final"; 
         
         let currentDisciplineMode = 'GALOP'; 
         let FLAT_STAKE = 20.0; 
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 25; 
+        let MIN_VALUE_MARGIN = 20; 
         let MAX_ODD_FILTER = 20.0; 
 
         let liveMeetingsData = [];
@@ -520,7 +520,7 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 25;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
             MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 20;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
@@ -618,7 +618,7 @@
         }
 
         // ==========================================
-        //  MOTEUR V28 - ALGORITHME AUTO-SCREENER
+        //  MOTEUR V29 - ALGORITHME AUTO-SCREENER
         // ==========================================
 
         function getCoteSafely(p) {
@@ -627,7 +627,7 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        function analyzeFormV28(musique) {
+        function analyzeFormV29(musique) {
             if (!musique) return { formFactor: 0.85, placeReliability: 0.45, scoreVisuel: 0 };
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
@@ -699,7 +699,7 @@
                 let estPlace = coteDir < 900 ? Math.max(1.20, 1.08 + ((coteDir - 1) / placeDivisor)) : 999.9;
                 let impliedPlaceProb = coteDir < 900 ? Math.min(0.90, Math.max(0.04, (0.76 / Math.max(1.25, estPlace)))) : 0;
 
-                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV28(p.musique || p.form);
+                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV29(p.musique || p.form);
                 let dropRatio = (coteMatin > 1 && coteDir < 900) ? (coteMatin / coteDir) : 1.0;
                 let dropPct = (coteMatin > 1 && coteDir < 900) ? ((coteMatin - coteDir) / coteMatin) * 100 : 0;
 
@@ -716,7 +716,6 @@
 
                 let margin = (coteDir < 900 && estPlace < 900) ? ((estPlace / trueOddPla) - 1) * 100 : -100;
 
-                // Tags UI
                 let alertHtml = `<span class="text-zinc-600 font-mono text-[10px]">Attente</span>`;
                 let badgeType = "NONE";
                 if (dropPct >= 20 && margin > 10) {
@@ -1007,14 +1006,8 @@
 
                     if (bannerText) bannerText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Calcul du ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} (${idx+1}/${datesToSync.length})...`;
                     
-                    let data;
-                    try {
-                        const res = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`);
-                        if (!res.ok) throw new Error("Network error");
-                        data = await res.json();
-                    } catch(e) {
-                        continue;
-                    }
+                    let data = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`).then(r => r.json()).catch(() => null);
+                    if (!data) continue;
 
                     let rawR = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                     
@@ -1106,14 +1099,12 @@
             
             if (!isBackground) {
                 document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-8 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse auto-radar...</td></tr>`;
-                document.getElementById('livePredictionBlock').classList.add('hidden');
                 document.getElementById('arrivalBlock').classList.add('hidden');
                 document.getElementById('reportsGrid').classList.add('hidden');
             }
 
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}&_t=${Date.now()}`);
-                if (!res.ok) throw new Error("Erreur réseau PMU");
                 const data = await res.json();
                 let partants = data.participants || [];
                 
@@ -1137,7 +1128,7 @@
 
                 if (!isBackground && hasArrival) autoTransitionDone = true;
 
-                let runningBadge = (isStarted && !hasArrival) ? '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ml-2 animate-pulse"><i class="fa-solid fa-horse-head mr-1"></i>EN COURSE</span>' : '';
+                let runningBadge = (isStarted && !hasArrival) ? '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ml-1 animate-pulse"><i class="fa-solid fa-horse-head mr-1"></i>EN COURSE</span>' : '';
 
                 document.getElementById('raceInfoDetails').innerHTML = `<div class="flex items-center flex-wrap"><span class="text-emerald-400 font-black text-sm">R${rNum}C${cNum}</span><span class="text-zinc-400 font-mono text-[11px] mx-1.5"><i class="fa-regular fa-clock"></i> ${cStart}</span><span class="text-zinc-300 font-semibold mr-1">- ${hipName}</span>${getDisciplineBadge(race.discipline)}${runningBadge}</div>`;
 
@@ -1215,7 +1206,6 @@
                     if (algo.processed.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes ou peloton inadapté.</td></tr>`;
                     } else {
-                        // Tri purement visuel : le pari sélectionné, puis les alertes, puis par score
                         let displayList = algo.processed.sort((a, b) => {
                             let aIsBet = algo.valueBets.some(v => v.num === a.num);
                             let bIsBet = algo.valueBets.some(v => v.num === b.num);
