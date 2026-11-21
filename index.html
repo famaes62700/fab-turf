@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V4 Zéro Tolérance)</title>
+    <title>Turf - V115 Value Betting (V5 Élite)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,8 +27,8 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-shield-halved mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V4 ROI+</span>
+                    <i class="fa-solid fa-gem mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V5 Elite</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -138,7 +138,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (Élite)
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
@@ -158,11 +158,11 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="30" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="40" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="20" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="16" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
@@ -172,7 +172,7 @@
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2">
                 <div>
                     <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Bilan du Jour (Value Betting)</h2>
-                    <p id="bilanSubtitle" class="text-[10px] text-zinc-400">Recherche d'anomalies de cotes PMU</p>
+                    <p id="bilanSubtitle" class="text-[10px] text-zinc-400">Recherche de la Strike-Zone</p>
                 </div>
                 <div class="flex items-center space-x-1.5">
                     <button id="btnToggleAuditLog" onclick="toggleAuditLog()" class="text-[9px] font-bold px-2 py-1 rounded border border-emerald-500/40 bg-zinc-800 hover:bg-zinc-700 text-emerald-300 cursor-pointer">
@@ -308,14 +308,14 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v4_contrarien"; 
+        const STATS_VERSION = "v115_v5_elite"; 
         
-        // --- PARAMETRES PAR DEFAUT "MODE V4 - ROI POSITIF" ---
+        // --- PARAMETRES PAR DEFAUT "MODE V5 - ELITE" ---
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 30.0;
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 30; // 30% requis !
-        let MAX_ODD_FILTER = 20.0; // Zone de chasse des outsiders : entre 6.0 et 20.0
+        let MIN_VALUE_MARGIN = 40; // Exigence massive (40%) pour compenser l'écrasement des cotes PMU
+        let MAX_ODD_FILTER = 16.0; // Zone idéale
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -564,8 +564,8 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 30;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 30;
-            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 20;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 40;
+            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 16;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
@@ -639,58 +639,54 @@
         }
 
         // ==========================================
-        //  NOUVEAU BLOC DE CALCUL MATHÉMATIQUE (V4 - CONTRARIEN)
+        //  NOUVEAU BLOC DE CALCUL MATHÉMATIQUE (V5 - ÉLITE)
         // ==========================================
 
-        // 1. Musique V4 (Ultra-Exigeant : La dynamique de victoire absolue)
-        function evaluateMusiqueV4(musique) {
-            if (!musique) return 0.5; // Pas de musique = on fuit
+        // 1. Musique V5 (Extrêmement pointilleuse sur la forme récente)
+        function evaluateMusiqueV5(musique) {
+            if (!musique) return 0.4;
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g);
-            if (!tokens || tokens.length === 0) return 0.5;
+            if (!tokens || tokens.length === 0) return 0.4;
 
-            // On regarde SEULEMENT les 3 dernières courses. Si pas de podium, on dégage.
-            let recentPodiums = 0;
             let score = 0;
-            
-            for (let i = 0; i < Math.min(tokens.length, 3); i++) {
+            // On accorde de l'importance SEULEMENT aux 4 dernières sorties.
+            for (let i = 0; i < Math.min(tokens.length, 4); i++) {
                 let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
-                if (res === '1') { score += 10; recentPodiums++; }
-                else if (res === '2') { score += 7; recentPodiums++; }
-                else if (res === '3') { score += 5; recentPodiums++; }
-                else if (res === '4') { score += 2; }
-                // 5 et au-delà valent 0.
+                if (res === '1') score += 10;
+                else if (res === '2') score += 7;
+                else if (res === '3') score += 5;
+                else if (res === '4') score += 2;
             }
             
-            // Si aucun podium récent, le multiplicateur s'effondre (0.4)
-            if (recentPodiums === 0) return 0.4;
+            if (score === 0) return 0.3; // Forme inexistante
             
-            return 0.8 + (score / 22) * 0.5; // Max ~1.3
+            // Score maximum théorique autour de 40.
+            return 0.7 + (score / 40) * 0.5; // Oscillera entre 0.7 et 1.2
         }
 
-        // 2. Le filtre "Zéro Tolérance" sur les fautes (Trot)
-        function penaltyRecentDAIV4(musique) {
+        // 2. Le filtre de disqualifications (Toujours intransigeant)
+        function penaltyRecentDAIV5(musique) {
             if (!musique) return 0.5;
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g);
             if (!tokens || tokens.length === 0) return 0.5;
             
+            // On scanne les 3 dernières courses.
             for (let i = 0; i < Math.min(tokens.length, 3); i++) {
                 let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
-                // UNE SEULE FAUTE (D ou A) dans les 3 dernières courses = ELIMINE (0.1)
-                if (res.includes('D') || res.includes('A')) {
-                    return 0.1;
-                }
+                if (res.includes('D') || res.includes('A')) return 0.1; // Cheval compliqué
             }
-            return 1.10; // Bonus de fiabilité totale
+            return 1.05; // Base neutre/positive
         }
 
-        // 3. Algo V4 (Le Contrarien)
+        // 3. Algo V5 (Elite & Smart Money)
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
             
-            // Fini les petits champs. Minimum 10 partants pour avoir des rapports payables.
-            if (validPartants.length < 10) return { processed: [], valueBets: [] }; 
+            // REGLE 1 : EXIGENCE MASSIVE DE PARTANTS (Min 12)
+            // C'est dans ces courses que le peloton piège les favoris et fait payer les outsiders.
+            if (validPartants.length < 12) return { processed: [], valueBets: [] }; 
 
             let hasAnyRealOdd = false;
             let processed = validPartants.map(p => {
@@ -705,31 +701,30 @@
                 if (coteDir <= 1.5) coteDir = 999.9;
                 else hasAnyRealOdd = true;
 
-                // Au PMU, le TRJ est de 85% en Gagnant et ~75% en Placé. 
-                // On calcule la base sur le Placé (le plus dur à rentabiliser)
-                let baseProb = 0.75 / coteDir;
+                let baseProb = 0.80 / coteDir;
 
-                // Modificateurs (V4)
-                let formMultiplier = evaluateMusiqueV4(musique);
-                let consistencyMultiplier = penaltyRecentDAIV4(musique);
+                let formMultiplier = evaluateMusiqueV5(musique);
+                let consistencyMultiplier = penaltyRecentDAIV5(musique);
 
-                // Money Drop (La baisse de cote doit être très forte pour être validée)
+                // --- SMART MONEY (LE CŒUR DE LA V5) ---
                 let marketMultiplier = 1.0;
                 let dropRatio = coteMatin / coteDir;
-                if (coteDir >= 5.0 && coteDir <= 25.0) {
-                    if (dropRatio >= 1.30) marketMultiplier = 1.30; // -30% de chute = Gros signal
-                    else if (dropRatio >= 1.15) marketMultiplier = 1.10;
-                    else if (dropRatio < 0.90) marketMultiplier = 0.70; // Abandonné par les parieurs
+                if (coteDir >= 6.0 && coteDir <= 20.0) {
+                    if (dropRatio >= 1.40) marketMultiplier = 1.45; // EXTRÊME : La cote a fondu !
+                    else if (dropRatio >= 1.20) marketMultiplier = 1.25; // Signal très fort
+                    else if (dropRatio < 0.90) marketMultiplier = 0.60; // Évite les faux "bons chevaux" que personne ne joue
                 }
 
-                // Probabilité Vraie V4 (Hard cap 60%)
+                // Probabilité Vraie V5
                 let trueProbGagnant = baseProb * formMultiplier * consistencyMultiplier * marketMultiplier;
                 trueProbGagnant = Math.max(0.001, Math.min(0.60, trueProbGagnant));
                 let trueOddGagnant = 1 / trueProbGagnant;
 
-                // Estimation PLACÉ (Très conservateur : Diviseur 4.5, on sait que le PMU paie mal)
-                let estPlace = 1.2 + ((coteDir - 1) / 4.5);
-                let trueOddPlace = 1 + ((trueOddGagnant - 1) / 4.5);
+                // --- LA FORMULE PMU ULTRA-REALISTE POUR LE PLACÉ ---
+                // Au lieu de diviser par 4, on simule l'écrasement de la masse.
+                // Un cheval à 10.0 rapportera autour de 3.00€. Un cheval à 16 rapportera ~4.20€.
+                let estPlace = 1.20 + ((coteDir - 1.0) / 5.0);
+                let trueOddPlace = 1 + ((trueOddGagnant - 1) / 5.0);
 
                 let margin = BET_TYPE === 'GAGNANT' 
                     ? ((coteDir / trueOddGagnant) - 1) * 100 
@@ -747,17 +742,19 @@
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
             
             let valueBets = processed.filter(p => {
-                // REGLE 1 : Marge massive (30% minimum pour absorber la variance du PMU)
-                let requiredMargin = Math.max(30, MIN_VALUE_MARGIN);
+                // EXIGENCE ABSOLUE (40% de marge minimale)
+                let requiredMargin = Math.max(40, MIN_VALUE_MARGIN);
                 if (p.valueMargin < requiredMargin) return false;
                 
-                // REGLE 2 : La Zone de Rentabilité (Cote PMU entre 6.0 et 20.0)
-                if (p.coteDir < 6.0) return false; // En dessous de 6/1, le rapport placé (1.50€-1.80€) ne compense pas les pertes
-                if (p.coteDir > 20.0) return false; // Au delà de 20/1, taux de réussite trop faible
+                // LA STRIKE ZONE (La Fenêtre en Or)
+                // Sous 7.0, le PMU paie souvent 1.80€ placé (injouable sur le long terme).
+                if (p.coteDir < 7.0) return false; 
+                // Au-dessus de 16.0, les cotes sont trop illusoires, la variance détruit la banque.
+                if (p.coteDir > 16.0) return false;
                 if (p.coteDir > MAX_ODD_FILTER) return false;
                 
-                // REGLE 3 : Vraie probabilité minimum (10% minimum mathématique)
-                if (p.trueProb < 0.10) return false;
+                // MATHS PURS : Plus de 8% de Vraie Probabilité de victoire exigée.
+                if (p.trueProb < 0.08) return false;
                 
                 return true;
             })
@@ -1557,12 +1554,12 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
-            // Sécurité pour forcer les nouveaux paramètres par défaut à l'ouverture
-            if (document.getElementById('inputMaxOdd').value != 20) {
-                 document.getElementById('inputMaxOdd').value = 20;
+            // Sécurité V5 pour forcer les nouveaux paramètres au premier chargement
+            if (document.getElementById('inputMaxOdd').value > 16) {
+                 document.getElementById('inputMaxOdd').value = 16;
             }
-            if (document.getElementById('inputMinMargin').value < 30) {
-                 document.getElementById('inputMinMargin').value = 30;
+            if (document.getElementById('inputMinMargin').value < 40) {
+                 document.getElementById('inputMinMargin').value = 40;
             }
             loadLivePmu(); 
         };
