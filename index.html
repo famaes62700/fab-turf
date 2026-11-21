@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V128 Value Betting (Filtres & Algo Optimisés)</title>
+    <title>Turf - V129 Value Betting (Ultimate Sniper)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Value Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=66">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=66">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=67">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=059669&size=512&font-size=0.4&v=67">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-radar mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V128</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V129 Pro</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -158,11 +158,11 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-blue-500/30 flex flex-col" title="Cote minimum (éviter les favoris)">
                     <span class="text-[9px] text-blue-400 uppercase font-bold">Cote PMU Min</span>
-                    <input type="number" id="inputMinOdd" min="1.0" max="50" step="0.1" value="3.0" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5 w-full">
+                    <input type="number" id="inputMinOdd" min="1.0" max="50" step="0.1" value="4.0" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5 w-full">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col" title="Score Value (Chute de cote % + Bonus forme)">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Score Value Min</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="20" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5 w-full">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="40" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5 w-full">
                 </label>
             </div>
         </div>
@@ -298,7 +298,7 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v128_value"; 
+        const STATS_VERSION = "v129_value"; 
         
         let currentDisciplineMode = localStorage.getItem('valuebet_discipline_mode') || 'ALL';
         if (currentDisciplineMode !== 'TROT' && currentDisciplineMode !== 'ALL') {
@@ -307,8 +307,8 @@
 
         let FLAT_STAKE = 10.0;
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 20; 
-        let MIN_ODD_FILTER = 3.0; // Point d'équilibre réussite/gains
+        let MIN_VALUE_MARGIN = 40; 
+        let MIN_ODD_FILTER = 4.0; 
         let MAX_ODD_FILTER = 15.0;
 
         let liveMeetingsData = [];
@@ -342,15 +342,28 @@
                 .replace(/[Ç]/g, "C");
         }
 
-        // NOUVEAU FILTRE TROT : On exclut le Plat et l'Obstacle, on garde TOUT le reste (sécurité totale pour la province)
+        // CORRECTION MAJEURE: Exclusion sticte du Plat/Obstacle pour le TROT.
+        // On inclut tout le reste (ce qui répare les courses de province sans discipline annoncée)
         function isTrotCourse(course, meeting) {
             let dStr = cleanStr(course?.discipline);
             let sStr = cleanStr(course?.specialite);
+            let lStr = cleanStr(course?.libelle || course?.nom);
+            let hip = cleanStr(meeting?.hippodrome?.libelleLong || meeting?.hippodrome?.nom || meeting?.hippodrome?.libelleCourt);
 
             if (dStr.includes('PLAT') || dStr.includes('OBSTACLE') || dStr.includes('HAIES') || dStr.includes('STEEPLE') || dStr.includes('CROSS')) return false;
             if (sStr.includes('PLAT') || sStr.includes('OBSTACLE') || sStr.includes('HAIES') || sStr.includes('STEEPLE') || sStr.includes('CROSS')) return false;
             
-            return true;
+            if (dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') ||
+                sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE') ||
+                lStr.includes('ATTEL') || lStr.includes('MONTE')) {
+                return true;
+            }
+
+            let isTrotHip = hip.includes('VINCENNES') || hip.includes('ENGHIEN') || hip.includes('CABOURG') || 
+                            hip.includes('CAEN') || hip.includes('MAUQUENCHY') || hip.includes('LAVAL') || 
+                            hip.includes('ARGENTAN') || hip.includes('CROISE-LAROCHE') || hip.includes('CAGNES');
+            
+            return isTrotHip;
         }
 
         function shouldIncludeCourse(course, meeting) {
@@ -520,18 +533,6 @@
             return String(timeValue);
         }
 
-        function getMeetingStartTime(meeting) {
-            if (!meeting) return '';
-            if (meeting.heurereunion || meeting.heurePremierDepart) {
-                return formatTime(meeting.heurereunion || meeting.heurePremierDepart);
-            }
-            let courses = meeting.courses || meeting.races || meeting.lesCourses || [];
-            if (courses.length > 0 && courses[0].heureDepart) {
-                return formatTime(courses[0].heureDepart);
-            }
-            return '';
-        }
-
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             if (!container) return;
@@ -552,7 +553,6 @@
                 btnTrot.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
                 btnAll.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
             } else {
-                currentDisciplineMode = 'ALL';
                 btnAll.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
                 btnTrot.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
             }
@@ -590,9 +590,9 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 10;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 40;
             MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 15;
-            MIN_ODD_FILTER = parseFloat(document.getElementById('inputMinOdd').value) || 3.0;
+            MIN_ODD_FILTER = parseFloat(document.getElementById('inputMinOdd').value) || 4.0;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER, minOdd: MIN_ODD_FILTER
@@ -680,7 +680,7 @@
             }
         }
 
-        // === MOTEUR SMART MONEY EXPERT (V128) ===
+        // === MOTEUR SMART MONEY EXPERT (V129 SNIPER) ===
         function evaluateMusique(musique) {
             if (!musique) return 50; 
             let clean = cleanStr(musique).replace(/\(\d+\)/g, '');
@@ -690,7 +690,6 @@
             let totalPts = 0, totalWeight = 0;
             let count = Math.min(tokens.length, 6);
             
-            // Poids modifiés pour sur-évaluer les 3 dernières courses
             const weights = [3.0, 2.0, 1.5, 1.0, 0.5, 0.2]; 
             
             for (let i = 0; i < count; i++) {
@@ -727,8 +726,10 @@
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !cleanStr(p.statut || "PARTANT").includes("NON_PARTANT"));
             if (validPartants.length < 5) return { processed: [], valueBets: [] };
-
+            
+            let nbPartants = validPartants.length;
             let hasAnyRealOdd = false;
+
             let processed = validPartants.map(p => {
                 let num = parseInt(p.numPmu || p.numOrdre, 10);
                 let musique = p.musique || p.form || "0a";
@@ -744,24 +745,23 @@
                 let musiqueScore = evaluateMusique(musique);
                 let recentDAI = countRecentDAI(musique);
                 
-                // 1. Chute brute en %
                 let dropPercent = 0;
                 if (coteMatin > coteDir && coteMatin < 900) {
                     dropPercent = ((coteMatin - coteDir) / coteMatin) * 100;
                 }
 
-                // 2. Score de base = La chute
                 let valueScore = dropPercent;
                 
-                // 3. Modulateur Forme (Les chevaux réguliers gagnent des points, les irréguliers en perdent)
-                valueScore += (musiqueScore - 50) * 0.5;
+                // Bonus de belle musique
+                if (musiqueScore >= 60) valueScore += 10;
+                else if (musiqueScore < 40) valueScore -= 25; // Rejet des très mauvais chevaux
                 
-                // 4. Malus impitoyable si faute récente
-                valueScore -= (recentDAI * 20);
+                // Malus impitoyable si faute récente
+                valueScore -= (recentDAI * 30);
 
-                // 5. Bonus de sécurité: si la cote est sous les 10.0, la baisse est plus significative qu'un passage 50 -> 40
-                if (coteDir < 10.0 && dropPercent > 10) {
-                    valueScore += 5;
+                // BONUS "Sweet Spot" PMU (Cotes entre 5.0 et 15.0 sont les plus rentables Placé/Gagnant)
+                if (coteDir >= 5.0 && coteDir <= 15.0) {
+                    valueScore += 15;
                 }
 
                 return {
@@ -776,13 +776,14 @@
 
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
             
-            // SELECTION : 1 seul cheval max, s'il passe tous les filtres
             let valueBets = processed.filter(p => 
                 p.valueMargin >= MIN_VALUE_MARGIN && 
                 p.coteDir <= MAX_ODD_FILTER && 
                 p.coteDir >= MIN_ODD_FILTER && 
-                p.coteDir < 900
-            ).sort((a, b) => b.valueMargin - a.valueMargin).slice(0, 1);
+                p.coteDir < 900 &&
+                // REGLE DE SURVIE PMU : On ne joue JAMAIS placé s'il y a moins de 8 chevaux
+                !(BET_TYPE === 'PLACE' && nbPartants < 8)
+            ).sort((a, b) => b.valueMargin - a.valueMargin).slice(0, 1); // 1 seul tir !
             
             return { processed, valueBets };
         }
@@ -835,7 +836,6 @@
             return { algo: liveAlgo, isFrozen: false, isStarted: true };
         }
 
-        // LECTEUR DE GAINS INFAILIBLE
         function extractGainFromRapports(listeRapports, horseNum, targetType) {
             let bestGain = 0;
             if (!listeRapports || !Array.isArray(listeRapports)) return 0;
