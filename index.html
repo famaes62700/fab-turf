@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V23 Objectif 60€/j)</title>
+    <title>Turf - V115 Value Betting (V24 Diagnostic API)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-chess-knight mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V23 PLACÉ</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V24 PLACÉ</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -150,12 +150,13 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                 <label class="bg-zinc-950 p-2 rounded-xl border border-emerald-500/30 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Mise Fixe / Pari (€)</span>
-                    <input type="number" id="inputFlatStake" min="1" max="1000" step="1" value="50" class="bg-transparent text-emerald-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputFlatStake" min="1" max="1000" step="1" value="20" class="bg-transparent text-emerald-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/50 flex flex-col">
                     <span class="text-[9px] text-amber-400 uppercase font-bold">Pari Recherché</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
                         <option value="PLACE" selected>Simple Placé (Régularité)</option>
+                        <option value="GAGNANT">Simple Gagnant</option>
                     </select>
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
@@ -310,10 +311,10 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v23_final"; 
+        const STATS_VERSION = "v115_v24_diag"; 
         
-        let currentDisciplineMode = 'GALOP'; // Par défaut sur Plat/Obs pour la rentabilité placée
-        let FLAT_STAKE = 50.0; // Mise ajustée
+        let currentDisciplineMode = 'GALOP'; 
+        let FLAT_STAKE = 20.0; 
         let BET_TYPE = 'PLACE';
         let MIN_VALUE_MARGIN = 20; 
         let MAX_ODD_FILTER = 15.0; 
@@ -504,18 +505,6 @@
             return String(timeValue);
         }
 
-        function getMeetingStartTime(meeting) {
-            if (!meeting) return '';
-            if (meeting.heurereunion || meeting.heurePremierDepart) {
-                return formatTime(meeting.heurereunion || meeting.heurePremierDepart);
-            }
-            let courses = meeting.courses || meeting.races || meeting.lesCourses || [];
-            if (courses.length > 0 && courses[0].heureDepart) {
-                return formatTime(courses[0].heureDepart);
-            }
-            return '';
-        }
-
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             if (!container) return;
@@ -527,9 +516,6 @@
             setTimeout(() => toast.remove(), 3500);
         }
 
-        // ==========================================
-        // CORRECTION MAJEURE DE L'INTERFACE UI ICI
-        // ==========================================
         function loadStrategySettings() {
             try {
                 let saved = JSON.parse(localStorage.getItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`) || '{}');
@@ -544,7 +530,6 @@
             document.getElementById('inputMinMargin').value = MIN_VALUE_MARGIN;
             document.getElementById('inputMaxOdd').value = MAX_ODD_FILTER;
             
-            // On s'assure que les 3 boutons existent avant de modifier leur classe
             let btnGalop = document.getElementById('btnFilterGalop');
             let btnTrot = document.getElementById('btnFilterTrot');
             let btnAll = document.getElementById('btnFilterAll');
@@ -564,8 +549,9 @@
         }
 
         function updateStrategyLabelsUI() {
+            let typeLbl = BET_TYPE === 'PLACE' ? 'Simple Placé' : 'Simple Gagnant';
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en Simple Placé`;
+            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en ${typeLbl} • Marge > ${MIN_VALUE_MARGIN}%`;
             
             let lbl = document.getElementById('histModeLabel');
             if(lbl) {
@@ -576,7 +562,7 @@
         }
 
         function applyStrategySettings() {
-            FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 50;
+            FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
             BET_TYPE = document.getElementById('selectBetType').value;
             MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
             MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 15;
@@ -594,7 +580,7 @@
             resetCountersUI();
             showToast(`Réglages enregistrés !`, "success");
             
-            if(liveMeetingsData.length > 0) calculateDailyStats();
+            if(liveMeetingsData.length > 0) calculateDailyStats(false);
             if(document.getElementById('raceSelect').value !== "") fetchRaceData(false);
         }
 
@@ -602,6 +588,7 @@
             currentDisciplineMode = mode;
             loadStrategySettings();
             document.getElementById('meetingSelect').value = "";
+            document.getElementById('raceSelect').innerHTML = '<option value="">-- Course --</option>';
             document.getElementById('livePredictionBlock').classList.add('hidden');
             document.getElementById('arrivalBlock').classList.add('hidden');
             if (countdownInterval) clearInterval(countdownInterval);
@@ -611,11 +598,35 @@
 
         function onDateChange() {
             document.getElementById('meetingSelect').value = "";
+            document.getElementById('raceSelect').innerHTML = '<option value="">-- Course --</option>';
             document.getElementById('livePredictionBlock').classList.add('hidden');
             document.getElementById('arrivalBlock').classList.add('hidden');
             if (countdownInterval) clearInterval(countdownInterval);
             resetCountersUI();
             loadLivePmu();
+        }
+
+        function onMeetingChange() {
+            let mIdx = document.getElementById('meetingSelect').value;
+            let raceSelect = document.getElementById('raceSelect');
+            raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
+            if (mIdx === "" || !liveMeetingsData[mIdx]) return;
+
+            liveMeetingsData[mIdx].courses.forEach((c, idx) => {
+                let opt = document.createElement('option');
+                opt.value = idx;
+                let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
+                let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
+                let cNum = c.numOrdre || (idx + 1);
+                opt.textContent = `${statusMarker}${courseTime}C${cNum} - ${c.libelle || c.nom || 'Course'}`;
+                raceSelect.appendChild(opt);
+            });
+        }
+
+        function onRaceChange() {
+            autoTransitionDone = false;
+            if (countdownInterval) clearInterval(countdownInterval);
+            fetchRaceData(false);
         }
 
         function resetAllCache() {
@@ -652,10 +663,6 @@
             }
         }
 
-        // ==========================================
-        //  ALGORITHME DE CALCUL "VALEUR SURE" (SANS BUG)
-        // ==========================================
-
         function getCoteSafely(p) {
             let raw = p.dernierRapportDirect?.rapport || p.probabiliteEvolution || "999.9";
             let c = parseFloat(String(raw).replace(',', '.'));
@@ -672,7 +679,6 @@
             let hasTop4 = false;
             
             for (let i = 0; i < Math.min(tokens.length, 4); i++) {
-                // SÉCURITÉ : On vérifie que match a bien fonctionné avant de faire toUpperCase()
                 let matchRes = tokens[i].match(/^([0-9DATR]+)/i);
                 let res = matchRes ? matchRes[1].toUpperCase() : '9';
                 let w = (4 - i); 
@@ -751,7 +757,6 @@
 
             return { processed, valueBets };
         }
-        // ==========================================
 
         function getAlgoWithFreeze(partants, race, raceKey) {
             let liveAlgo = computeAlgorithm(partants);
@@ -996,14 +1001,8 @@
 
                     if (bannerText) bannerText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Calcul du ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} (${idx+1}/${datesToSync.length})...`;
                     
-                    let data;
-                    try {
-                        const res = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`);
-                        if (!res.ok) throw new Error("Network error");
-                        data = await res.json();
-                    } catch(e) {
-                        continue;
-                    }
+                    let data = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`).then(r => r.json()).catch(() => null);
+                    if (!data) continue;
 
                     let rawR = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                     
@@ -1045,12 +1044,7 @@
 
                             if (!raceData || !raceData.partants || raceData.partants.length < 5 || !raceData.isComplete) continue;
 
-                            let algo;
-                            try {
-                                algo = computeAlgorithm(raceData.partants);
-                            } catch (e) {
-                                continue;
-                            }
+                            let algo = computeAlgorithm(raceData.partants);
                             if (algo.valueBets.length === 0) continue;
 
                             coursesValidees++;
@@ -1180,6 +1174,287 @@
             }
         }
 
+        async function fetchRaceData(isBackground = false) {
+            let mIdx = document.getElementById('meetingSelect').value;
+            let cIdx = document.getElementById('raceSelect').value;
+            if (mIdx === "" || cIdx === "") return;
+            
+            let meeting = liveMeetingsData[mIdx];
+            let race = meeting?.courses?.[cIdx];
+            if (!meeting || !race) return;
+
+            let dateInput = document.getElementById('raceDate').value;
+            let parts = dateInput.split('-');
+            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+            
+            let rNum = meeting.numOfficiel || (parseInt(mIdx, 10) + 1);
+            let cNum = race.numOrdre || (parseInt(cIdx, 10) + 1);
+            let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
+            
+            if (!isBackground) {
+                document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar...</td></tr>`;
+                document.getElementById('livePredictionBlock').classList.add('hidden');
+                document.getElementById('arrivalBlock').classList.add('hidden');
+                document.getElementById('reportsGrid').classList.add('hidden');
+            }
+
+            try {
+                const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}&_t=${Date.now()}`);
+                const data = await res.json();
+                let partants = data.participants || [];
+                
+                let hipName = meeting.hippodrome?.libelleLong || meeting.hippodrome?.libelleCourt || meeting.hippodrome?.nom || 'Hippodrome';
+                let cStart = race.heureDepart ? formatTime(race.heureDepart) : '';
+                let timeTag = cStart ? ` <span class="text-zinc-400 font-mono text-[11px] mx-1.5"><i class="fa-regular fa-clock"></i> ${cStart}</span>` : '';
+
+                let { algo, isFrozen, isStarted } = getAlgoWithFreeze(partants, race, raceKey);
+                
+                let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0 && p.ordreArrivee < 20).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
+                let hasArrival = arrivees.length > 0;
+
+                if (!isBackground && hasArrival) {
+                    autoTransitionDone = true;
+                }
+
+                let runningBadge = (isStarted && !hasArrival)
+                    ? '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ml-1 animate-pulse"><i class="fa-solid fa-horse-head mr-1"></i>EN COURSE</span>'
+                    : '';
+
+                document.getElementById('raceInfoDetails').innerHTML = `<div class="flex items-center flex-wrap"><span class="text-amber-400 font-black text-sm">R${rNum}C${cNum}</span>${timeTag}<span class="text-zinc-300 font-semibold mr-2">- ${hipName}</span>${getDisciplineBadge(race.discipline)}${runningBadge}</div>`;
+
+                let tbody = document.getElementById('runnersTableBody');
+                let livePredBlock = document.getElementById('livePredictionBlock');
+                let livePredList = document.getElementById('livePredictionList');
+                let lockBadge = document.getElementById('radarLockBadge');
+                let arrivalBlock = document.getElementById('arrivalBlock');
+                let arrivalList = document.getElementById('arrivalList');
+                let reportsGrid = document.getElementById('reportsGrid');
+                let timerSpan = document.getElementById('nextRaceTimer');
+
+                if (hasArrival) {
+                    livePredBlock.classList.add('hidden'); 
+                    arrivalBlock.classList.remove('hidden');
+                    arrivalList.innerHTML = arrivees.slice(0, 5).map(p => 
+                        `<div class="bg-blue-900/60 px-2.5 py-1 rounded-lg border border-blue-500/40"><span class="text-blue-300">${p.ordreArrivee}e:</span> N°${p.numPmu || p.numOrdre} ${p.nom}</div>`
+                    ).join('');
+
+                    let listeRapports = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+                    let reportsHTML = "";
+                    
+                    listeRapports.forEach(group => {
+                        let pType = String(group.typePari || group.libellePari || group.codePari || "").toUpperCase();
+                        let famille = String(group.famillePari || "").toUpperCase();
+                        
+                        if (pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || famille.includes('SIMPLE')) {
+                            let details = group.rapports || group.dividendes || group.lesRapports || [];
+                            details.forEach(item => {
+                                let combo = String(item.combinaison || item.cheval || item.numeroCheval || item.partant || "").trim();
+                                let lib = String(item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport || "").toUpperCase();
+                                
+                                let val = 0;
+                                if (item.dividendePourUnEuro !== undefined) val = item.dividendePourUnEuro / 100;
+                                else if (item.dividendeEuro !== undefined) val = item.dividendeEuro;
+                                else if (item.gainEuro !== undefined) val = item.gainEuro;
+                                else {
+                                    let rawM = item.rapport || item.dividende || item.montant;
+                                    if (rawM !== undefined && rawM !== null) {
+                                        val = parseFloat(String(rawM).replace(',', '.'));
+                                        if (val > 100) val = val / 100; 
+                                    }
+                                }
+
+                                if (val > 0) {
+                                    let typeBadge = 'P';
+                                    if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || pType.includes('GAGNANT') || pType === 'SG') {
+                                        if (!lib.includes('PLACE') && !lib.includes('SHOW')) typeBadge = 'G';
+                                    }
+
+                                    let badgeColor = typeBadge === 'G' ? 'text-amber-400' : 'text-blue-400';
+                                    reportsHTML += `<div class="bg-blue-900/40 p-1.5 rounded border border-blue-500/30 flex justify-between items-center text-[10px]">
+                                        <span class="text-zinc-300">N°${combo} <span class="${badgeColor} font-black">${typeBadge}</span></span>
+                                        <span class="text-white font-bold">${val.toFixed(2)}€</span>
+                                    </div>`;
+                                }
+                            });
+                        }
+                    });
+
+                    if (reportsHTML !== "") {
+                        reportsGrid.innerHTML = reportsHTML;
+                        reportsGrid.classList.remove('hidden');
+                        reportsGrid.classList.add('grid');
+                    } else {
+                        reportsGrid.classList.add('hidden');
+                        reportsGrid.classList.remove('grid');
+                    }
+
+                    if (!alertedArrivals.has(raceKey)) {
+                        alertedArrivals.add(raceKey);
+                        playTone('arrival');
+                    }
+
+                    if (!autoTransitionDone) {
+                        autoTransitionDone = true;
+                        timerSpan.classList.remove('hidden');
+                        
+                        let timeLeft = 30;
+                        timerSpan.textContent = `Bascule dans ${timeLeft}s`;
+                        
+                        if (countdownInterval) clearInterval(countdownInterval);
+                        countdownInterval = setInterval(() => {
+                            timeLeft--;
+                            if(timerSpan) timerSpan.textContent = `Bascule dans ${timeLeft}s`;
+                            if (timeLeft <= 0) {
+                                clearInterval(countdownInterval);
+                                if(timerSpan) timerSpan.classList.add('hidden');
+                                goToNextRace();
+                            }
+                        }, 1000);
+                    }
+                } else {
+                    arrivalBlock.classList.add('hidden');
+                    reportsGrid.classList.add('hidden');
+                    if (timerSpan) timerSpan.classList.add('hidden');
+                    
+                    if (algo.processed.length === 0) {
+                        if (!isBackground) tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes ou critères non réunis sur cette course.</td></tr>`;
+                        return;
+                    }
+
+                    if (lockBadge) {
+                        if (isFrozen) lockBadge.classList.remove('hidden');
+                        else lockBadge.classList.add('hidden');
+                    }
+
+                    if (algo.valueBets.length > 0) {
+                        livePredBlock.classList.remove('hidden');
+                        livePredList.innerHTML = algo.valueBets.map(v => 
+                            `<div class="bg-emerald-600 px-3 py-1.5 rounded-lg shadow border border-emerald-400 text-white">Jouer le N°${v.num} ${v.nom}</div>`
+                        ).join('');
+                        
+                        if (!alertedValues.has(raceKey)) {
+                            playTone('value');
+                            alertedValues.add(raceKey);
+                        }
+                    } else {
+                        livePredBlock.classList.remove('hidden');
+                        livePredList.innerHTML = `<span class="text-zinc-400 text-xs font-normal">Aucune anomalie détectée pour cette course. Ne rien jouer.</span>`;
+                    }
+                }
+
+                if (!isBackground || !isFrozen) {
+                    tbody.innerHTML = '';
+                    algo.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
+                        let tr = document.createElement('tr');
+                        let isValue = algo.valueBets.some(v => v.num === p.num);
+                        tr.className = isValue ? "bg-emerald-900/20 border-l-4 border-emerald-500" : "border-b border-zinc-800/50";
+                        
+                        let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
+                        if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold animate-pulse shadow">VALUE</span>`;
+                        if (isFrozen && !hasArrival) tag += `<span class="ml-2 text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-lock mr-0.5"></i>Figé</span>`;
+
+                        let probHtml = (p.trueProb !== undefined && !isNaN(p.trueProb)) ? `${(p.trueProb * 100).toFixed(1)}%` : 'N/A';
+
+                        tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay !== null ? p.coteDisplay : '--'}</td><td class="p-3 text-emerald-500">${probHtml}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+            } catch(e) {
+                if (!isBackground) document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">Erreur de chargement de la course (${e.message || 'API Locale'}).</td></tr>`;
+            }
+        }
+
+        async function calculateDailyStats(isAuto = false) {
+            let dateInput = document.getElementById('raceDate').value;
+            if (!dateInput || liveMeetingsData.length === 0) return;
+
+            document.getElementById('btnResumeMissing').style.display = 'none';
+            document.getElementById('dailyStatusBadge').textContent = 'Analyse en cours...';
+            
+            let parts = dateInput.split('-');
+            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+            
+            let racesToScan = [];
+            liveMeetingsData.forEach((m, mIdx) => {
+                let hipName = m.hippodrome?.libelleLong || m.hippodrome?.libelleCourt || m.hippodrome?.nom || 'Hippodrome';
+                let rNum = m.numOfficiel || (mIdx + 1);
+                m.courses.forEach((c, cIdx) => {
+                    let st = String(c.statut || '').toUpperCase();
+                    let cNum = c.numOrdre || (cIdx + 1);
+                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: rNum, cNum: cNum, name: `R${rNum}C${cNum}`, hipName: hipName });
+                });
+            });
+
+            let totalStakes = 0, totalNet = 0, betsCount = 0, winsCount = 0, coursesValidees = 0;
+            let auditRows = [];
+            let statsProgress = document.getElementById('statsProgress');
+
+            for (let i = 0; i < racesToScan.length; i++) {
+                let r = racesToScan[i];
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> (${i+1}/${racesToScan.length}) : ${r.name}`;
+                
+                let cacheKey = `race_cache_value_${ddmmyyyy}_${r.rNum}_${r.cNum}`;
+                let raceData = null;
+                
+                if (validatedRacesCache[cacheKey]) {
+                    raceData = validatedRacesCache[cacheKey];
+                } else {
+                    try {
+                        await sleep(200); 
+                        const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            let partants = data.participants || [];
+                            let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+                            
+                            raceData = { partants, rapportsList, isComplete: rapportsList.length > 0 };
+                            if (raceData.isComplete) validatedRacesCache[cacheKey] = raceData;
+                        }
+                    } catch (e) { }
+                }
+
+                if (!raceData || !raceData.partants || raceData.partants.length < 5 || !raceData.isComplete) {
+                    continue;
+                }
+
+                let algo = computeAlgorithm(raceData.partants);
+                if (algo.valueBets.length === 0) continue;
+
+                coursesValidees++;
+                algo.valueBets.forEach(vh => {
+                    let gain1E = extractGainFromRapports(raceData.rapportsList, vh.num, BET_TYPE);
+                    betsCount++;
+                    totalStakes += FLAT_STAKE;
+                    if (gain1E >= 1.0) {
+                        winsCount++;
+                        let betNet = (gain1E * FLAT_STAKE) - FLAT_STAKE;
+                        totalNet += betNet;
+                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2"><span class="text-emerald-400">N°${vh.num}</span></td><td class="py-1 pr-2 text-center text-zinc-300">${gain1E.toFixed(2)}</td><td class="py-1 text-right text-emerald-400 font-bold">+${betNet.toFixed(2)}€</td></tr>`);
+                    } else {
+                        totalNet -= FLAT_STAKE;
+                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2">N°${vh.num}</td><td class="py-1 pr-2 text-center text-zinc-500">Perdu</td><td class="py-1 text-right text-red-400">-${FLAT_STAKE.toFixed(2)}€</td></tr>`);
+                    }
+                });
+
+                document.getElementById('dashInvested').textContent = `${totalStakes.toFixed(2)} €`;
+                document.getElementById('dashBetsCount').textContent = `${betsCount} pari(s)`;
+                document.getElementById('dashHitRate').textContent = `${betsCount > 0 ? ((winsCount/betsCount)*100).toFixed(0) : 0} %`;
+                document.getElementById('dashWinsCount').textContent = `${winsCount} gagné(s)`;
+                document.getElementById('dashNet').innerHTML = formatMoneyHTML(totalNet);
+                document.getElementById('dashROI').innerHTML = formatROI(totalNet, totalStakes);
+            }
+
+            document.getElementById('btnToggleAuditLog').textContent = `📋 Journal des Paris (${betsCount})`;
+            document.getElementById('auditLogBody').innerHTML = auditRows.join('');
+            document.getElementById('dailyStatusBadge').textContent = 'Terminé';
+            statsProgress.textContent = `✅ ${coursesValidees}/${racesToScan.length} chargées`;
+            document.getElementById('btnResumeMissing').style.display = 'inline-block';
+            document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Re-Scanner';
+            
+            localStorage.setItem(`valuebet_stats_${STATS_VERSION}_${currentDisciplineMode}_${ddmmyyyy}`, JSON.stringify({ stakes: totalStakes, net: totalNet, bets: betsCount, wins: winsCount, updatedAt: Date.now() }));
+        }
+
         async function loadLivePmu() {
             let dateEl = document.getElementById('raceDate');
             if (!dateEl.value) {
@@ -1195,7 +1470,6 @@
             document.getElementById('btnResumeMissing').style.display = 'none';
 
             try {
-                // METHODE ORIGINALE DU TOUT PREMIER CODE : AUCUN "if (!res.ok) throw..."
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`);
                 const data = await res.json();
                 
@@ -1255,7 +1529,8 @@
                 }
             } catch (e) {
                 console.error("Détail erreur:", e);
-                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Erreur API Locale</span>';
+                let msg = e && e.message ? ` (${e.message})` : '';
+                statusText.innerHTML = `<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Erreur API Locale${msg}</span>`;
                 document.getElementById('btnResumeMissing').style.display = 'inline-block';
                 document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Réessayer';
             }
