@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V21 Opti 20€)</title>
+    <title>Turf - V115 Value Betting (V22 Correction API)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-coins mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V21 OPTI 20€</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V22 OPTI 20€</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -138,7 +138,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V21 Opti 20€)
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V22 Opti 20€)
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
@@ -307,14 +307,14 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v21_opti20"; 
+        const STATS_VERSION = "v115_v22_opti20"; 
         
-        // --- PARAMETRES PAR DEFAUT "MODE V21 - OPTIMISATION 20€" ---
+        // --- PARAMETRES PAR DEFAUT ---
         let currentDisciplineMode = 'GALOP'; // Plat/Obstacle par défaut
-        let FLAT_STAKE = 20.0; // Mise baissée à 20€
+        let FLAT_STAKE = 20.0; // Mise à 20€
         let BET_TYPE = 'PLACE'; // Simple Placé
-        let MIN_VALUE_MARGIN = 25; // 25% exigée pour garantir un haut rendement
-        let MAX_ODD_FILTER = 18.0; // Fenêtre augmentée : 6.0 à 18.0
+        let MIN_VALUE_MARGIN = 25; // Marge élevée requise
+        let MAX_ODD_FILTER = 18.0; 
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -540,12 +540,20 @@
             
             let btnGalop = document.getElementById('btnFilterGalop');
             let btnAll = document.getElementById('btnFilterAll');
+            let btnTrot = document.getElementById('btnFilterTrot');
+            
             if (currentDisciplineMode === 'GALOP') {
                 btnGalop.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
                 btnAll.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
+                btnTrot.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
+            } else if (currentDisciplineMode === 'TROT') {
+                btnTrot.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
+                btnAll.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
+                btnGalop.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
             } else {
                 btnAll.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
                 btnGalop.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
+                btnTrot.className = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
             }
             
             updateStrategyLabelsUI();
@@ -553,10 +561,14 @@
 
         function updateStrategyLabelsUI() {
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en Simple Placé (V21 Opti 20€)`;
+            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en Simple Placé (Rendement Haut)`;
             
             let lbl = document.getElementById('histModeLabel');
-            if(lbl) lbl.textContent = currentDisciplineMode === 'GALOP' ? '100% Plat/Obs' : 'Toutes Courses';
+            if(lbl) {
+                if (currentDisciplineMode === 'GALOP') lbl.textContent = '100% Plat/Obs';
+                else if (currentDisciplineMode === 'TROT') lbl.textContent = '100% Trot';
+                else lbl.textContent = 'Toutes Courses';
+            }
         }
 
         function applyStrategySettings() {
@@ -637,7 +649,7 @@
         }
 
         // ==========================================
-        //  NOUVEAU BLOC V21 - OPTIMISATION 20€ (HAUT RENDEMENT)
+        //  NOUVEAU BLOC V22 - LA CORRECTION API
         // ==========================================
 
         function getCoteSafely(p) {
@@ -646,8 +658,8 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        // 1. Musique V21 (Focus Top 4 - Élimination des "zéro")
-        function evaluateMusiqueV21(musique) {
+        // 1. Musique Sécurisée et Optimisée
+        function evaluateMusiqueV22(musique) {
             if (!musique) return 0.5;
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
@@ -661,28 +673,26 @@
                 let res = matchRes ? matchRes[1].toUpperCase() : '9';
                 let w = (4 - i); 
                 
-                // Il doit avoir fait l'arrivée au moins une fois récemment
+                // Au moins 1 présence dans le top 4 récemment
                 if (i <= 2 && ['1','2','3','4'].includes(res)) hasTop4 = true;
                 
                 if (res === '1') score += 10 * w;
                 else if (res === '2') score += 8 * w;
                 else if (res === '3') score += 6 * w;
                 else if (res === '4') score += 4 * w;
-                else if (res === '0') score -= 5 * w; // On punit très fort les non-placés
+                else if (res === '0') score -= 5 * w; // On punit fort les non-placés secs
             }
             
-            if (!hasTop4) return 0.2; // Forme douteuse
+            if (!hasTop4) return 0.2; 
             
-            return 0.8 + (score / 80); // Multiplicateur max ~ 1.5
+            return 0.8 + (score / 80); 
         }
 
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
-            // Les petits champs faussent les rapports placés, on les ignore (min 10)
             if (validPartants.length < 10 || validPartants.length > 18) return { processed: [], valueBets: [] };
 
-            // Anti-Ultra Favori : S'il y a un cheval sous les 2.5/1, il détruit les probabilités.
             let minCoteInRace = Math.min(...validPartants.map(p => getCoteSafely(p)));
             if (minCoteInRace < 2.5) return { processed: [], valueBets: [] }; 
 
@@ -699,13 +709,10 @@
 
                 let dropRatio = coteMatin / coteDir;
                 
-                // Base PMU Plat/Obs
                 let pmuProbPla = (0.75 / coteDir) * 3; 
 
-                let formMult = evaluateMusiqueV21(musique);
+                let formMult = evaluateMusiqueV22(musique);
                 
-                // Smart Money : On cherche une baisse légère ou une forte stagnation,
-                // On évite les chevaux abandonnés (<0.95).
                 let marketMult = 1.0;
                 if (dropRatio >= 1.15) marketMult = 1.30; 
                 else if (dropRatio >= 1.05) marketMult = 1.15;
@@ -715,7 +722,6 @@
                 trueProbPla = Math.max(0.01, Math.min(0.85, trueProbPla));
                 let trueOddPla = 1 / trueProbPla;
 
-                // Estimation Placé Galop (Formule empirique ajustée pour les cotes 6 à 18)
                 let estPlace = 1.20 + ((coteDir - 1) / 3.8);
 
                 let margin = ((estPlace / trueOddPla) - 1) * 100;
@@ -734,23 +740,16 @@
             
             let valueBets = processed.filter(p => {
                 // FENETRE HAUT RENDEMENT (6.0 à 18.0)
-                // En dessous de 6, le rapport (souvent 1.70-2.00) ne couvre pas nos pertes avec une mise de 20€.
                 if (p.coteDir < 6.0 || p.coteDir > 18.0) return false; 
                 if (p.coteDir > MAX_ODD_FILTER) return false;
-                
-                // Marge élevée requise
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
-                
-                // Le cheval doit être validé par un peu d'argent (dropRatio >= 1.05)
                 if (p.dropRatio < 1.05) return false;
-
-                // Sécurité mathématique (Min 25% de chance de podium)
                 if (p.trueProb < 0.25) return false; 
                 
                 return true;
             })
             .sort((a, b) => b.valueMargin - a.valueMargin)
-            .slice(0, 1); // Toujours 1 seul pari par course max
+            .slice(0, 1);
 
             return { processed, valueBets };
         }
@@ -999,14 +998,8 @@
 
                     if (bannerText) bannerText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Calcul du ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} (${idx+1}/${datesToSync.length})...`;
                     
-                    let data;
-                    try {
-                        const res = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`);
-                        if (!res.ok) throw new Error("Network error");
-                        data = await res.json();
-                    } catch(e) {
-                        continue;
-                    }
+                    let data = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`).then(r => r.json()).catch(() => null);
+                    if (!data) continue;
 
                     let rawR = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
                     
@@ -1024,6 +1017,7 @@
                                 let sStr = String(course.specialite || '').toUpperCase();
                                 let isGalop = dStr.includes('PLAT') || dStr.includes('OBSTACLE') || dStr.includes('HAIES') || dStr.includes('STEEPLE') || dStr.includes('CROSS');
                                 if (currentDisciplineMode === 'GALOP') return isGalop;
+                                if (currentDisciplineMode === 'TROT') return dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') || sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE');
                                 return true;
                             });
                             if (targetCourses.length === 0) continue;
@@ -1086,102 +1080,6 @@
             calculateDailyStats(false);
         }
 
-        function getSortedRacesList() {
-            let list = [];
-            liveMeetingsData.forEach((m, mIdx) => {
-                let courses = m.courses || m.races || m.lesCourses || [];
-                courses.forEach((c, cIdx) => {
-                    if (c.heureDepart) {
-                        list.push({ mIdx, cIdx, time: new Date(c.heureDepart).getTime(), courseObj: c });
-                    }
-                });
-            });
-            return list.sort((a, b) => a.time - b.time);
-        }
-
-        function navigateRace(direction) {
-            let mIdx = parseInt(document.getElementById('meetingSelect').value, 10);
-            let cIdx = parseInt(document.getElementById('raceSelect').value, 10);
-            if (isNaN(mIdx) || isNaN(cIdx)) return;
-
-            let sortedRaces = getSortedRacesList();
-            let currentIndex = sortedRaces.findIndex(r => r.mIdx === mIdx && r.cIdx === cIdx);
-
-            if (currentIndex !== -1) {
-                let targetIndex = currentIndex + direction;
-                if (targetIndex >= 0 && targetIndex < sortedRaces.length) {
-                    let targetRace = sortedRaces[targetIndex];
-                    
-                    document.getElementById('meetingSelect').value = targetRace.mIdx;
-                    
-                    let meeting = liveMeetingsData[targetRace.mIdx];
-                    let raceSelect = document.getElementById('raceSelect');
-                    raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
-                    meeting.courses.forEach((c, idx) => {
-                        let opt = document.createElement('option');
-                        opt.value = idx;
-                        let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                        let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
-                        let cNum = c.numOrdre || (idx+1);
-                        opt.textContent = `${statusMarker}${courseTime}C${cNum} - ${c.libelle || c.nom}`;
-                        raceSelect.appendChild(opt);
-                    });
-
-                    document.getElementById('raceSelect').value = targetRace.cIdx;
-                    autoTransitionDone = false;
-                    if (countdownInterval) clearInterval(countdownInterval);
-                    fetchRaceData(false);
-                } else {
-                    let msg = direction > 0 ? "Fin des courses de la journée !" : "C'est la première course de la journée !";
-                    showToast(msg, "info");
-                }
-            }
-        }
-
-        function goToNextRace() {
-            navigateRace(1);
-        }
-
-        function autoSelectCurrentRace() {
-            let now = Date.now();
-            let sortedRaces = getSortedRacesList();
-            
-            if (sortedRaces.length === 0) return;
-
-            let targetRace = null;
-            
-            for (let i = 0; i < sortedRaces.length; i++) {
-                let r = sortedRaces[i];
-                let diff = r.time - now;
-                if (diff > -300000 && !isRaceFinished(r.courseObj)) {
-                    targetRace = r;
-                    break;
-                }
-            }
-
-            if (!targetRace) {
-                targetRace = sortedRaces[sortedRaces.length - 1];
-            }
-
-            if (targetRace && liveMeetingsData[targetRace.mIdx]) {
-                document.getElementById('meetingSelect').value = targetRace.mIdx;
-                
-                let raceSelect = document.getElementById('raceSelect');
-                raceSelect.innerHTML = '<option value="">-- Choisissez une course --</option>';
-                liveMeetingsData[targetRace.mIdx].courses.forEach((c, idx) => {
-                    let opt = document.createElement('option');
-                    opt.value = idx;
-                    let courseTime = c.heureDepart ? `[${formatTime(c.heureDepart)}] ` : '';
-                    let statusMarker = isRaceFinished(c) ? '🏁 ' : '';
-                    let cNum = c.numOrdre || (idx+1);
-                    opt.textContent = `${statusMarker}${courseTime}C${cNum} - ${c.libelle || c.nom}`;
-                    raceSelect.appendChild(opt);
-                });
-
-                document.getElementById('raceSelect').value = targetRace.cIdx;
-            }
-        }
-
         async function loadLivePmu() {
             let dateEl = document.getElementById('raceDate');
             if (!dateEl.value) {
@@ -1197,8 +1095,8 @@
             document.getElementById('btnResumeMissing').style.display = 'none';
 
             try {
+                // CORRECTION : Retour strict à la méthode de fetch de la toute première version
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`);
-                if (!res.ok) throw new Error("Erreur réseau");
                 const data = await res.json();
                 
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
@@ -1214,6 +1112,7 @@
                         let sStr = String(c.specialite || '').toUpperCase();
                         let isGalop = dStr.includes('PLAT') || dStr.includes('OBSTACLE') || dStr.includes('HAIES') || dStr.includes('STEEPLE') || dStr.includes('CROSS');
                         if (currentDisciplineMode === 'GALOP') return isGalop;
+                        if (currentDisciplineMode === 'TROT') return dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') || sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE');
                         return true;
                     });
                     
@@ -1256,7 +1155,7 @@
                 }
             } catch (e) {
                 console.error("Détail erreur:", e);
-                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Serveur local PMU injoignable.</span>';
+                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Erreur API Locale</span>';
                 document.getElementById('btnResumeMissing').style.display = 'inline-block';
                 document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Réessayer';
             }
@@ -1269,21 +1168,6 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
-            // Sécurité V21
-            if (document.getElementById('selectBetType').value !== 'PLACE') {
-                 document.getElementById('selectBetType').value = 'PLACE';
-                 BET_TYPE = 'PLACE';
-            }
-            if (document.getElementById('inputMaxOdd').value < 18) {
-                 document.getElementById('inputMaxOdd').value = 18;
-            }
-            if (document.getElementById('inputMinMargin').value < 25) {
-                 document.getElementById('inputMinMargin').value = 25;
-            }
-            if (document.getElementById('inputFlatStake').value > 20) {
-                 document.getElementById('inputFlatStake').value = 20;
-                 FLAT_STAKE = 20.0;
-            }
             loadLivePmu(); 
         };
     </script>
