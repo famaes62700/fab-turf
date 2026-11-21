@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V17 L'Anomalie Statistique)</title>
+    <title>Turf - V115 Value Betting (V18 Masterclass Placé)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,8 +27,8 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-user-secret mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V17 ANOMALIE</span>
+                    <i class="fa-solid fa-gem mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V18 PLACÉ</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -138,7 +138,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V17 Anomalie)
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V18 Masterclass)
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
@@ -152,7 +152,8 @@
                 <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/50 flex flex-col">
                     <span class="text-[9px] text-amber-400 uppercase font-bold">Pari Recherché</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
-                        <option value="PLACE" selected>Simple Placé (L'Oublié)</option>
+                        <option value="PLACE" selected>Simple Placé (Régularité)</option>
+                        <option value="GAGNANT">Simple Gagnant</option>
                     </select>
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
@@ -161,7 +162,7 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="30" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="14" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
@@ -294,7 +295,7 @@
                         <tr class="bg-zinc-800/60 text-zinc-400 border-b border-zinc-800">
                             <th class="p-3">N° / Nom</th>
                             <th class="p-3">Cote Actuelle</th>
-                            <th class="p-3">Statut Modèle <span class="text-[9px] font-normal text-zinc-500">(Zéro défaut)</span></th>
+                            <th class="p-3">Proba Modèle <span class="text-[9px] font-normal text-zinc-500">(Math.)</span></th>
                             <th class="p-3">Marge Value</th>
                         </tr>
                     </thead>
@@ -307,14 +308,14 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v17_anomalie"; 
+        const STATS_VERSION = "v115_v18_masterclass"; 
         
-        // --- PARAMETRES PAR DEFAUT "MODE V17 - L'ANOMALIE STATISTIQUE" ---
+        // --- PARAMETRES PAR DEFAUT "MODE V18 - PLACÉ MASTERCLASS" ---
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 30.0;
-        let BET_TYPE = 'PLACE'; // On bloque sur placé
+        let BET_TYPE = 'PLACE'; // Le Placé maîtrisé
         let MIN_VALUE_MARGIN = 20; 
-        let MAX_ODD_FILTER = 30.0; // On ouvre grand pour cibler les vrais chevaux oubliés
+        let MAX_ODD_FILTER = 14.0; // Fenêtre Placé idéale : 5.0 à 14.0
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -553,7 +554,7 @@
 
         function updateStrategyLabelsUI() {
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en Simple Placé (V17 L'Oublié)`;
+            if (b) b.textContent = `Mise Fixe ${FLAT_STAKE}€ en Simple Placé (V18 Masterclass)`;
             
             let lbl = document.getElementById('histModeLabel');
             if(lbl) lbl.textContent = currentDisciplineMode === 'TROT' ? '100% Trot' : 'Toutes Courses';
@@ -563,7 +564,7 @@
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 30;
             BET_TYPE = document.getElementById('selectBetType').value;
             MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
-            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 30;
+            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 14;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
@@ -637,7 +638,7 @@
         }
 
         // ==========================================
-        //  NOUVEAU BLOC V17 - L'ANOMALIE STATISTIQUE (LE CHEVAL OUBLIÉ)
+        //  NOUVEAU BLOC V18 - MASTERCLASS PLACÉ
         // ==========================================
 
         function getCoteSafely(p) {
@@ -646,44 +647,55 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        // 1. L'Évaluation V17 : Tolérance ZÉRO absolu.
-        function evaluateMusiqueV17(musique) {
-            if (!musique) return 0.1; // Rejeté
+        // 1. Analyse de Forme Stricte (Top 4 Requis)
+        function evaluateMusiqueV18(musique) {
+            if (!musique) return 0.5;
+            let clean = String(musique).replace(/\(\d+\)/g, '');
+            let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
+            if (tokens.length === 0) return 0.5;
+
+            let score = 0;
+            let placeCount = 0;
+            
+            for (let i = 0; i < Math.min(tokens.length, 4); i++) {
+                let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
+                let w = (4 - i);
+                
+                if (['1','2','3','4'].includes(res)) placeCount++;
+                
+                if (res === '1') score += 10 * w;
+                else if (res === '2') score += 8 * w;
+                else if (res === '3') score += 6 * w;
+                else if (res === '4') score += 4 * w;
+                else if (res === '5') score += 2 * w;
+            }
+            
+            // FILTRE DE BASE : Il doit avoir été placé récemment, sinon on ne joue pas.
+            if (placeCount === 0) return 0.2; 
+            
+            return 0.8 + (score / 100); 
+        }
+
+        // 2. Anti-Faute (Zéro Tolérance)
+        function penaltyDAIV18(musique) {
+            if (!musique) return 0.8;
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
             
-            // Il faut de l'historique
-            if (tokens.length < 3) return 0.1;
-
-            let score = 0;
-            for (let i = 0; i < Math.min(tokens.length, 4); i++) {
+            for (let i = 0; i < Math.min(tokens.length, 3); i++) {
                 let res = tokens[i].match(/^([0-9DATR]+)/i)[1].toUpperCase();
-                
-                // LA REGLE D'OR : N'IMPORTE QUEL ECHEC DANS LES 4 DERNIERES COURSES = OUT.
-                // Zéro Disqualification, Zéro Non Placé (0). Le cheval doit être parfait.
-                if (res.includes('D') || res.includes('A') || res.includes('T') || res.includes('R') || res === '0') {
-                    return 0.1; 
-                }
-                
-                if (['1','2','3','4'].includes(res)) score += (5 - i); // Plus c'est récent, plus c'est lourd
+                // 1 seule faute sur les 3 dernières = ON JETTE.
+                if (res.includes('D') || res.includes('A')) return 0.1; 
             }
-            
-            if (score < 4) return 0.1; // Il doit avoir au moins quelques belles places
-            
-            return 1.5; // S'il a passé ce filtre, c'est un métronome absolu. Multiplicateur massif.
+            return 1.15; 
         }
 
+        // 3. Algorithme Central V18
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
-            if (validPartants.length < 8) return { processed: [], valueBets: [] };
-
-            // LE FILTRE D'ENVIRONNEMENT : L'ASPIRATEUR A MISES
-            // On ne joue QUE si le public est hypnotisé par des favoris clairs.
-            let favs = validPartants.filter(p => getCoteSafely(p) < 3.5);
-            
-            // S'il n'y a pas de favori clair, ou s'il y en a trop (3 favoris = course illisible) : on passe.
-            if (favs.length === 0 || favs.length > 2) return { processed: [], valueBets: [] }; 
+            // Les courses avec moins de 10 partants sont trop piégeuses pour les rapports
+            if (validPartants.length < 10) return { processed: [], valueBets: [] };
 
             let hasAnyRealOdd = false;
             
@@ -692,19 +704,30 @@
                 let musique = p.musique || p.form || "0a";
                 let coteDir = getCoteSafely(p);
 
+                let rawMatin = p.dernierRapportReference?.rapport || coteDir;
+                let coteMatin = parseFloat(String(rawMatin).replace(',', '.')) || coteDir;
+
                 if (coteDir < 900) hasAnyRealOdd = true;
 
-                // Base mathématique PMU Placé estimée
-                let pmuProbPla = (0.80 / coteDir) * 3; 
-
-                let formMult = evaluateMusiqueV17(musique);
+                let dropRatio = coteMatin / coteDir;
                 
-                let trueProbPla = pmuProbPla * formMult;
+                let pmuProbPla = (0.75 / coteDir) * 3; 
+
+                let formMult = evaluateMusiqueV18(musique);
+                let daiMult = penaltyDAIV18(musique);
+                
+                // Smart Money : On valide les chutes de cote modérées à fortes
+                let marketMult = 1.0;
+                if (dropRatio >= 1.15) marketMult = 1.30; 
+                else if (dropRatio >= 1.05) marketMult = 1.10;
+                else if (dropRatio < 0.90) marketMult = 0.70;
+                
+                let trueProbPla = pmuProbPla * formMult * daiMult * marketMult;
                 trueProbPla = Math.max(0.01, Math.min(0.85, trueProbPla));
                 let trueOddPla = 1 / trueProbPla;
 
-                // On estime un rapport placé très optimiste, car on SAIT que les favoris vont parfois craquer.
-                let estPlace = 1 + ((coteDir - 1) / 3.0);
+                // Diviseur PMU empirique
+                let estPlace = 1 + ((coteDir - 1) / 4.0);
 
                 let margin = ((estPlace / trueOddPla) - 1) * 100;
 
@@ -714,22 +737,22 @@
                     coteDir, estPlace, trueOddGag: 0, trueOddPla, 
                     valueMargin: margin, 
                     ordreArrivee: p.ordreArrivee ? parseInt(p.ordreArrivee, 10) : 0,
-                    isFlawless: (formMult > 1.0)
+                    trueProb: trueProbPla
                 };
             });
 
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
             
             let valueBets = processed.filter(p => {
-                // Règle 1 : La Cible. On veut le cheval oublié (cote de 10.0 à 30.0).
-                if (p.coteDir < 10.0 || p.coteDir > 30.0) return false; 
+                // Règle 1 : La Fenêtre V18 (5.0 à 14.0)
+                if (p.coteDir < 5.0 || p.coteDir > 14.0) return false; 
                 if (p.coteDir > MAX_ODD_FILTER) return false;
                 
-                // Règle 2 : Le Cheval doit avoir un parcours parfait
-                if (!p.isFlawless) return false;
-
-                // Règle 3 : Marge mathématique
+                // Règle 2 : La Marge
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
+                
+                // Règle 3 : Exigence de chance (minimum 35% de chance de podium)
+                if (p.trueProb < 0.35) return false; 
                 
                 return true;
             })
@@ -1225,10 +1248,304 @@
                 }
             } catch (e) {
                 console.error("Détail erreur:", e);
-                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Erreur API Locale</span>';
+                statusText.innerHTML = '<span class="text-red-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Le serveur local PMU ne répond pas (port fermé ou hors ligne).</span>';
                 document.getElementById('btnResumeMissing').style.display = 'inline-block';
                 document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Réessayer';
             }
+        }
+
+        async function fetchRaceData(isBackground = false) {
+            let mIdx = document.getElementById('meetingSelect').value;
+            let cIdx = document.getElementById('raceSelect').value;
+            if (mIdx === "" || cIdx === "") return;
+            
+            let meeting = liveMeetingsData[mIdx];
+            let race = meeting.courses[cIdx];
+            let dateInput = document.getElementById('raceDate').value;
+            let parts = dateInput.split('-');
+            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+            
+            let rNum = meeting.numOfficiel || (parseInt(mIdx, 10) + 1);
+            let cNum = race.numOrdre || (parseInt(cIdx, 10) + 1);
+            let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
+            
+            if (!isBackground) {
+                document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse radar...</td></tr>`;
+                document.getElementById('livePredictionBlock').classList.add('hidden');
+                document.getElementById('arrivalBlock').classList.add('hidden');
+                document.getElementById('reportsGrid').classList.add('hidden');
+            }
+
+            try {
+                const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${rNum}&c=${cNum}&_t=${Date.now()}`);
+                const data = await res.json();
+                let partants = data.participants || [];
+                
+                let hipName = meeting.hippodrome?.libelleLong || meeting.hippodrome?.libelleCourt || meeting.hippodrome?.nom || 'Hippodrome';
+                let cStart = race.heureDepart ? formatTime(race.heureDepart) : '';
+                let timeTag = cStart ? ` <span class="text-zinc-400 font-mono text-[11px] mx-1.5"><i class="fa-regular fa-clock"></i> ${cStart}</span>` : '';
+
+                let { algo, isFrozen, isStarted } = getAlgoWithFreeze(partants, race, raceKey);
+                
+                let arrivees = partants.filter(p => p.ordreArrivee && p.ordreArrivee > 0 && p.ordreArrivee < 20).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
+                let hasArrival = arrivees.length > 0;
+
+                if (!isBackground && hasArrival) {
+                    autoTransitionDone = true;
+                }
+
+                let runningBadge = (isStarted && !hasArrival)
+                    ? '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ml-1 animate-pulse"><i class="fa-solid fa-horse-head mr-1"></i>EN COURSE</span>'
+                    : '';
+
+                document.getElementById('raceInfoDetails').innerHTML = `<div class="flex items-center flex-wrap"><span class="text-amber-400 font-black text-sm">R${rNum}C${cNum}</span>${timeTag}<span class="text-zinc-300 font-semibold mr-2">- ${hipName}</span>${getDisciplineBadge(race.discipline)}${runningBadge}</div>`;
+
+                let tbody = document.getElementById('runnersTableBody');
+                let livePredBlock = document.getElementById('livePredictionBlock');
+                let livePredList = document.getElementById('livePredictionList');
+                let lockBadge = document.getElementById('radarLockBadge');
+                let arrivalBlock = document.getElementById('arrivalBlock');
+                let arrivalList = document.getElementById('arrivalList');
+                let reportsGrid = document.getElementById('reportsGrid');
+                let timerSpan = document.getElementById('nextRaceTimer');
+
+                if (hasArrival) {
+                    livePredBlock.classList.add('hidden'); 
+                    arrivalBlock.classList.remove('hidden');
+                    arrivalList.innerHTML = arrivees.slice(0, 5).map(p => 
+                        `<div class="bg-blue-900/60 px-2.5 py-1 rounded-lg border border-blue-500/40"><span class="text-blue-300">${p.ordreArrivee}e:</span> N°${p.numPmu || p.numOrdre} ${p.nom}</div>`
+                    ).join('');
+
+                    // EXTRACTION ET AFFICHAGE DES RAPPORTS DEFINITIFS
+                    let listeRapports = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+                    let reportsHTML = "";
+                    
+                    listeRapports.forEach(group => {
+                        let pType = String(group.typePari || group.libellePari || group.codePari || "").toUpperCase();
+                        let famille = String(group.famillePari || "").toUpperCase();
+                        
+                        if (pType.includes('SIMPLE') || pType.includes('SG') || pType.includes('SP') || famille.includes('SIMPLE')) {
+                            let details = group.rapports || group.dividendes || group.lesRapports || [];
+                            details.forEach(item => {
+                                let combo = String(item.combinaison || item.cheval || item.numeroCheval || item.partant || "").trim();
+                                let lib = String(item.libelleRapport || item.libelle || item.typeRapport || item.nomRapport || "").toUpperCase();
+                                
+                                let val = 0;
+                                if (item.dividendePourUnEuro !== undefined) val = item.dividendePourUnEuro / 100;
+                                else if (item.dividendeEuro !== undefined) val = item.dividendeEuro;
+                                else if (item.gainEuro !== undefined) val = item.gainEuro;
+                                else {
+                                    let rawM = item.rapport || item.dividende || item.montant;
+                                    if (rawM !== undefined && rawM !== null) {
+                                        val = parseFloat(String(rawM).replace(',', '.'));
+                                        if (val > 100) val = val / 100; 
+                                    }
+                                }
+
+                                if (val > 0) {
+                                    let typeBadge = 'P';
+                                    if (lib.includes('GAGNANT') || lib === 'G' || lib.includes('SG') || lib.includes('1ER') || lib.includes('WIN') || pType.includes('GAGNANT') || pType === 'SG') {
+                                        if (!lib.includes('PLACE') && !lib.includes('SHOW')) typeBadge = 'G';
+                                    }
+
+                                    let badgeColor = typeBadge === 'G' ? 'text-amber-400' : 'text-blue-400';
+                                    reportsHTML += `<div class="bg-blue-900/40 p-1.5 rounded border border-blue-500/30 flex justify-between items-center text-[10px]">
+                                        <span class="text-zinc-300">N°${combo} <span class="${badgeColor} font-black">${typeBadge}</span></span>
+                                        <span class="text-white font-bold">${val.toFixed(2)}€</span>
+                                    </div>`;
+                                }
+                            });
+                        }
+                    });
+
+                    if (reportsHTML !== "") {
+                        reportsGrid.innerHTML = reportsHTML;
+                        reportsGrid.classList.remove('hidden');
+                        reportsGrid.classList.add('grid');
+                    } else {
+                        reportsGrid.classList.add('hidden');
+                        reportsGrid.classList.remove('grid');
+                    }
+
+                    if (!alertedArrivals.has(raceKey)) {
+                        alertedArrivals.add(raceKey);
+                        playTone('arrival');
+                    }
+
+                    if (!autoTransitionDone) {
+                        autoTransitionDone = true;
+                        timerSpan.classList.remove('hidden');
+                        
+                        let timeLeft = 30;
+                        timerSpan.textContent = `Bascule dans ${timeLeft}s`;
+                        
+                        if (countdownInterval) clearInterval(countdownInterval);
+                        countdownInterval = setInterval(() => {
+                            timeLeft--;
+                            if(timerSpan) timerSpan.textContent = `Bascule dans ${timeLeft}s`;
+                            if (timeLeft <= 0) {
+                                clearInterval(countdownInterval);
+                                if(timerSpan) timerSpan.classList.add('hidden');
+                                goToNextRace();
+                            }
+                        }, 1000);
+                    }
+                } else {
+                    arrivalBlock.classList.add('hidden');
+                    reportsGrid.classList.add('hidden');
+                    if (timerSpan) timerSpan.classList.add('hidden');
+                    
+                    if (algo.processed.length === 0) {
+                        if (!isBackground) tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes ou peloton inadapté.</td></tr>`;
+                        return;
+                    }
+
+                    if (lockBadge) {
+                        if (isFrozen) lockBadge.classList.remove('hidden');
+                        else lockBadge.classList.add('hidden');
+                    }
+
+                    if (algo.valueBets.length > 0) {
+                        livePredBlock.classList.remove('hidden');
+                        livePredList.innerHTML = algo.valueBets.map(v => 
+                            `<div class="bg-emerald-600 px-3 py-1.5 rounded-lg shadow border border-emerald-400 text-white">Jouer le N°${v.num} ${v.nom}</div>`
+                        ).join('');
+                        
+                        if (!alertedValues.has(raceKey)) {
+                            playTone('value');
+                            alertedValues.add(raceKey);
+                        }
+                    } else {
+                        livePredBlock.classList.remove('hidden');
+                        livePredList.innerHTML = `<span class="text-zinc-400 text-xs font-normal">Aucune anomalie détectée pour cette course. Ne rien jouer.</span>`;
+                    }
+                }
+
+                if (!isBackground || !isFrozen) {
+                    tbody.innerHTML = '';
+                    algo.processed.sort((a, b) => b.valueMargin - a.valueMargin).forEach(p => {
+                        let tr = document.createElement('tr');
+                        let isValue = algo.valueBets.some(v => v.num === p.num);
+                        tr.className = isValue ? "bg-emerald-900/20 border-l-4 border-emerald-500" : "border-b border-zinc-800/50";
+                        
+                        let tag = p.ordreArrivee ? `<span class="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
+                        if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold animate-pulse shadow">VALUE</span>`;
+                        if (isFrozen && !hasArrival) tag += `<span class="ml-2 text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-lock mr-0.5"></i>Figé</span>`;
+
+                        // Affichage sécurisé de la probabilité pour éviter tout NaN
+                        let probHtml = p.trueProb ? `${(p.trueProb * 100).toFixed(1)}%` : 'N/A';
+
+                        tr.innerHTML = `<td class="p-3 font-bold"><span class="text-zinc-400 mr-2">${p.num}</span>${p.nom}${tag}</td><td class="p-3 text-zinc-300 font-bold">${p.coteDisplay !== null ? p.coteDisplay : '--'}</td><td class="p-3 text-emerald-500">${probHtml}</td><td class="p-3 ${p.valueMargin >= MIN_VALUE_MARGIN ? 'text-emerald-400 font-bold' : 'text-zinc-500'}">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+            } catch(e) {
+                if (!isBackground) document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-6 text-center text-red-500">La connexion au PMU a échoué. Le serveur est injoignable.</td></tr>`;
+            }
+        }
+
+        async function calculateDailyStats(isAuto = false) {
+            let dateInput = document.getElementById('raceDate').value;
+            if (!dateInput || liveMeetingsData.length === 0) return;
+
+            document.getElementById('btnResumeMissing').style.display = 'none';
+            document.getElementById('dailyStatusBadge').textContent = 'Analyse en cours...';
+            
+            let parts = dateInput.split('-');
+            let ddmmyyyy = `${parts[2]}${parts[1]}${parts[0]}`;
+            
+            let racesToScan = [];
+            liveMeetingsData.forEach((m, mIdx) => {
+                let hipName = m.hippodrome?.libelleLong || m.hippodrome?.libelleCourt || m.hippodrome?.nom || 'Hippodrome';
+                let rNum = m.numOfficiel || (mIdx + 1);
+                m.courses.forEach((c, cIdx) => {
+                    let st = String(c.statut || '').toUpperCase();
+                    let cNum = c.numOrdre || (cIdx + 1);
+                    if (!st.includes('ANNUL')) racesToScan.push({ rNum: rNum, cNum: cNum, name: `R${rNum}C${cNum}`, hipName: hipName });
+                });
+            });
+
+            let totalStakes = 0, totalNet = 0, betsCount = 0, winsCount = 0, coursesValidees = 0;
+            let auditRows = [];
+            let statsProgress = document.getElementById('statsProgress');
+
+            for (let i = 0; i < racesToScan.length; i++) {
+                let r = racesToScan[i];
+                statsProgress.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> (${i+1}/${racesToScan.length}) : ${r.name}`;
+                
+                let cacheKey = `race_cache_value_${ddmmyyyy}_${r.rNum}_${r.cNum}`;
+                let raceData = null;
+                
+                if (validatedRacesCache[cacheKey]) {
+                    raceData = validatedRacesCache[cacheKey];
+                } else {
+                    try {
+                        await sleep(200); 
+                        const res = await fetch(`/api/courses?date=${ddmmyyyy}&r=${r.rNum}&c=${r.cNum}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            let partants = data.participants || [];
+                            let rapportsList = Array.isArray(data.rapports) ? data.rapports : (data.rapports?.lesRapports || data.rapports?.rapports || []);
+                            
+                            raceData = { partants, rapportsList, isComplete: rapportsList.length > 0 };
+                            if (raceData.isComplete) validatedRacesCache[cacheKey] = raceData;
+                        }
+                    } catch (e) { }
+                }
+
+                if (!raceData || !raceData.partants || raceData.partants.length < 5 || !raceData.isComplete) {
+                    continue;
+                }
+                
+                if (currentDisciplineMode === 'TROT') {
+                    let originalMeeting = liveMeetingsData.find(m => m.numOfficiel == r.rNum);
+                    if (originalMeeting) {
+                        let originalCourse = originalMeeting.courses.find(c => c.numOrdre == r.cNum);
+                        if (originalCourse) {
+                            let dStr = String(originalCourse.discipline || '').toUpperCase();
+                            let sStr = String(originalCourse.specialite || '').toUpperCase();
+                            let isTrot = dStr === '' || dStr === 'UNDEFINED' || dStr.includes('TROT') || dStr.includes('ATTEL') || dStr.includes('MONTE') || sStr.includes('TROT') || sStr.includes('ATTEL') || sStr.includes('MONTE');
+                            if (!isTrot) continue;
+                        }
+                    }
+                }
+
+                let algo = computeAlgorithm(raceData.partants);
+                if (algo.valueBets.length === 0) continue;
+
+                coursesValidees++;
+                algo.valueBets.forEach(vh => {
+                    let gain1E = extractGainFromRapports(raceData.rapportsList, vh.num, BET_TYPE);
+                    betsCount++;
+                    totalStakes += FLAT_STAKE;
+                    if (gain1E >= 1.0) {
+                        winsCount++;
+                        let betNet = (gain1E * FLAT_STAKE) - FLAT_STAKE;
+                        totalNet += betNet;
+                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2"><span class="text-emerald-400">N°${vh.num}</span></td><td class="py-1 pr-2 text-center text-zinc-300">${gain1E.toFixed(2)}</td><td class="py-1 text-right text-emerald-400 font-bold">+${betNet.toFixed(2)}€</td></tr>`);
+                    } else {
+                        totalNet -= FLAT_STAKE;
+                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2">N°${vh.num}</td><td class="py-1 pr-2 text-center text-zinc-500">Perdu</td><td class="py-1 text-right text-red-400">-${FLAT_STAKE.toFixed(2)}€</td></tr>`);
+                    }
+                });
+
+                document.getElementById('dashInvested').textContent = `${totalStakes.toFixed(2)} €`;
+                document.getElementById('dashBetsCount').textContent = `${betsCount} pari(s)`;
+                document.getElementById('dashHitRate').textContent = `${betsCount > 0 ? ((winsCount/betsCount)*100).toFixed(0) : 0} %`;
+                document.getElementById('dashWinsCount').textContent = `${winsCount} gagné(s)`;
+                document.getElementById('dashNet').innerHTML = formatMoneyHTML(totalNet);
+                document.getElementById('dashROI').innerHTML = formatROI(totalNet, totalStakes);
+            }
+
+            document.getElementById('btnToggleAuditLog').textContent = `📋 Journal des Paris (${betsCount})`;
+            document.getElementById('auditLogBody').innerHTML = auditRows.join('');
+            document.getElementById('dailyStatusBadge').textContent = 'Terminé';
+            statsProgress.textContent = `✅ ${coursesValidees}/${racesToScan.length} chargées`;
+            document.getElementById('btnResumeMissing').style.display = 'inline-block';
+            document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Re-Scanner';
+            
+            localStorage.setItem(`valuebet_stats_${STATS_VERSION}_${currentDisciplineMode}_${ddmmyyyy}`, JSON.stringify({ stakes: totalStakes, net: totalNet, bets: betsCount, wins: winsCount, updatedAt: Date.now() }));
         }
 
         window.onload = () => { 
@@ -1238,15 +1555,15 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
-            // Sécurité V17
+            // Sécurité V18 pour forcer les nouveaux paramètres au premier chargement
             if (document.getElementById('selectBetType').value !== 'PLACE') {
                  document.getElementById('selectBetType').value = 'PLACE';
                  BET_TYPE = 'PLACE';
             }
-            if (document.getElementById('inputMaxOdd').value < 20) {
-                 document.getElementById('inputMaxOdd').value = 30;
+            if (document.getElementById('inputMaxOdd').value > 14) {
+                 document.getElementById('inputMaxOdd').value = 14;
             }
-            if (document.getElementById('inputMinMargin').value > 20) {
+            if (document.getElementById('inputMinMargin').value < 20) {
                  document.getElementById('inputMinMargin').value = 20;
             }
             loadLivePmu(); 
