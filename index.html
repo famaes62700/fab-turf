@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V24 Diagnostic API)</title>
+    <title>Turf - V115 Value Betting (V25 Placé Équilibré)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-chess-knight mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V24 PLACÉ</span>
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V25 PLACÉ</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -141,7 +141,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V25)
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
@@ -161,11 +161,11 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="20" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="18" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="15" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="16" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
@@ -298,7 +298,7 @@
                         <tr class="bg-zinc-800/60 text-zinc-400 border-b border-zinc-800">
                             <th class="p-3">N° / Nom</th>
                             <th class="p-3">Cote Actuelle</th>
-                            <th class="p-3">Proba Modèle <span class="text-[9px] font-normal text-zinc-500">(Math.)</span></th>
+                            <th class="p-3">Proba Placé <span class="text-[9px] font-normal text-zinc-500">(V25)</span></th>
                             <th class="p-3">Marge Value</th>
                         </tr>
                     </thead>
@@ -311,13 +311,13 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v24_diag"; 
+        const STATS_VERSION = "v115_v25_place"; 
         
         let currentDisciplineMode = 'GALOP'; 
         let FLAT_STAKE = 20.0; 
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 20; 
-        let MAX_ODD_FILTER = 15.0; 
+        let MIN_VALUE_MARGIN = 18; 
+        let MAX_ODD_FILTER = 16.0; 
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -564,8 +564,8 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
-            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 15;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 18;
+            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 16;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
@@ -663,93 +663,120 @@
             }
         }
 
+        // ==========================================
+        //  ALGORITHME V25 - PLACÉ ÉQUILIBRÉ
+        // ==========================================
+
         function getCoteSafely(p) {
             let raw = p.dernierRapportDirect?.rapport || p.probabiliteEvolution || "999.9";
             let c = parseFloat(String(raw).replace(',', '.'));
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        function evaluateMusiqueSafe(musique) {
-            if (!musique) return 0.5;
+        function analyzeFormV25(musique) {
+            if (!musique) return { formFactor: 0.85, placeReliability: 0.5 };
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
-            if (tokens.length === 0) return 0.5;
+            if (tokens.length === 0) return { formFactor: 0.85, placeReliability: 0.5 };
 
-            let score = 0;
-            let hasTop4 = false;
-            
-            for (let i = 0; i < Math.min(tokens.length, 4); i++) {
+            const weights = [2.2, 1.7, 1.25, 0.9, 0.6];
+            let weightedPts = 0;
+            let maxWeightedPts = 0;
+            let podiumOrFourth = 0;
+            let faults = 0;
+            let inspected = Math.min(tokens.length, 5);
+
+            for (let i = 0; i < inspected; i++) {
                 let matchRes = tokens[i].match(/^([0-9DATR]+)/i);
                 let res = matchRes ? matchRes[1].toUpperCase() : '9';
-                let w = (4 - i); 
-                
-                if (['1','2','3','4'].includes(res)) hasTop4 = true;
-                
-                if (res === '1') score += 10 * w;
-                else if (res === '2') score += 8 * w;
-                else if (res === '3') score += 6 * w;
-                else if (res === '4') score += 4 * w;
-                else if (res === '0' || res.includes('D') || res.includes('A')) score -= 2 * w; 
+                let w = weights[i];
+                maxWeightedPts += w * 10;
+
+                if (res === '1') { weightedPts += 10 * w; podiumOrFourth++; }
+                else if (res === '2') { weightedPts += 9 * w; podiumOrFourth++; }
+                else if (res === '3') { weightedPts += 8 * w; podiumOrFourth++; }
+                else if (res === '4') { weightedPts += 6.5 * w; podiumOrFourth++; }
+                else if (res === '5') { weightedPts += 4 * w; }
+                else if (res === '6' || res === '7') { weightedPts += 1.5 * w; }
+                else if (res.includes('D') || res.includes('A')) {
+                    faults++;
+                    weightedPts -= 3.5 * w;
+                } else {
+                    weightedPts -= 1.0 * w;
+                }
             }
-            
-            if (!hasTop4) return 0.2; 
-            
-            return 0.8 + (score / 100); 
+
+            let ratio = Math.max(0, Math.min(1, weightedPts / maxWeightedPts));
+            let formFactor = 0.72 + (ratio * 0.48); // [0.72 .. 1.20]
+            if (faults >= 2) formFactor *= 0.75;
+            else if (faults === 1) formFactor *= 0.90;
+
+            let placeReliability = Math.min(1, (podiumOrFourth / Math.max(1, inspected)) * 1.15);
+            return { formFactor, placeReliability };
         }
 
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
-            if (validPartants.length < 10 || validPartants.length > 18) return { processed: [], valueBets: [] };
-
-            let minCoteInRace = Math.min(...validPartants.map(p => getCoteSafely(p)));
-            if (minCoteInRace < 2.5) return { processed: [], valueBets: [] }; 
+            // En Simple Placé, moins de 9 partants limite souvent les rapports ou fausse l'équilibre du champ
+            if (validPartants.length < 9 || validPartants.length > 18) return { processed: [], valueBets: [] };
 
             let hasAnyRealOdd = false;
-            
+            let placeDivisor = validPartants.length >= 14 ? 3.3 : (validPartants.length >= 11 ? 3.6 : 4.0);
+
             let processed = validPartants.map(p => {
                 let num = parseInt(p.numPmu || p.numOrdre, 10);
-                let musique = p.musique || p.form || "0a";
+                let musique = p.musique || p.form || "";
                 let coteDir = getCoteSafely(p);
                 let rawMatin = p.dernierRapportReference?.rapport || coteDir;
                 let coteMatin = parseFloat(String(rawMatin).replace(',', '.')) || coteDir;
 
                 if (coteDir < 900) hasAnyRealOdd = true;
 
-                let dropRatio = coteMatin / coteDir;
-                let pmuProbPla = (0.72 / coteDir) * 3; 
+                // Estimation du rapport placé moyen selon la cote directe et la taille du champ
+                let estPlace = coteDir < 900 ? Math.max(1.15, 1 + ((coteDir - 1) / placeDivisor)) : 999.9;
+                let impliedPlaceProb = coteDir < 900 ? Math.min(0.92, Math.max(0.03, (0.76 / Math.max(1.2, estPlace)))) : 0;
 
-                let formMult = evaluateMusiqueSafe(musique);
-                
-                let marketMult = 1.0;
-                if (dropRatio >= 1.15) marketMult = 1.25; 
-                else if (dropRatio >= 1.05) marketMult = 1.10;
-                else if (dropRatio < 0.90) marketMult = 0.70;
-                
-                let trueProbPla = pmuProbPla * formMult * marketMult;
-                trueProbPla = Math.max(0.01, Math.min(0.85, trueProbPla));
+                let { formFactor, placeReliability } = analyzeFormV25(musique);
+                let dropRatio = (coteMatin > 1 && coteDir < 900) ? (coteMatin / coteDir) : 1.0;
+
+                let marketFactor = 1.0;
+                if (coteDir >= 4.0 && coteDir <= 22.0) {
+                    if (dropRatio >= 1.22) marketFactor = 1.18;
+                    else if (dropRatio >= 1.10) marketFactor = 1.08;
+                    else if (dropRatio <= 0.85) marketFactor = 0.85;
+                }
+
+                // Probabilité placée estimée combinant le marché, la forme pondérée et la régularité de placement
+                let rawProbPla = impliedPlaceProb * formFactor * (0.88 + placeReliability * 0.24) * marketFactor;
+                let trueProbPla = Math.max(0.04, Math.min(0.82, rawProbPla));
                 let trueOddPla = 1 / trueProbPla;
 
-                let estPlace = 1.10 + ((coteDir - 1) / 3.8);
-                let margin = ((estPlace / trueOddPla) - 1) * 100;
+                let margin = (coteDir < 900 && estPlace < 900) ? ((estPlace / trueOddPla) - 1) * 100 : -100;
 
                 return {
-                    num, nom: p.nom || "Cheval", musique: p.musique,
+                    num,
+                    nom: p.nom || "Cheval",
+                    musique,
                     coteDisplay: coteDir < 900 ? coteDir.toFixed(1) : "--",
-                    coteDir, estPlace, trueOddGag: 0, trueOddPla, 
-                    valueMargin: margin, 
+                    coteDir,
+                    estPlace,
+                    trueOddGag: 0,
+                    trueOddPla,
+                    valueMargin: margin,
                     ordreArrivee: p.ordreArrivee ? parseInt(p.ordreArrivee, 10) : 0,
                     trueProb: trueProbPla
                 };
             });
 
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
-            
+
             let valueBets = processed.filter(p => {
-                if (p.coteDir < 5.0 || p.coteDir > 15.0) return false; 
+                if (p.coteDir < 4.2 || p.coteDir > 22.0) return false;
                 if (p.coteDir > MAX_ODD_FILTER) return false;
+                if (p.estPlace < 1.45) return false; // Évite les rapports placés trop maigres
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
-                if (p.trueProb < 0.33) return false; 
+                if (p.trueProb < 0.28) return false;
                 return true;
             })
             .sort((a, b) => b.valueMargin - a.valueMargin)
@@ -757,6 +784,7 @@
 
             return { processed, valueBets };
         }
+        // ==========================================
 
         function getAlgoWithFreeze(partants, race, raceKey) {
             let liveAlgo = computeAlgorithm(partants);
