@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V37 Filtre de Masse)</title>
+    <title>Turf - V115 Value Betting (V38 Anti-Handicap)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Auto Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=63">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=63">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=64">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=64">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,8 +27,8 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-users mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V37 MASSE</span>
+                    <i class="fa-solid fa-shield-halved mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V38 ANTI-HANDICAP</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -155,16 +155,16 @@
                 <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/50 flex flex-col">
                     <span class="text-[9px] text-amber-400 uppercase font-bold">Pari Recherché</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
-                        <option value="PLACE" selected>Simple Placé (V37 Masse)</option>
+                        <option value="PLACE" selected>Placé (Anti-Handicap)</option>
                     </select>
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="20" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="15" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="15" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="13" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
@@ -300,13 +300,13 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v37_masse"; 
+        const STATS_VERSION = "v115_v38_antihandicap"; 
         
         let currentDisciplineMode = 'GALOP'; 
         let FLAT_STAKE = 20.0; 
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 20; 
-        let MAX_ODD_FILTER = 15.0; // V37 : Retour à la fenêtre d'or (6.0 - 15.0)
+        let MIN_VALUE_MARGIN = 15; // Marge assouplie car le filtre de partants est très strict
+        let MAX_ODD_FILTER = 13.0; // On évite les outsiders de fond de peloton
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -521,7 +521,7 @@
         function updateStrategyLabelsUI() {
             let typeLbl = BET_TYPE === 'PLACE' ? 'Placé' : 'Gagnant';
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `V37 Masse : ${FLAT_STAKE}€ en Simple ${typeLbl}`;
+            if (b) b.textContent = `V38 (Anti-Handicap) : ${FLAT_STAKE}€ en Simple ${typeLbl}`;
             
             let lbl = document.getElementById('histModeLabel');
             if(lbl) {
@@ -534,8 +534,8 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
-            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 15.0;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 15;
+            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 13.0;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
@@ -632,7 +632,7 @@
         }
 
         // ==========================================
-        //  MOTEUR V37 - LE FILTRE DE MASSE (MIN 12 PARTANTS)
+        //  MOTEUR V38 - LE FILTRE ANTI-HANDICAP (8 à 13 partants)
         // ==========================================
 
         function getCoteSafely(p) {
@@ -641,8 +641,8 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        // Identique à la V33 pour garantir les 33% / 36% de réussite
-        function analyzeFormV37(musique) {
+        // Moteur original de la V33 (celui qui a prouvé 33% de réussite)
+        function analyzeFormV38(musique) {
             if (!musique) return { formFactor: 0.85, placeReliability: 0.45, scoreVisuel: 0 };
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
@@ -693,15 +693,15 @@
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
-            // V37 : LE FILTRE DE MASSE. On interdit de jouer dans des courses de moins de 12 partants.
-            // C'est la seule façon de garantir des rapports placés > 2.80€ sans avoir à cibler des chevaux impossibles à 20/1.
-            if (validPartants.length < 12 || validPartants.length > 18) return { processed: [], valueBets: [] };
+            // V38 : LE FILTRE ANTI-HANDICAP. On ne joue que les courses de 8 à 13 partants.
+            // Cela exclut la quasi-totalité des Handicaps Divisés qui détruisent la régularité.
+            if (validPartants.length < 8 || validPartants.length > 13) return { processed: [], valueBets: [] };
 
             let minCoteInRace = Math.min(...validPartants.map(p => getCoteSafely(p)));
             if (minCoteInRace < 2.5) return { processed: [], valueBets: [] }; 
 
             let hasAnyRealOdd = false;
-            let placeDivisor = validPartants.length >= 15 ? 3.1 : 3.4; // Diviseur généreux car beaucoup de partants
+            let placeDivisor = validPartants.length >= 11 ? 3.6 : 3.9;
 
             let processed = validPartants.map(p => {
                 let num = parseInt(p.numPmu || p.numOrdre, 10);
@@ -711,18 +711,17 @@
 
                 if (coteDir < 900) hasAnyRealOdd = true;
 
-                let estPlace = coteDir < 900 ? Math.max(1.30, 1.25 + ((coteDir - 1) / placeDivisor)) : 999.9;
+                let estPlace = coteDir < 900 ? Math.max(1.20, 1.15 + ((coteDir - 1) / placeDivisor)) : 999.9;
                 let impliedPlaceProb = coteDir < 900 ? Math.min(0.90, Math.max(0.04, (0.76 / Math.max(1.25, estPlace)))) : 0;
 
-                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV37(p.musique || p.form);
+                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV38(p.musique || p.form);
                 let dropRatio = (coteMatin > 1 && coteDir < 900) ? (coteMatin / coteDir) : 1.0;
                 let dropPct = (coteMatin > 1 && coteDir < 900) ? ((coteMatin - coteDir) / coteMatin) * 100 : 0;
 
-                // V37 : Smart Money de base. Si la cote dérive (dropRatio < 1), on casse la proba.
                 let marketFactor = 1.0;
                 if (dropRatio >= 1.20) marketFactor = 1.25; 
                 else if (dropRatio >= 1.05) marketFactor = 1.15;
-                else if (dropRatio < 1.00) marketFactor = 0.50; 
+                else if (dropRatio < 0.90) marketFactor = 0.80; 
 
                 let rawProbPla = impliedPlaceProb * formFactor * (0.86 + placeReliability * 0.28) * marketFactor;
                 let trueProbPla = Math.max(0.05, Math.min(0.78, rawProbPla));
@@ -735,7 +734,7 @@
                 if (dropPct >= 20 && margin > 10) {
                     alertHtml = `<span class="bg-orange-500/20 text-orange-400 border border-orange-500/40 px-2 py-0.5 rounded font-black text-[10px] animate-pulse">🔥 MONEY</span>`;
                     badgeType = "MONEY";
-                } else if (scoreVisuel > 60 && dropPct >= 0 && margin > MIN_VALUE_MARGIN) {
+                } else if (scoreVisuel > 60 && dropPct < 5 && margin > MIN_VALUE_MARGIN) {
                     alertHtml = `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded font-black text-[10px]">🟢 VALUE</span>`;
                     badgeType = "VALUE";
                 } else if (scoreVisuel < 30 && coteDir < 5.0) {
@@ -766,14 +765,16 @@
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
 
             let valueBets = processed.filter(p => {
-                // V37 : RETOUR À LA FENÊTRE D'OR (6.0 à 15.0)
-                if (p.coteDir < 6.0 || p.coteDir > 15.0) return false;
+                // V38 : FENÊTRE DE SÉCURITÉ (5.5 à 13.0)
+                if (p.coteDir < 5.5 || p.coteDir > 13.0) return false;
                 if (p.coteDir > MAX_ODD_FILTER) return false;
                 
-                // On s'assure juste que l'argent est orienté dans le bon sens (stagnation ou baisse)
-                if (p.dropRatio < 1.00) return false;
+                // Dérive de 5% max tolérée (ratio 0.95)
+                if (p.dropRatio < 0.95) return false;
 
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
+                
+                // On garde la probabilité élevée de la V33
                 if (p.trueProb < 0.28) return false; 
                 
                 if (p.badgeType === "DANGER") return false;
@@ -1228,7 +1229,7 @@
                 if (!isBackground || !isFrozen) {
                     tbody.innerHTML = '';
                     if (algo.processed.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Données insuffisantes ou peloton inadapté (min 12 partants).</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-zinc-500">Aucun pari (Filtre 8 à 13 partants min/max).</td></tr>`;
                     } else {
                         let displayList = algo.processed.sort((a, b) => {
                             let aIsBet = algo.valueBets.some(v => v.num === a.num);
@@ -1452,13 +1453,13 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
-            // Sécurité V37
+            // Sécurité V38
             if (document.getElementById('selectBetType').value !== 'PLACE') {
                  document.getElementById('selectBetType').value = 'PLACE';
                  BET_TYPE = 'PLACE';
             }
-            if (document.getElementById('inputMaxOdd').value < 15) {
-                 document.getElementById('inputMaxOdd').value = 15;
+            if (document.getElementById('inputMaxOdd').value > 13) {
+                 document.getElementById('inputMaxOdd').value = 13;
             }
             loadLivePmu(); 
         };
