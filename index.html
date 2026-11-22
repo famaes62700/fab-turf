@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V30 Sniper Galop)</title>
+    <title>Turf - V115 Value Betting (V31 Le Point de Bascule)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Auto Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Sniper&background=000&color=10b981&size=512&font-size=0.4&v=56">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Sniper&background=000&color=10b981&size=512&font-size=0.4&v=56">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=57">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=57">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,8 +27,8 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-crosshairs mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V30 SNIPER</span>
+                    <i class="fa-solid fa-chart-pie mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V31 BASCULE</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -155,8 +155,7 @@
                 <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/50 flex flex-col">
                     <span class="text-[9px] text-amber-400 uppercase font-bold">Pari Recherché</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
-                        <option value="PLACE" selected>Simple Placé (Sniper)</option>
-                        <option value="GAGNANT">Simple Gagnant</option>
+                        <option value="PLACE" selected>Simple Placé (V31 Bascule)</option>
                     </select>
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
@@ -165,7 +164,7 @@
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="16" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="22" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
@@ -250,6 +249,21 @@
             </div>
         </div>
 
+        <!-- SIGNAL EN DIRECT POUR LA COURSE SELECTIONNEE -->
+        <div id="livePredictionBlock" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-emerald-900/20">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
+                    <i class="fa-solid fa-crosshairs mr-1.5"></i> Ordre du Radar
+                </h2>
+                <span id="radarLockBadge" class="hidden text-[9px] font-black uppercase text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded">
+                    <i class="fa-solid fa-lock mr-1"></i> Cotes figées au départ
+                </span>
+            </div>
+            <div id="livePredictionList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
+                <!-- Rempli par javascript -->
+            </div>
+        </div>
+
         <!-- BLOC ARRIVÉE OFFICIELLE -->
         <div id="arrivalBlock" class="hidden bg-blue-950/40 border border-blue-500/40 rounded-xl p-3.5 space-y-2 mt-2 shadow-lg shadow-blue-900/20">
             <div class="flex justify-between items-center">
@@ -286,13 +300,13 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v30_sniper"; 
+        const STATS_VERSION = "v115_v31_bascule"; 
         
         let currentDisciplineMode = 'GALOP'; 
         let FLAT_STAKE = 20.0; 
         let BET_TYPE = 'PLACE';
         let MIN_VALUE_MARGIN = 25; 
-        let MAX_ODD_FILTER = 16.0; 
+        let MAX_ODD_FILTER = 22.0; 
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -521,7 +535,7 @@
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
             BET_TYPE = document.getElementById('selectBetType').value;
             MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 25;
-            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 16;
+            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 22.0;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
@@ -618,7 +632,7 @@
         }
 
         // ==========================================
-        //  MOTEUR V30 - LE SNIPER GALOP
+        //  MOTEUR V31 - LE POINT DE BASCULE
         // ==========================================
 
         function getCoteSafely(p) {
@@ -627,7 +641,7 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        function analyzeFormV30(musique) {
+        function analyzeFormV31(musique) {
             if (!musique) return { formFactor: 0.50, placeReliability: 0.10, scoreVisuel: 0 };
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
@@ -637,10 +651,7 @@
             let weightedPts = 0;
             let maxWeightedPts = 0;
             let top4Count = 0;
-            
-            // LA REGLE D'OR DU SNIPER : Obligation absolue d'un podium sur les 3 dernières
             let recentPodium = false; 
-            
             let inspected = Math.min(tokens.length, 5);
 
             for (let i = 0; i < inspected; i++) {
@@ -666,10 +677,10 @@
             }
 
             let ratio = Math.max(0, Math.min(1, weightedPts / maxWeightedPts));
-            let formFactor = 0.50 + (ratio * 0.70); // Plus d'amplitude pour récompenser les métronomes
+            let formFactor = 0.50 + (ratio * 0.70); 
             
-            // FILTRE SNIPER
-            if (!recentPodium) formFactor *= 0.40; // On détruit la probabilité s'il n'y a pas de podium récent
+            // FILTRE SNIPER CONSERVE
+            if (!recentPodium) formFactor *= 0.40; 
 
             let placeReliability = Math.min(1, (top4Count / Math.max(1, Math.min(inspected, 4))));
             let scoreVisuel = Math.max(0, Math.min(100, Math.round(ratio * 100)));
@@ -679,7 +690,7 @@
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
-            if (validPartants.length < 9 || validPartants.length > 18) return { processed: [], valueBets: [] };
+            if (validPartants.length < 9 || validPartants.length > 16) return { processed: [], valueBets: [] };
 
             let minCoteInRace = Math.min(...validPartants.map(p => getCoteSafely(p)));
             if (minCoteInRace < 2.5) return { processed: [], valueBets: [] }; 
@@ -695,18 +706,18 @@
 
                 if (coteDir < 900) hasAnyRealOdd = true;
 
-                let estPlace = coteDir < 900 ? Math.max(1.20, 1.20 + ((coteDir - 1) / placeDivisor)) : 999.9;
+                // V31 : Force une estimation plus basse pour être encore plus sûr que ça paiera
+                let estPlace = coteDir < 900 ? Math.max(1.80, 1.30 + ((coteDir - 1) / placeDivisor)) : 999.9;
                 let impliedPlaceProb = coteDir < 900 ? Math.min(0.90, Math.max(0.04, (0.76 / Math.max(1.25, estPlace)))) : 0;
 
-                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV30(p.musique || p.form);
+                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV31(p.musique || p.form);
                 let dropRatio = (coteMatin > 1 && coteDir < 900) ? (coteMatin / coteDir) : 1.0;
                 let dropPct = (coteMatin > 1 && coteDir < 900) ? ((coteMatin - coteDir) / coteMatin) * 100 : 0;
 
-                // L'ANTI-DÉRAPAGE ABSOLU
                 let marketFactor = 1.0;
                 if (dropRatio >= 1.25) marketFactor = 1.30; 
                 else if (dropRatio >= 1.05) marketFactor = 1.15;
-                else if (dropRatio < 0.95) marketFactor = 0.30; // On élimine les cotes qui montent !
+                else if (dropRatio < 1.00) marketFactor = 0.10; // V31: On élimine TOUTE cote qui a monté. Strict.
 
                 let rawProbPla = impliedPlaceProb * formFactor * (0.80 + placeReliability * 0.30) * marketFactor;
                 let trueProbPla = Math.max(0.02, Math.min(0.85, rawProbPla));
@@ -717,7 +728,6 @@
                 let alertHtml = `<span class="text-zinc-600 font-mono text-[10px]">Attente</span>`;
                 let badgeType = "NONE";
                 
-                // On met les badges de détection même si on ne parie pas
                 if (dropPct >= 20 && scoreVisuel > 40) {
                     alertHtml = `<span class="bg-orange-500/20 text-orange-400 border border-orange-500/40 px-2 py-0.5 rounded font-black text-[10px] animate-pulse">🔥 MONEY</span>`;
                     badgeType = "MONEY";
@@ -739,6 +749,7 @@
                     dropPct,
                     dropRatio,
                     scoreVisuel,
+                    estPlace,
                     alertHtml,
                     badgeType,
                     trueOddPla,
@@ -751,15 +762,18 @@
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
 
             let valueBets = processed.filter(p => {
-                // LA FENÊTRE DE FER (7.5 à 16.0)
-                if (p.coteDir < 7.5 || p.coteDir > 16.0) return false;
+                // V31 : LA FENÊTRE DE FER (9.0 à 22.0)
+                if (p.coteDir < 9.0 || p.coteDir > 22.0) return false;
                 if (p.coteDir > MAX_ODD_FILTER) return false;
                 
-                // L'ANTI-DÉRAPAGE
-                if (p.dropRatio < 0.95) return false;
+                // V31 : Force un rapport estimé > 2.90
+                if (p.estPlace < 2.90) return false;
+                
+                // V31 : L'ANTI-DÉRAPAGE ABSOLU
+                if (p.dropRatio < 1.00) return false; // Ne doit pas avoir monté
 
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
-                if (p.trueProb < 0.25) return false;
+                if (p.trueProb < 0.22) return false; 
                 return true;
             })
             .sort((a, b) => b.valueMargin - a.valueMargin)
@@ -1383,7 +1397,6 @@
 
             try {
                 const res = await fetch(`/api/courses?date=${ddmmyyyy}&_t=${Date.now()}`);
-                if (!res.ok) throw new Error("Erreur réseau");
                 const data = await res.json();
                 
                 let rawReunions = data.programme?.reunions || data.reunions || data.programme?.lesReunions || [];
@@ -1435,6 +1448,14 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
+            // Sécurité V31
+            if (document.getElementById('selectBetType').value !== 'PLACE') {
+                 document.getElementById('selectBetType').value = 'PLACE';
+                 BET_TYPE = 'PLACE';
+            }
+            if (document.getElementById('inputMaxOdd').value < 22) {
+                 document.getElementById('inputMaxOdd').value = 22;
+            }
             loadLivePmu(); 
         };
     </script>
