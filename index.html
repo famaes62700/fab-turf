@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V33 Opti Initiale)</title>
+    <title>Turf - V115 Value Betting (V34 Asymétrie)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Auto Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=59">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=59">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=60">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Value&background=000&color=10b981&size=512&font-size=0.4&v=60">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,8 +27,8 @@
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-gem mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V33 OPTI</span>
+                    <i class="fa-solid fa-bolt mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V34 ASYMÉTRIE</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
@@ -141,7 +141,7 @@
         <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar (V33 Opti Initiale)
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
@@ -155,17 +155,16 @@
                 <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/50 flex flex-col">
                     <span class="text-[9px] text-amber-400 uppercase font-bold">Pari Recherché</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
-                        <option value="PLACE" selected>Simple Placé</option>
-                        <option value="GAGNANT">Simple Gagnant</option>
+                        <option value="PLACE" selected>Simple Placé (V34)</option>
                     </select>
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Value Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="22" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="20" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote PMU Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="14" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="25" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
@@ -301,13 +300,13 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v33_opti_initiale"; 
+        const STATS_VERSION = "v115_v34_asymetrie"; 
         
         let currentDisciplineMode = 'GALOP'; 
         let FLAT_STAKE = 20.0; 
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 22; // Légèrement supérieur à 20% pour gratter du ROI
-        let MAX_ODD_FILTER = 14.0; // Retour à la limite stricte de 14.0
+        let MIN_VALUE_MARGIN = 20; 
+        let MAX_ODD_FILTER = 25.0; // V34: On laisse la porte ouverte aux gros outsiders payants
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -522,7 +521,7 @@
         function updateStrategyLabelsUI() {
             let typeLbl = BET_TYPE === 'PLACE' ? 'Placé' : 'Gagnant';
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `Auto-Betting : ${FLAT_STAKE}€ en Simple ${typeLbl}`;
+            if (b) b.textContent = `Asymétrie V34 : ${FLAT_STAKE}€ en Simple ${typeLbl}`;
             
             let lbl = document.getElementById('histModeLabel');
             if(lbl) {
@@ -535,8 +534,8 @@
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 22;
-            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 14.0;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 20;
+            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 25.0;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
                 flatStake: FLAT_STAKE, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
@@ -633,7 +632,7 @@
         }
 
         // ==========================================
-        //  MOTEUR V33 - RETOUR AUX SOURCES OPTIMISÉ (POUR COMBLER LES -2.5% ROI)
+        //  MOTEUR V34 - L'ASYMÉTRIE POSITIVE (GROS OUTSIDERS)
         // ==========================================
 
         function getCoteSafely(p) {
@@ -642,8 +641,8 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        // La version qui a fait ses preuves (V29) avec un léger assouplissement sur les erreurs pour maintenir le volume
-        function analyzeFormV33(musique) {
+        // Cerveau identique à la version qui a fait 36% de réussite
+        function analyzeFormV34(musique) {
             if (!musique) return { formFactor: 0.85, placeReliability: 0.45, scoreVisuel: 0 };
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
@@ -666,7 +665,7 @@
                 if (['1', '2', '3'].includes(res)) {
                     weightedPts += (res === '1' ? 10 : res === '2' ? 9 : 8) * w;
                     top4Count++;
-                    if (i <= 2) recentTop3 = true; // Exigence : Podium dans les 3 dernières courses
+                    if (i <= 2) recentTop3 = true; 
                 } else if (res === '4') {
                     weightedPts += 6 * w;
                     top4Count++;
@@ -674,17 +673,17 @@
                     weightedPts += 3 * w;
                 } else if (res === '0' || res.includes('D') || res.includes('A') || res.includes('T') || res.includes('R')) {
                     faults++;
-                    weightedPts -= 2.5 * w; // Pénalité adoucie par rapport à la V30/V31 pour maintenir le volume
+                    weightedPts -= 2.5 * w; 
                 } else {
                     weightedPts -= 1 * w;
                 }
             }
 
             let ratio = Math.max(0, Math.min(1, weightedPts / maxWeightedPts));
-            let formFactor = 0.70 + (ratio * 0.55); // Multiplicateur de forme de 0.70 à 1.25
+            let formFactor = 0.70 + (ratio * 0.55); 
             
-            if (!recentTop3) formFactor *= 0.85; // Baisse la probabilité, mais ne la met pas à zéro
-            if (faults >= 2) formFactor *= 0.80; // Accepte 1 faute, pénalise à partir de 2
+            if (!recentTop3) formFactor *= 0.85; 
+            if (faults >= 2) formFactor *= 0.80; 
 
             let placeReliability = Math.min(1, (top4Count / Math.max(1, Math.min(inspected, 4))) * 1.2);
             let scoreVisuel = Math.max(0, Math.min(100, Math.round(ratio * 100)));
@@ -710,18 +709,17 @@
 
                 if (coteDir < 900) hasAnyRealOdd = true;
 
-                let estPlace = coteDir < 900 ? Math.max(1.20, 1.15 + ((coteDir - 1) / placeDivisor)) : 999.9;
+                let estPlace = coteDir < 900 ? Math.max(1.20, 1.25 + ((coteDir - 1) / placeDivisor)) : 999.9;
                 let impliedPlaceProb = coteDir < 900 ? Math.min(0.90, Math.max(0.04, (0.76 / Math.max(1.25, estPlace)))) : 0;
 
-                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV33(p.musique || p.form);
+                let { formFactor, placeReliability, scoreVisuel } = analyzeFormV34(p.musique || p.form);
                 let dropRatio = (coteMatin > 1 && coteDir < 900) ? (coteMatin / coteDir) : 1.0;
                 let dropPct = (coteMatin > 1 && coteDir < 900) ? ((coteMatin - coteDir) / coteMatin) * 100 : 0;
 
-                // Smart Money de la V29 : On veut que la cote stagne (ignoré par le public) ou baisse un peu
                 let marketFactor = 1.0;
                 if (dropRatio >= 1.20) marketFactor = 1.25; 
                 else if (dropRatio >= 1.05) marketFactor = 1.15;
-                else if (dropRatio < 0.90) marketFactor = 0.80; // Baisse de la proba si la cote est en dérive forte
+                else if (dropRatio < 0.90) marketFactor = 0.80; 
 
                 let rawProbPla = impliedPlaceProb * formFactor * (0.86 + placeReliability * 0.28) * marketFactor;
                 let trueProbPla = Math.max(0.05, Math.min(0.78, rawProbPla));
@@ -750,6 +748,7 @@
                     coteMatinDisplay: coteMatin < 900 ? coteMatin.toFixed(1) : "--",
                     coteDir,
                     dropPct,
+                    dropRatio,
                     scoreVisuel,
                     estPlace,
                     alertHtml,
@@ -764,20 +763,20 @@
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
 
             let valueBets = processed.filter(p => {
-                // V33 : LA CIBLE PARFAITE (6.5 à 14.0)
-                // Sous 6.5, le rapport placé est en moyenne inférieur à 1.70€, ce qui est mathématiquement perdant.
-                // Au dessus de 14.0, le cheval arrive placé moins de 1 fois sur 4. On détruit la réussite.
-                if (p.coteDir < 6.5 || p.coteDir > 14.0) return false;
+                // V34 : LA FENÊTRE DES OUTSIDERS (8.0 à 25.0)
+                if (p.coteDir < 8.0 || p.coteDir > 25.0) return false;
                 if (p.coteDir > MAX_ODD_FILTER) return false;
                 
-                // V33 : LE PLANCHER PLACÉ
-                // L'algo ne donne plus l'ordre de miser s'il estime que le rapport placé sera inférieur à 1.80€
-                if (p.estPlace < 1.80) return false;
+                // V34 : LE PLANCHER DU RENDEMENT (doit payer au moins 2.60€)
+                if (p.estPlace < 2.60) return false;
+
+                // V34 : L'ARGENT INTELLIGENT (La cote NE DOIT PAS MONTER, ratio min = 1.0)
+                if (p.dropRatio < 1.00) return false;
 
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
                 
-                // On vise 33% de réussite
-                if (p.trueProb < 0.28) return false;
+                // On accepte une chance sur 5 min, vu que la cote est grosse
+                if (p.trueProb < 0.20) return false;
                 
                 if (p.badgeType === "DANGER") return false;
                 return true;
@@ -1455,13 +1454,13 @@
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
             loadStrategySettings(); 
-            // Sécurité V33 (Plancher à 14 max)
+            // Sécurité V34
             if (document.getElementById('selectBetType').value !== 'PLACE') {
                  document.getElementById('selectBetType').value = 'PLACE';
                  BET_TYPE = 'PLACE';
             }
-            if (document.getElementById('inputMaxOdd').value > 14) {
-                 document.getElementById('inputMaxOdd').value = 14;
+            if (document.getElementById('inputMaxOdd').value < 25) {
+                 document.getElementById('inputMaxOdd').value = 25;
             }
             loadLivePmu(); 
         };
