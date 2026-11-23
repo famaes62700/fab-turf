@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V41 Montante Trot)</title>
+    <title>Turf - V115 Value Betting (V42 Montante Mensuelle)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Auto Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Montante&background=000&color=f59e0b&size=512&font-size=0.4&v=67">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Montante&background=000&color=f59e0b&size=512&font-size=0.4&v=67">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Montante&background=000&color=f59e0b&size=512&font-size=0.4&v=68">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Montante&background=000&color=f59e0b&size=512&font-size=0.4&v=68">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2">
                 <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-amber-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
                     <i class="fa-solid fa-arrow-trend-up mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded font-bold">V41 MONTANTE</span>
+                    <span class="text-[9px] ml-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded font-bold">V42 MENSUELLE</span>
                 </h1>
                 <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-amber-500 shadow" onchange="onDateChange()">
             </div>
@@ -37,7 +37,7 @@
                 <button id="btnSoundToggle" onclick="toggleSound()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 w-8 h-8 rounded-lg border border-zinc-700 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Activer/Désactiver les alertes sonores">
                     <i class="fa-solid fa-bell-slash"></i>
                 </button>
-                <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-amber-400 w-8 h-8 rounded-lg border border-amber-500/30 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Historique & R.O.I">
+                <button onclick="toggleHistoryStats()" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 w-8 h-8 rounded-lg border border-emerald-500/30 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Historique & R.O.I">
                     <i class="fa-solid fa-chart-line"></i>
                 </button>
                 <button onclick="resetAllCache()" class="bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white w-8 h-8 rounded-lg border border-red-500/40 font-bold transition flex items-center justify-center shadow flex-shrink-0 cursor-pointer" title="Vider le cache">
@@ -141,13 +141,14 @@
         <div class="bg-zinc-900 border border-amber-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
                 <h2 class="text-[11px] font-bold uppercase text-amber-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Gestion de Mise (V41 Montante)
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar
                 </h2>
                 <button onclick="applyStrategySettings()" class="bg-amber-600 hover:bg-amber-500 text-zinc-900 text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
                 </button>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
+            
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-[11px]">
                 <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/30 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Mise Base (€)</span>
                     <input type="number" id="inputFlatStake" min="1" max="1000" step="1" value="20" class="bg-transparent text-amber-400 font-black text-sm focus:outline-none mt-0.5" title="Mise par défaut">
@@ -157,7 +158,7 @@
                     <input type="number" id="inputStakeStep" min="0" max="500" step="1" value="5" class="bg-transparent text-rose-300 font-black text-sm focus:outline-none mt-0.5" title="Augmentation après une perte">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col hidden sm:flex">
-                    <span class="text-[9px] text-zinc-400 uppercase font-bold">Pari Cible</span>
+                    <span class="text-[9px] text-zinc-400 uppercase font-bold">Pari</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
                         <option value="PLACE" selected>Placé</option>
                     </select>
@@ -166,9 +167,16 @@
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Min (%)</span>
                     <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="15" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
+                
+                <!-- NOUVEAU REGLAGE COTE MIN -->
+                <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
+                    <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote Min</span>
+                    <input type="number" id="inputMinOdd" min="1" max="100" step="0.5" value="4.5" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                </label>
+
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="1" value="9" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="0.5" value="9" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
@@ -304,13 +312,14 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v41_montante"; 
+        const STATS_VERSION = "v115_v42_montante_mensuelle"; 
         
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 20.0; 
-        let STAKE_STEP = 5.0; // La Montante (Evolution en cas de perte)
+        let STAKE_STEP = 5.0; // Augmentation après perte
         let BET_TYPE = 'PLACE';
         let MIN_VALUE_MARGIN = 15; 
+        let MIN_ODD_FILTER = 4.5; // NOUVEAU: Cote Min paramétrable
         let MAX_ODD_FILTER = 9.0; 
 
         let liveMeetingsData = [];
@@ -498,6 +507,7 @@
                 if (saved.stakeStep !== undefined) STAKE_STEP = Number(saved.stakeStep);
                 if (saved.betType) BET_TYPE = saved.betType;
                 if (saved.minMargin) MIN_VALUE_MARGIN = Number(saved.minMargin);
+                if (saved.minOdd) MIN_ODD_FILTER = Number(saved.minOdd);
                 if (saved.maxOdd) MAX_ODD_FILTER = Number(saved.maxOdd);
             } catch(e) {}
             
@@ -505,6 +515,7 @@
             document.getElementById('inputStakeStep').value = STAKE_STEP;
             document.getElementById('selectBetType').value = BET_TYPE;
             document.getElementById('inputMinMargin').value = MIN_VALUE_MARGIN;
+            document.getElementById('inputMinOdd').value = MIN_ODD_FILTER;
             document.getElementById('inputMaxOdd').value = MAX_ODD_FILTER;
             
             let btnGalop = document.getElementById('btnFilterGalop');
@@ -540,13 +551,14 @@
 
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
-            STAKE_STEP = parseFloat(document.getElementById('inputStakeStep').value) || 5;
+            STAKE_STEP = parseFloat(document.getElementById('inputStakeStep').value) || 0;
             BET_TYPE = document.getElementById('selectBetType').value;
             MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 15;
+            MIN_ODD_FILTER = parseFloat(document.getElementById('inputMinOdd').value) || 4.5;
             MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 9.0;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
-                flatStake: FLAT_STAKE, stakeStep: STAKE_STEP, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, maxOdd: MAX_ODD_FILTER
+                flatStake: FLAT_STAKE, stakeStep: STAKE_STEP, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, minOdd: MIN_ODD_FILTER, maxOdd: MAX_ODD_FILTER
             }));
 
             Object.keys(localStorage).forEach(k => {
@@ -640,7 +652,7 @@
         }
 
         // ==========================================
-        //  MOTEUR TROT 60% (Cerveau de la V40)
+        //  MOTEUR V42 - TROT 60% + COTE MINIMUM CUSTOM
         // ==========================================
 
         function getCoteSafely(p) {
@@ -749,8 +761,8 @@
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
 
             let valueBets = processed.filter(p => {
-                if (p.coteDir < 4.5 || p.coteDir > 9.0) return false;
-                if (p.coteDir > MAX_ODD_FILTER) return false;
+                // V42 : UTILISATION DE LA COTE MINIMUM CUSTOMISÉE
+                if (p.coteDir < MIN_ODD_FILTER || p.coteDir > MAX_ODD_FILTER) return false;
                 if (p.estPlace < 1.70) return false;
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
                 if (p.trueProbPla < 0.45) return false;
@@ -765,7 +777,7 @@
         function getAlgoWithFreeze(partants, race, raceKey) {
             let liveAlgo = computeAlgorithm(partants);
             let started = isRaceStarted(race, partants);
-            let snapshotKey = `${raceKey}_${currentDisciplineMode}_${BET_TYPE}_${MIN_VALUE_MARGIN}_${MAX_ODD_FILTER}`;
+            let snapshotKey = `${raceKey}_${currentDisciplineMode}_${BET_TYPE}_${MIN_VALUE_MARGIN}_${MAX_ODD_FILTER}_${MIN_ODD_FILTER}`;
 
             if (!started) {
                 if (liveAlgo.processed.length > 0 && !frozenRaceSnapshots[snapshotKey]) {
@@ -991,12 +1003,19 @@
             }
 
             try {
-                // LA MONTANTE : L'état de la mise survit au changement de course et de jour !
                 let currentStake = FLAT_STAKE;
+                let lastMonth = -1; // V42: Traqueur de changement de mois
 
                 for (let idx = 0; idx < datesToSync.length; idx++) {
                     if (cancelSyncFlag) break;
                     let d = datesToSync[idx];
+                    
+                    // V42 : LE COUPE-CIRCUIT MENSUEL
+                    if (lastMonth !== -1 && d.getMonth() !== lastMonth) {
+                        currentStake = FLAT_STAKE; 
+                    }
+                    lastMonth = d.getMonth();
+
                     let yyyymmdd = getLocalDateString(d);
                     let ddmmyyyy = `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
                     let isToday = (yyyymmdd === getLocalDateString());
@@ -1015,7 +1034,6 @@
                     
                     let dayStakes = 0, dayNet = 0, dayBetsCount = 0, dayWinsCount = 0;
                     
-                    // REGROUPER ET TRIER CHRONOLOGIQUEMENT POUR LA MONTANTE
                     let allRacesOfDay = [];
                     for (let m of rawR) {
                         if (String(m.statut || "").toUpperCase().includes('ANNUL')) continue;
@@ -1061,10 +1079,10 @@
                             if (g >= 1.0) {
                                 dayWinsCount++;
                                 dayNet += (g * stakeUsed) - stakeUsed;
-                                currentStake = FLAT_STAKE; // RESET MONTANTE
+                                currentStake = FLAT_STAKE; 
                             } else {
                                 dayNet -= stakeUsed;
-                                currentStake += STAKE_STEP; // ++ MONTANTE
+                                currentStake += STAKE_STEP; 
                             }
                         });
                     }
@@ -1286,7 +1304,6 @@
                 });
             });
 
-            // TRI CHRONOLOGIQUE STRICT POUR LA MONTANTE
             racesToScan.sort((a,b) => a.time - b.time);
 
             let totalStakes = 0, totalNet = 0, betsCount = 0, winsCount = 0;
@@ -1348,11 +1365,11 @@
                         let betNet = (g * stakeUsed) - stakeUsed;
                         totalNet += betNet;
                         auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2"><span class="text-amber-400">N°${vh.num}</span></td><td class="py-1 pr-2 text-center text-zinc-300">${g.toFixed(2)} <span class="text-[9px] text-zinc-500 block">(${stakeUsed}€)</span></td><td class="py-1 text-right text-emerald-400 font-bold">+${betNet.toFixed(2)}€</td></tr>`);
-                        currentStake = FLAT_STAKE; // RESET MONTANTE
+                        currentStake = FLAT_STAKE; 
                     } else {
                         totalNet -= stakeUsed;
                         auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2">N°${vh.num}</td><td class="py-1 pr-2 text-center text-zinc-500">Perdu <span class="text-[9px] text-zinc-600 block">(${stakeUsed}€)</span></td><td class="py-1 text-right text-red-400">-${stakeUsed.toFixed(2)}€</td></tr>`);
-                        currentStake += STAKE_STEP; // ++ MONTANTE
+                        currentStake += STAKE_STEP; 
                     }
                 });
 
@@ -1367,7 +1384,6 @@
             document.getElementById('btnToggleAuditLog').textContent = `📋 Journal des Paris (${betsCount})`;
             document.getElementById('auditLogBody').innerHTML = auditRows.join('');
             
-            // INDICATION DE LA PROCHAINE MISE À JOUER
             document.getElementById('dailyStatusBadge').innerHTML = `Prochaine mise : <strong class="text-amber-400">${currentStake} €</strong>`;
             statsProgress.textContent = `✅ Scan du jour terminé`;
             document.getElementById('btnResumeMissing').style.display = 'inline-block';
@@ -1420,7 +1436,7 @@
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${liveMeetingsData.length} réunions | ${totalCourses} courses)</span>`;
+                    statusText.innerHTML = `<span class="text-amber-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${liveMeetingsData.length} réunions | ${totalCourses} courses)</span>`;
                     
                     document.getElementById('meetingSelect').value = "0";
                     onMeetingChange();
@@ -1443,16 +1459,13 @@
                 let today = new Date();
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
-            // Forcer le mode Trot
+            // Forcer le mode Trot par defaut
             currentDisciplineMode = 'TROT';
             loadStrategySettings(); 
-            // Sécurité V41
+            // Sécurité V42
             if (document.getElementById('selectBetType').value !== 'PLACE') {
                  document.getElementById('selectBetType').value = 'PLACE';
                  BET_TYPE = 'PLACE';
-            }
-            if (document.getElementById('inputMaxOdd').value > 9) {
-                 document.getElementById('inputMaxOdd').value = 9;
             }
             loadLivePmu(); 
         };
