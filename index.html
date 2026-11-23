@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turf - V115 Value Betting (V42 Montante Mensuelle)</title>
+    <title>Turf - V115 Value Betting (V43 Recouvrement Trot)</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Auto Turf">
     
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Montante&background=000&color=f59e0b&size=512&font-size=0.4&v=68">
-    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Montante&background=000&color=f59e0b&size=512&font-size=0.4&v=68">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=Recouv&background=000&color=10b981&size=512&font-size=0.4&v=69">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=Recouv&background=000&color=10b981&size=512&font-size=0.4&v=69">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,11 +26,11 @@
     <header class="bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 p-3 sm:p-4 sticky top-0 z-40 shadow-lg">
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
-                <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-amber-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
-                    <i class="fa-solid fa-arrow-trend-up mr-2"></i><span class="hidden sm:inline">Value</span> 
-                    <span class="text-[9px] ml-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded font-bold">V42 MENSUELLE</span>
+                <h1 class="text-base sm:text-lg font-black uppercase tracking-wider text-emerald-500 flex items-center bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-700">
+                    <i class="fa-solid fa-shield-halved mr-2"></i><span class="hidden sm:inline">Value</span> 
+                    <span class="text-[9px] ml-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">V43 RECOUVREMENT</span>
                 </h1>
-                <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-amber-500 shadow" onchange="onDateChange()">
+                <input type="date" id="raceDate" class="bg-zinc-800 text-white text-[11px] sm:text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 cursor-pointer focus:outline-none focus:border-emerald-500 shadow" onchange="onDateChange()">
             </div>
             
             <div class="flex items-center space-x-1.5 sm:space-x-2">
@@ -51,9 +51,9 @@
         
         <!-- FILTRES -->
         <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-2 flex items-center justify-between text-xs">
-            <span class="text-zinc-400 font-bold ml-2"><i class="fa-solid fa-filter mr-1.5 text-amber-500"></i> Filtre :</span>
+            <span class="text-zinc-400 font-bold ml-2"><i class="fa-solid fa-filter mr-1.5 text-emerald-500"></i> Filtre :</span>
             <div class="flex space-x-2">
-                <button id="btnFilterTrot" onclick="setDisciplineMode('TROT')" class="bg-amber-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer">
+                <button id="btnFilterTrot" onclick="setDisciplineMode('TROT')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer">
                     100% Trot
                 </button>
                 <button id="btnFilterGalop" onclick="setDisciplineMode('GALOP')" class="bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer">
@@ -67,11 +67,11 @@
 
         <!-- STATUT CONNEXION -->
         <div class="flex flex-wrap justify-between items-center gap-2 bg-zinc-950 border border-zinc-800 p-2 rounded-xl">
-            <div id="statusText" class="text-xs text-amber-400 font-mono flex items-center">
+            <div id="statusText" class="text-xs text-emerald-400 font-mono flex items-center">
                 <i class="fa-solid fa-spinner fa-spin mr-2"></i>Connexion au serveur local...
             </div>
             <div class="flex items-center space-x-2">
-                <button id="btnResumeMissing" onclick="calculateDailyStats(false)" style="display: none;" class="text-[10px] bg-amber-600 hover:bg-amber-500 text-white font-black px-2 py-1 rounded cursor-pointer shadow">
+                <button id="btnResumeMissing" onclick="calculateDailyStats(false)" style="display: none;" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded cursor-pointer shadow">
                     <i class="fa-solid fa-play mr-1"></i>Scanner le jour
                 </button>
                 <div id="statsProgress" class="text-[10px] text-zinc-300 font-mono text-right bg-zinc-900 px-2 py-1 rounded border border-zinc-800">Prêt</div>
@@ -79,19 +79,19 @@
         </div>
 
         <!-- HISTORIQUE CUMULÉ & R.O.I -->
-        <div id="historyBlock" style="display: none;" class="bg-zinc-900 border border-amber-500/40 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
+        <div id="historyBlock" style="display: none;" class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2.5">
                 <h2 class="text-xs font-bold uppercase text-zinc-200 tracking-wider flex items-center">
-                    <i class="fa-solid fa-chart-line mr-1.5 text-amber-400"></i> Suivi R.O.I (<span id="histModeLabel" class="text-amber-400 ml-1">100% Trot</span>)
+                    <i class="fa-solid fa-chart-line mr-1.5 text-emerald-400"></i> Suivi R.O.I (<span id="histModeLabel" class="text-emerald-400 ml-1">100% Trot</span>)
                 </h2>
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <button id="btnSyncWeek" onclick="syncPeriodHistory('WEEK')" class="bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
+                    <button id="btnSyncWeek" onclick="syncPeriodHistory('WEEK')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
                         <i class="fa-solid fa-bolt mr-1"></i> Semaine
                     </button>
-                    <button id="btnSyncMonth" onclick="syncPeriodHistory('MONTH')" class="bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
+                    <button id="btnSyncMonth" onclick="syncPeriodHistory('MONTH')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
                         <i class="fa-solid fa-calendar-check mr-1"></i> Mois
                     </button>
-                    <button id="btnSyncYear" onclick="syncPeriodHistory('YEAR')" class="bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
+                    <button id="btnSyncYear" onclick="syncPeriodHistory('YEAR')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center">
                         <i class="fa-solid fa-calendar mr-1"></i> Année
                     </button>
                     <button onclick="clearHistoryStats()" class="bg-red-900/40 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center" title="Vider les cumuls">
@@ -101,7 +101,7 @@
                 </div>
             </div>
 
-            <div id="syncProgressBanner" style="display: none;" class="bg-zinc-950 border border-amber-500/40 text-amber-300 text-xs px-3 py-2 rounded-xl font-mono flex justify-between items-center">
+            <div id="syncProgressBanner" style="display: none;" class="bg-zinc-950 border border-emerald-500/40 text-emerald-300 text-xs px-3 py-2 rounded-xl font-mono flex justify-between items-center">
                 <span id="syncProgressText"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse chronologique en cours...</span>
                 <button onclick="cancelSyncPeriod()" class="text-[10px] bg-red-900/50 text-red-300 px-2 py-0.5 rounded border border-red-500/40 cursor-pointer">Stop</button>
             </div>
@@ -115,8 +115,8 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 mb-2.5 text-[11px]">
                         <div class="text-zinc-400">Total Joué : <span id="weekStakes" class="text-white font-bold block text-xs mt-0.5">0.00 €</span></div>
                         <div class="text-zinc-400">Réussite : <span id="weekHitRate" class="text-white font-bold block text-xs mt-0.5">0 %</span></div>
-                        <div class="text-zinc-400">Bénéfice : <span id="weekNet" class="text-amber-400 font-bold block text-xs mt-0.5">0.00 €</span></div>
-                        <div class="text-zinc-400">R.O.I : <span id="weekROI" class="text-amber-400 font-bold block text-sm mt-0.5">0.00 %</span></div>
+                        <div class="text-zinc-400">Bénéfice : <span id="weekNet" class="text-emerald-400 font-bold block text-xs mt-0.5">0.00 €</span></div>
+                        <div class="text-zinc-400">R.O.I : <span id="weekROI" class="text-emerald-400 font-bold block text-sm mt-0.5">0.00 %</span></div>
                     </div>
                     <div id="weekDaysBreakdown" class="space-y-1 text-[11px]"></div>
                 </div>
@@ -129,8 +129,8 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 mb-3 text-[11px]">
                         <div class="text-zinc-400">Total Joué : <span id="yearStakes" class="text-white font-bold block text-xs mt-0.5">0.00 €</span></div>
                         <div class="text-zinc-400">Réussite : <span id="yearHitRate" class="text-white font-bold block text-xs mt-0.5">0 %</span></div>
-                        <div class="text-zinc-400">Bénéfice : <span id="yearNet" class="text-amber-400 font-bold block text-xs mt-0.5">0.00 €</span></div>
-                        <div class="text-zinc-400">R.O.I : <span id="yearROI" class="text-amber-400 font-bold block text-sm mt-0.5">0.00 %</span></div>
+                        <div class="text-zinc-400">Bénéfice : <span id="yearNet" class="text-emerald-400 font-bold block text-xs mt-0.5">0.00 €</span></div>
+                        <div class="text-zinc-400">R.O.I : <span id="yearROI" class="text-emerald-400 font-bold block text-sm mt-0.5">0.00 %</span></div>
                     </div>
                     <div id="monthsGrid" class="space-y-2"></div>
                 </div>
@@ -138,58 +138,56 @@
         </div>
 
         <!-- RÉGLAGES VALUE BETTING -->
-        <div class="bg-zinc-900 border border-amber-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
+        <div class="bg-zinc-900 border border-emerald-500/40 rounded-2xl p-3.5 shadow-xl space-y-2.5">
             <div class="flex justify-between items-center">
-                <h2 class="text-[11px] font-bold uppercase text-amber-400 tracking-wider flex items-center">
-                    <i class="fa-solid fa-sliders mr-1.5"></i> Paramètres du Radar
+                <h2 class="text-[11px] font-bold uppercase text-emerald-400 tracking-wider flex items-center">
+                    <i class="fa-solid fa-sliders mr-1.5"></i> Gestion de Mise & Cotes (V43)
                 </h2>
-                <button onclick="applyStrategySettings()" class="bg-amber-600 hover:bg-amber-500 text-zinc-900 text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
+                <button onclick="applyStrategySettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow transition cursor-pointer">
                     Valider
                 </button>
             </div>
             
             <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-[11px]">
-                <label class="bg-zinc-950 p-2 rounded-xl border border-amber-500/30 flex flex-col">
+                <label class="bg-zinc-950 p-2 rounded-xl border border-emerald-500/30 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Mise Base (€)</span>
-                    <input type="number" id="inputFlatStake" min="1" max="1000" step="1" value="20" class="bg-transparent text-amber-400 font-black text-sm focus:outline-none mt-0.5" title="Mise par défaut">
+                    <input type="number" id="inputFlatStake" min="1" max="1000" step="1" value="20" class="bg-transparent text-emerald-400 font-black text-sm focus:outline-none mt-0.5" title="Mise de départ">
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-rose-500/30 flex flex-col">
-                    <span class="text-[9px] text-rose-400 uppercase font-bold">+ Perte (€)</span>
-                    <input type="number" id="inputStakeStep" min="0" max="500" step="1" value="5" class="bg-transparent text-rose-300 font-black text-sm focus:outline-none mt-0.5" title="Augmentation après une perte">
+                    <span class="text-[9px] text-rose-400 uppercase font-bold">Plafond Mise (€)</span>
+                    <input type="number" id="inputMaxStake" min="20" max="2000" step="5" value="100" class="bg-transparent text-rose-300 font-black text-sm focus:outline-none mt-0.5" title="Plafond max de recouvrement (reset au 1er du mois)">
                 </label>
-                <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col hidden sm:flex">
+                <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Pari</span>
                     <select id="selectBetType" class="bg-zinc-950 text-white font-bold text-[11px] focus:outline-none mt-1 cursor-pointer">
                         <option value="PLACE" selected>Placé</option>
+                        <option value="GAGNANT">Gagnant</option>
                     </select>
                 </label>
                 <label class="bg-zinc-950 p-2 rounded-xl border border-cyan-500/30 flex flex-col">
                     <span class="text-[9px] text-cyan-400 uppercase font-bold">Marge Min (%)</span>
-                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="15" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinMargin" min="1" max="200" step="1" value="18" class="bg-transparent text-cyan-300 font-black text-sm focus:outline-none mt-0.5">
                 </label>
-                
-                <!-- NOUVEAU REGLAGE COTE MIN -->
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote Min</span>
-                    <input type="number" id="inputMinOdd" min="1" max="100" step="0.5" value="4.5" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMinOdd" min="1" max="100" step="0.5" value="6.5" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
-
                 <label class="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col">
                     <span class="text-[9px] text-zinc-400 uppercase font-bold">Cote Max</span>
-                    <input type="number" id="inputMaxOdd" min="3" max="100" step="0.5" value="9" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
+                    <input type="number" id="inputMaxOdd" min="3" max="100" step="0.5" value="14" class="bg-transparent text-white font-black text-sm focus:outline-none mt-0.5">
                 </label>
             </div>
         </div>
 
         <!-- DASHBOARD BILAN -->
-        <div class="bg-zinc-900 border border-amber-500/30 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
+        <div class="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-xl mb-2 space-y-3">
             <div class="flex flex-wrap justify-between items-center gap-2 border-b border-zinc-800 pb-2">
                 <div>
-                    <h2 class="text-xs font-bold uppercase text-amber-400 tracking-wider">Bilan du Jour (Auto-Tracking)</h2>
+                    <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Bilan du Jour (Recouvrement Auto)</h2>
                     <p id="bilanSubtitle" class="text-[10px] text-zinc-400">Simulation sur les pronostics de l'algorithme</p>
                 </div>
                 <div class="flex items-center space-x-1.5">
-                    <button id="btnToggleAuditLog" onclick="toggleAuditLog()" class="text-[9px] font-bold px-2 py-1 rounded border border-amber-500/40 bg-zinc-800 hover:bg-zinc-700 text-amber-300 cursor-pointer">
+                    <button id="btnToggleAuditLog" onclick="toggleAuditLog()" class="text-[9px] font-bold px-2 py-1 rounded border border-emerald-500/40 bg-zinc-800 hover:bg-zinc-700 text-emerald-300 cursor-pointer">
                         📋 Journal (0)
                     </button>
                     <span id="dailyStatusBadge" class="text-[9px] font-bold px-2 py-1 rounded border border-zinc-700 bg-zinc-800 text-zinc-300">En attente</span>
@@ -212,7 +210,7 @@
                     <strong id="dashNet" class="text-lg font-black text-zinc-500">0.00 €</strong>
                 </div>
                 <div class="flex flex-col px-1 mt-2 sm:mt-0">
-                    <span class="text-[9px] uppercase font-bold text-amber-500">R.O.I (Retour)</span>
+                    <span class="text-[9px] uppercase font-bold text-emerald-500">R.O.I (Retour)</span>
                     <strong id="dashROI" class="text-lg font-black text-zinc-500">0.00 %</strong>
                 </div>
             </div>
@@ -223,7 +221,7 @@
                         <tr class="text-zinc-500 border-b border-zinc-800">
                             <th class="pb-1.5 pr-2">Course</th>
                             <th class="pb-1.5 pr-2">Cheval Choisi</th>
-                            <th class="pb-1.5 pr-2 text-center">Rapport</th>
+                            <th class="pb-1.5 pr-2 text-center">Rapport / Mise</th>
                             <th class="pb-1.5 text-right">Résultat Net</th>
                         </tr>
                     </thead>
@@ -233,10 +231,10 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <select id="meetingSelect" onchange="onMeetingChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer">
+            <select id="meetingSelect" onchange="onMeetingChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer">
                 <option value="">-- Réunion --</option>
             </select>
-            <select id="raceSelect" onchange="onRaceChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer">
+            <select id="raceSelect" onchange="onRaceChange()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer">
                 <option value="">-- Course --</option>
             </select>
         </div>
@@ -247,7 +245,7 @@
                 <i class="fa-solid fa-tv mr-1.5 text-red-400"></i> Suivi direct
             </span>
             <div class="flex items-center space-x-2">
-                <button onclick="fetchRaceData(false)" class="bg-zinc-800 hover:bg-zinc-700 text-amber-400 text-[11px] px-2.5 py-1.5 rounded-lg border border-amber-500/30 font-bold transition flex items-center shadow cursor-pointer">
+                <button onclick="fetchRaceData(false)" class="bg-zinc-800 hover:bg-zinc-700 text-emerald-400 text-[11px] px-2.5 py-1.5 rounded-lg border border-emerald-500/30 font-bold transition flex items-center shadow cursor-pointer">
                     <i class="fa-solid fa-rotate mr-1"></i> Actualiser
                 </button>
                 <div class="flex items-center bg-zinc-800 rounded-lg border border-zinc-700 overflow-hidden shadow">
@@ -262,18 +260,16 @@
         </div>
 
         <!-- SIGNAL EN DIRECT POUR LA COURSE SELECTIONNEE -->
-        <div id="livePredictionBlock" class="hidden bg-amber-950/40 border border-amber-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-amber-900/20">
+        <div id="livePredictionBlock" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3.5 space-y-2 mt-4 shadow-lg shadow-emerald-900/20">
             <div class="flex justify-between items-center">
-                <h2 class="text-xs font-bold uppercase text-amber-400 tracking-wider flex items-center">
+                <h2 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center">
                     <i class="fa-solid fa-crosshairs mr-1.5"></i> Ordre du Radar
                 </h2>
                 <span id="radarLockBadge" class="hidden text-[9px] font-black uppercase text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded">
                     <i class="fa-solid fa-lock mr-1"></i> Cotes figées au départ
                 </span>
             </div>
-            <div id="livePredictionList" class="flex flex-wrap gap-2 text-sm font-bold text-white">
-                <!-- Rempli par javascript -->
-            </div>
+            <div id="livePredictionList" class="flex flex-wrap gap-2 text-sm font-bold text-white"></div>
         </div>
 
         <!-- BLOC ARRIVÉE OFFICIELLE -->
@@ -290,16 +286,14 @@
 
         <!-- TABLEAU SCREENER / AUTOMATIQUE -->
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden text-xs shadow-xl mt-4">
-            <div id="raceInfoDetails" class="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-800/30">
-                <!-- Rempli dynamiquement -->
-            </div>
+            <div id="raceInfoDetails" class="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-800/30"></div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="bg-zinc-950 text-zinc-400 border-b border-zinc-800">
                             <th class="p-3">N° / Cheval</th>
                             <th class="p-3 text-center">Matin ➝ Direct</th>
-                            <th class="p-3 text-center">Proba Modèle</th>
+                            <th class="p-3 text-center">Proba Placé</th>
                             <th class="p-3 text-right">Marge Value</th>
                         </tr>
                     </thead>
@@ -312,15 +306,15 @@
     </main>
 
     <script>
-        const STATS_VERSION = "v115_v42_montante_mensuelle"; 
+        const STATS_VERSION = "v115_v43_recouvrement"; 
         
         let currentDisciplineMode = 'TROT'; 
         let FLAT_STAKE = 20.0; 
-        let STAKE_STEP = 5.0; // Augmentation après perte
+        let MAX_STAKE_CAP = 100.0;
         let BET_TYPE = 'PLACE';
-        let MIN_VALUE_MARGIN = 15; 
-        let MIN_ODD_FILTER = 4.5; // NOUVEAU: Cote Min paramétrable
-        let MAX_ODD_FILTER = 9.0; 
+        let MIN_VALUE_MARGIN = 18; 
+        let MIN_ODD_FILTER = 6.5;
+        let MAX_ODD_FILTER = 14.0; 
 
         let liveMeetingsData = [];
         let validatedRacesCache = {}; 
@@ -340,6 +334,14 @@
         let alertedArrivals = new Set();
 
         const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+        function computeRecoveryStake(cumulativeLoss, estPlaceOdd) {
+            if (cumulativeLoss <= 0) return FLAT_STAKE;
+            let expectedProfitPerEuro = Math.max(0.55, (estPlaceOdd || 1.95) - 1);
+            let needed = Math.ceil((cumulativeLoss + FLAT_STAKE * 0.5) / expectedProfitPerEuro);
+            let stepped = Math.max(FLAT_STAKE + 5, Math.ceil(needed / 5) * 5);
+            return Math.min(MAX_STAKE_CAP, stepped);
+        }
 
         function matchesDisciplineFilter(course, mode) {
             if (mode === 'ALL') return true;
@@ -504,7 +506,7 @@
             try {
                 let saved = JSON.parse(localStorage.getItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`) || '{}');
                 if (saved.flatStake) FLAT_STAKE = Number(saved.flatStake);
-                if (saved.stakeStep !== undefined) STAKE_STEP = Number(saved.stakeStep);
+                if (saved.maxStake) MAX_STAKE_CAP = Number(saved.maxStake);
                 if (saved.betType) BET_TYPE = saved.betType;
                 if (saved.minMargin) MIN_VALUE_MARGIN = Number(saved.minMargin);
                 if (saved.minOdd) MIN_ODD_FILTER = Number(saved.minOdd);
@@ -512,7 +514,7 @@
             } catch(e) {}
             
             document.getElementById('inputFlatStake').value = FLAT_STAKE;
-            document.getElementById('inputStakeStep').value = STAKE_STEP;
+            document.getElementById('inputMaxStake').value = MAX_STAKE_CAP;
             document.getElementById('selectBetType').value = BET_TYPE;
             document.getElementById('inputMinMargin').value = MIN_VALUE_MARGIN;
             document.getElementById('inputMinOdd').value = MIN_ODD_FILTER;
@@ -522,7 +524,7 @@
             let btnTrot = document.getElementById('btnFilterTrot');
             let btnAll = document.getElementById('btnFilterAll');
             
-            let activeClass = "bg-amber-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
+            let activeClass = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black transition shadow cursor-pointer";
             let inactiveClass = "bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer";
             
             if (btnGalop) btnGalop.className = inactiveClass;
@@ -539,7 +541,7 @@
         function updateStrategyLabelsUI() {
             let typeLbl = BET_TYPE === 'PLACE' ? 'Placé' : 'Gagnant';
             let b = document.getElementById('bilanSubtitle');
-            if (b) b.textContent = `Montante (+${STAKE_STEP}€) en Simple ${typeLbl}`;
+            if (b) b.textContent = `Recouvrement (Base ${FLAT_STAKE}€ • Max ${MAX_STAKE_CAP}€) en Simple ${typeLbl}`;
             
             let lbl = document.getElementById('histModeLabel');
             if(lbl) {
@@ -551,14 +553,14 @@
 
         function applyStrategySettings() {
             FLAT_STAKE = parseFloat(document.getElementById('inputFlatStake').value) || 20;
-            STAKE_STEP = parseFloat(document.getElementById('inputStakeStep').value) || 0;
+            MAX_STAKE_CAP = parseFloat(document.getElementById('inputMaxStake').value) || 100;
             BET_TYPE = document.getElementById('selectBetType').value;
-            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 15;
-            MIN_ODD_FILTER = parseFloat(document.getElementById('inputMinOdd').value) || 4.5;
-            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 9.0;
+            MIN_VALUE_MARGIN = parseFloat(document.getElementById('inputMinMargin').value) || 18;
+            MIN_ODD_FILTER = parseFloat(document.getElementById('inputMinOdd').value) || 6.5;
+            MAX_ODD_FILTER = parseFloat(document.getElementById('inputMaxOdd').value) || 14.0;
 
             localStorage.setItem(`valuebet_${STATS_VERSION}_settings_${currentDisciplineMode}`, JSON.stringify({
-                flatStake: FLAT_STAKE, stakeStep: STAKE_STEP, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, minOdd: MIN_ODD_FILTER, maxOdd: MAX_ODD_FILTER
+                flatStake: FLAT_STAKE, maxStake: MAX_STAKE_CAP, betType: BET_TYPE, minMargin: MIN_VALUE_MARGIN, minOdd: MIN_ODD_FILTER, maxOdd: MAX_ODD_FILTER
             }));
 
             Object.keys(localStorage).forEach(k => {
@@ -652,7 +654,7 @@
         }
 
         // ==========================================
-        //  MOTEUR V42 - TROT 60% + COTE MINIMUM CUSTOM
+        //  MOTEUR V43 - TROT PAYANT (COTES 6.5 - 14.0 & RAPPORT PLACÉ >= 1.95€)
         // ==========================================
 
         function getCoteSafely(p) {
@@ -661,13 +663,13 @@
             return (isNaN(c) || c <= 1.0) ? 999.9 : c;
         }
 
-        function analyzeFormTrot(musique) {
+        function analyzeFormTrotV43(musique) {
             if (!musique) return { formFactor: 0.50, placeReliability: 0.20, scoreVisuel: 0 };
             let clean = String(musique).replace(/\(\d+\)/g, '');
             let tokens = clean.match(/([0-9DATR]+)([a-zA-Z]+)/g) || [];
             if (tokens.length === 0) return { formFactor: 0.50, placeReliability: 0.20, scoreVisuel: 0 };
 
-            const weights = [3.0, 2.0, 1.2, 0.8, 0.5];
+            const weights = [3.0, 2.0, 1.3, 0.85, 0.5];
             let weightedPts = 0;
             let maxWeightedPts = 0;
             let top4Count = 0;
@@ -702,9 +704,9 @@
             }
 
             let ratio = Math.max(0, Math.min(1, weightedPts / maxWeightedPts));
-            let formFactor = 0.60 + (ratio * 0.65); 
+            let formFactor = 0.65 + (ratio * 0.65); 
             
-            if (hasRecentDAI) formFactor *= 0.30; 
+            if (hasRecentDAI) formFactor *= 0.25; 
 
             let placeReliability = Math.min(1, (top4Count / Math.max(1, Math.min(inspected, 4))));
             let scoreVisuel = Math.max(0, Math.min(100, Math.round(ratio * 100)));
@@ -714,13 +716,14 @@
         function computeAlgorithm(partants) {
             let validPartants = partants.filter(p => !String(p.statut || "PARTANT").toUpperCase().includes("NON_PARTANT"));
 
+            // Pelotons fournis (12 à 18) pour diluer la masse sur les favoris et obtenir de vrais rapports placés
             if (validPartants.length < 12 || validPartants.length > 18) return { processed: [], valueBets: [] };
 
             let minCoteInRace = Math.min(...validPartants.map(p => getCoteSafely(p)));
-            if (minCoteInRace < 1.8) return { processed: [], valueBets: [] }; 
+            if (minCoteInRace < 2.0) return { processed: [], valueBets: [] }; 
 
             let hasAnyRealOdd = false;
-            let placeDivisor = validPartants.length >= 15 ? 4.2 : 4.6;
+            let placeDivisor = validPartants.length >= 15 ? 4.0 : 4.4;
 
             let processed = validPartants.map(p => {
                 let num = parseInt(p.numPmu || p.numOrdre, 10);
@@ -730,21 +733,21 @@
 
                 if (coteDir < 900) hasAnyRealOdd = true;
 
-                let estPlace = coteDir < 900 ? Math.max(1.10, 1.10 + ((coteDir - 1) / placeDivisor)) : 999.9;
-                let impliedPlaceProb = coteDir < 900 ? Math.min(0.95, Math.max(0.04, (0.80 / Math.max(1.15, estPlace)))) : 0;
+                let estPlace = coteDir < 900 ? Math.max(1.15, 1.12 + ((coteDir - 1) / placeDivisor)) : 999.9;
+                let impliedPlaceProb = coteDir < 900 ? Math.min(0.92, Math.max(0.04, (0.78 / Math.max(1.20, estPlace)))) : 0;
 
-                let { formFactor, placeReliability, scoreVisuel } = analyzeFormTrot(p.musique || p.form);
+                let { formFactor, placeReliability, scoreVisuel } = analyzeFormTrotV43(p.musique || p.form);
                 let dropRatio = (coteMatin > 1 && coteDir < 900) ? (coteMatin / coteDir) : 1.0;
                 let dropPct = (coteMatin > 1 && coteDir < 900) ? ((coteMatin - coteDir) / coteMatin) * 100 : 0;
 
                 let marketFactor = 1.0;
-                if (dropRatio >= 1.15) marketFactor = 1.20; 
-                else if (dropRatio >= 1.00) marketFactor = 1.05;
-                else if (dropRatio >= 0.95) marketFactor = 0.90; 
-                else marketFactor = 0.50; 
+                if (dropRatio >= 1.15) marketFactor = 1.22; 
+                else if (dropRatio >= 1.00) marketFactor = 1.06;
+                else if (dropRatio >= 0.95) marketFactor = 0.92; 
+                else marketFactor = 0.45; 
 
-                let rawProbPla = impliedPlaceProb * formFactor * (0.80 + placeReliability * 0.35) * marketFactor;
-                let trueProbPla = Math.max(0.10, Math.min(0.88, rawProbPla));
+                let rawProbPla = impliedPlaceProb * formFactor * (0.82 + placeReliability * 0.34) * marketFactor;
+                let trueProbPla = Math.max(0.08, Math.min(0.84, rawProbPla));
                 let trueOddPla = 1 / trueProbPla;
 
                 let margin = (coteDir < 900 && estPlace < 900) ? ((estPlace / trueOddPla) - 1) * 100 : -100;
@@ -761,11 +764,11 @@
             if (!hasAnyRealOdd) return { processed: [], valueBets: [] };
 
             let valueBets = processed.filter(p => {
-                // V42 : UTILISATION DE LA COTE MINIMUM CUSTOMISÉE
                 if (p.coteDir < MIN_ODD_FILTER || p.coteDir > MAX_ODD_FILTER) return false;
-                if (p.estPlace < 1.70) return false;
+                if (p.estPlace < 1.95) return false; // Exige un rapport placé capable d'absorber la série
+                if (p.dropRatio < 0.96) return false;
                 if (p.valueMargin < MIN_VALUE_MARGIN) return false;
-                if (p.trueProbPla < 0.45) return false;
+                if (p.trueProbPla < 0.36) return false;
                 return true;
             })
             .sort((a, b) => b.valueMargin - a.valueMargin)
@@ -1003,16 +1006,16 @@
             }
 
             try {
-                let currentStake = FLAT_STAKE;
-                let lastMonth = -1; // V42: Traqueur de changement de mois
+                let cumulativeLoss = 0;
+                let lastMonth = -1;
 
                 for (let idx = 0; idx < datesToSync.length; idx++) {
                     if (cancelSyncFlag) break;
                     let d = datesToSync[idx];
                     
-                    // V42 : LE COUPE-CIRCUIT MENSUEL
+                    // Coupe-circuit mensuel au 1er de chaque mois
                     if (lastMonth !== -1 && d.getMonth() !== lastMonth) {
-                        currentStake = FLAT_STAKE; 
+                        cumulativeLoss = 0;
                     }
                     lastMonth = d.getMonth();
 
@@ -1073,16 +1076,17 @@
                         algo.valueBets.forEach(vh => {
                             let g = extractGainFromRapports(raceData.rapportsList, vh.num, BET_TYPE);
                             dayBetsCount++;
-                            let stakeUsed = currentStake;
+                            let stakeUsed = computeRecoveryStake(cumulativeLoss, vh.estPlace);
                             dayStakes += stakeUsed;
                             
                             if (g >= 1.0) {
                                 dayWinsCount++;
-                                dayNet += (g * stakeUsed) - stakeUsed;
-                                currentStake = FLAT_STAKE; 
+                                let betNet = (g * stakeUsed) - stakeUsed;
+                                dayNet += betNet;
+                                cumulativeLoss = Math.max(0, cumulativeLoss - betNet);
                             } else {
                                 dayNet -= stakeUsed;
-                                currentStake += STAKE_STEP; 
+                                cumulativeLoss += stakeUsed;
                             }
                         });
                     }
@@ -1100,6 +1104,48 @@
             if (banner) banner.style.display = 'none';
             isSyncingPeriod = false;
             calculateDailyStats(false);
+        }
+
+        function getSortedRacesList() {
+            let list = [];
+            liveMeetingsData.forEach((m, mIdx) => {
+                let courses = m.courses || m.races || m.lesCourses || [];
+                courses.forEach((c, cIdx) => {
+                    if (c.heureDepart) {
+                        list.push({ mIdx, cIdx, time: new Date(c.heureDepart).getTime(), courseObj: c });
+                    }
+                });
+            });
+            return list.sort((a, b) => a.time - b.time);
+        }
+
+        function navigateRace(direction) {
+            let mIdx = parseInt(document.getElementById('meetingSelect').value, 10);
+            let cIdx = parseInt(document.getElementById('raceSelect').value, 10);
+            if (isNaN(mIdx) || isNaN(cIdx)) return;
+
+            let sortedRaces = getSortedRacesList();
+            let currentIndex = sortedRaces.findIndex(r => r.mIdx === mIdx && r.cIdx === cIdx);
+
+            if (currentIndex !== -1) {
+                let targetIndex = currentIndex + direction;
+                if (targetIndex >= 0 && targetIndex < sortedRaces.length) {
+                    let targetRace = sortedRaces[targetIndex];
+                    document.getElementById('meetingSelect').value = targetRace.mIdx;
+                    onMeetingChange();
+                    document.getElementById('raceSelect').value = targetRace.cIdx;
+                    autoTransitionDone = false;
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    fetchRaceData(false);
+                } else {
+                    let msg = direction > 0 ? "Fin des courses de la journée !" : "C'est la première course de la journée !";
+                    showToast(msg, "info");
+                }
+            }
+        }
+
+        function goToNextRace() {
+            navigateRace(1);
         }
 
         async function fetchRaceData(isBackground = false) {
@@ -1120,7 +1166,7 @@
             let raceKey = `${ddmmyyyy}_R${rNum}C${cNum}`;
             
             if (!isBackground) {
-                document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-8 text-center text-amber-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse auto-radar...</td></tr>`;
+                document.getElementById('runnersTableBody').innerHTML = `<tr><td colspan="4" class="p-8 text-center text-emerald-500 font-mono"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyse auto-radar...</td></tr>`;
                 document.getElementById('livePredictionBlock').classList.add('hidden');
                 document.getElementById('arrivalBlock').classList.add('hidden');
                 document.getElementById('reportsGrid').classList.add('hidden');
@@ -1154,7 +1200,7 @@
 
                 let runningBadge = (isStarted && !hasArrival) ? '<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ml-1 animate-pulse"><i class="fa-solid fa-horse-head mr-1"></i>EN COURSE</span>' : '';
 
-                document.getElementById('raceInfoDetails').innerHTML = `<div class="flex items-center flex-wrap"><span class="text-amber-400 font-black text-sm">R${rNum}C${cNum}</span><span class="text-zinc-400 font-mono text-[11px] mx-1.5"><i class="fa-regular fa-clock"></i> ${cStart}</span><span class="text-zinc-300 font-semibold mr-1">- ${hipName}</span>${getDisciplineBadge(race.discipline)}${runningBadge}</div>`;
+                document.getElementById('raceInfoDetails').innerHTML = `<div class="flex items-center flex-wrap"><span class="text-emerald-400 font-black text-sm">R${rNum}C${cNum}</span><span class="text-zinc-400 font-mono text-[11px] mx-1.5"><i class="fa-regular fa-clock"></i> ${cStart}</span><span class="text-zinc-300 font-semibold mr-1">- ${hipName}</span>${getDisciplineBadge(race.discipline)}${runningBadge}</div>`;
 
                 let tbody = document.getElementById('runnersTableBody');
                 let timerSpan = document.getElementById('nextRaceTimer');
@@ -1246,25 +1292,25 @@
                             
                             if (isValue) {
                                 betFound = true;
-                                tr.className = "bg-amber-900/20 border-l-4 border-amber-500";
+                                tr.className = "bg-emerald-900/20 border-l-4 border-emerald-500";
                             } else {
                                 tr.className = "border-b border-zinc-800/50 opacity-80";
                             }
                             
                             let tag = p.ordreArrivee ? `<span class="ml-2 text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">🏁 ${p.ordreArrivee}e</span>` : '';
-                            if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold animate-pulse shadow">AUTO BET</span>`;
+                            if (isValue && !hasArrival) tag += `<span class="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold animate-pulse shadow">AUTO BET</span>`;
                             if (isFrozen && isValue && !hasArrival) tag += `<span class="ml-2 text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-lock mr-0.5"></i>Figé</span>`;
 
                             let dropColor = p.dropPct >= 20 ? "text-orange-400 font-bold" : (p.dropPct < -10 ? "text-red-400" : "text-zinc-400");
                             let dropStr = p.dropPct > 0 ? `-${p.dropPct.toFixed(0)}%` : (p.dropPct < 0 ? `+${Math.abs(p.dropPct).toFixed(0)}%` : `0%`);
                             
-                            let rightCol = isValue ? `<span class="text-amber-400 font-black">+${p.valueMargin.toFixed(0)}% Marge</span>` : p.alertHtml;
+                            let rightCol = isValue ? `<span class="text-emerald-400 font-black">+${p.valueMargin.toFixed(0)}% Marge</span>` : `<span class="text-zinc-600 text-[10px]">${p.valueMargin > 0 ? '+' : ''}${p.valueMargin.toFixed(0)}%</span>`;
                             let probHtml = (p.trueProbPla !== undefined && !isNaN(p.trueProbPla)) ? `${(p.trueProbPla * 100).toFixed(1)}%` : 'N/A';
 
                             tr.innerHTML = `
                                 <td class="p-3 font-bold"><span class="text-zinc-500 mr-2">${p.num}</span><span class="text-zinc-200">${p.nom}</span> <span class="block text-[9px] text-zinc-500 font-normal mt-0.5">${p.musique}</span>${tag}</td>
                                 <td class="p-3 text-center text-xs"><span class="text-zinc-500">${p.coteMatinDisplay}</span> ➝ <span class="text-white font-bold">${p.coteDisplay}</span> <span class="block text-[10px] ${dropColor} mt-0.5">${dropStr}</span></td>
-                                <td class="p-3 text-center text-amber-500 font-mono">${probHtml}</td>
+                                <td class="p-3 text-center text-emerald-500 font-mono">${probHtml}</td>
                                 <td class="p-3 text-right">${rightCol}</td>
                             `;
                             tbody.appendChild(tr);
@@ -1307,7 +1353,7 @@
             racesToScan.sort((a,b) => a.time - b.time);
 
             let totalStakes = 0, totalNet = 0, betsCount = 0, winsCount = 0;
-            let currentStake = FLAT_STAKE;
+            let cumulativeLoss = 0;
             let auditRows = [];
             let statsProgress = document.getElementById('statsProgress');
 
@@ -1357,19 +1403,19 @@
                 algo.valueBets.forEach(vh => {
                     let g = extractGainFromRapports(raceData.rapportsList, vh.num, BET_TYPE);
                     betsCount++;
-                    let stakeUsed = currentStake;
+                    let stakeUsed = computeRecoveryStake(cumulativeLoss, vh.estPlace);
                     totalStakes += stakeUsed;
 
                     if (g >= 1.0) {
                         winsCount++;
                         let betNet = (g * stakeUsed) - stakeUsed;
                         totalNet += betNet;
-                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2"><span class="text-amber-400">N°${vh.num}</span></td><td class="py-1 pr-2 text-center text-zinc-300">${g.toFixed(2)} <span class="text-[9px] text-zinc-500 block">(${stakeUsed}€)</span></td><td class="py-1 text-right text-emerald-400 font-bold">+${betNet.toFixed(2)}€</td></tr>`);
-                        currentStake = FLAT_STAKE; 
+                        cumulativeLoss = Math.max(0, cumulativeLoss - betNet);
+                        auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2"><span class="text-emerald-400">N°${vh.num}</span></td><td class="py-1 pr-2 text-center text-zinc-300">${g.toFixed(2)} <span class="text-[9px] text-zinc-500 block">(${stakeUsed}€)</span></td><td class="py-1 text-right text-emerald-400 font-bold">+${betNet.toFixed(2)}€</td></tr>`);
                     } else {
                         totalNet -= stakeUsed;
+                        cumulativeLoss += stakeUsed;
                         auditRows.push(`<tr><td class="py-1 pr-2 text-zinc-200">${r.name} <span class="text-[9px] text-zinc-500 block sm:inline">${r.hipName}</span></td><td class="py-1 pr-2">N°${vh.num}</td><td class="py-1 pr-2 text-center text-zinc-500">Perdu <span class="text-[9px] text-zinc-600 block">(${stakeUsed}€)</span></td><td class="py-1 text-right text-red-400">-${stakeUsed.toFixed(2)}€</td></tr>`);
-                        currentStake += STAKE_STEP; 
                     }
                 });
 
@@ -1381,10 +1427,10 @@
                 document.getElementById('dashROI').innerHTML = formatROI(totalNet, totalStakes);
             }
 
+            let nextStakeEst = computeRecoveryStake(cumulativeLoss, 1.95);
             document.getElementById('btnToggleAuditLog').textContent = `📋 Journal des Paris (${betsCount})`;
             document.getElementById('auditLogBody').innerHTML = auditRows.join('');
-            
-            document.getElementById('dailyStatusBadge').innerHTML = `Prochaine mise : <strong class="text-amber-400">${currentStake} €</strong>`;
+            document.getElementById('dailyStatusBadge').innerHTML = `Prochaine mise : <strong class="text-emerald-400">${nextStakeEst} €</strong>`;
             statsProgress.textContent = `✅ Scan du jour terminé`;
             document.getElementById('btnResumeMissing').style.display = 'inline-block';
             document.getElementById('btnResumeMissing').innerHTML = '<i class="fa-solid fa-rotate-right mr-1"></i>Re-Scanner';
@@ -1436,7 +1482,7 @@
                         select.appendChild(opt);
                     });
                     
-                    statusText.innerHTML = `<span class="text-amber-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${liveMeetingsData.length} réunions | ${totalCourses} courses)</span>`;
+                    statusText.innerHTML = `<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i> Connecté (${liveMeetingsData.length} réunions | ${totalCourses} courses)</span>`;
                     
                     document.getElementById('meetingSelect').value = "0";
                     onMeetingChange();
@@ -1459,14 +1505,8 @@
                 let today = new Date();
                 dateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
-            // Forcer le mode Trot par defaut
             currentDisciplineMode = 'TROT';
             loadStrategySettings(); 
-            // Sécurité V42
-            if (document.getElementById('selectBetType').value !== 'PLACE') {
-                 document.getElementById('selectBetType').value = 'PLACE';
-                 BET_TYPE = 'PLACE';
-            }
             loadLivePmu(); 
         };
     </script>
